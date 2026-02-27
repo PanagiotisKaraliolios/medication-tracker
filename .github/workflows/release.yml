@@ -63,7 +63,8 @@ jobs:
 
       - name: Decode keystore
         run: |
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/release.keystore
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | tr -d '\n\r ' | base64 --decode > android/app/release.keystore
+          echo "✅ Keystore decoded ($(wc -c < android/app/release.keystore) bytes)"
 
       - name: Inject release signing config
         run: |
