@@ -123,8 +123,6 @@ jobs:
             1. Download `MediTrack-${{ steps.version.outputs.tag }}.apk` below
             2. Transfer to your Android device
             3. Open the APK to install (enable "Install from unknown sources" if prompted)
-
-            > **Note:** You will need a Supabase backend configured. See the [README](https://github.com/${{ github.repository }}#-getting-started) for setup instructions.
           files: ${{ steps.rename.outputs.apk_path }}
           draft: false
           prerelease: false
