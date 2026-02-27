@@ -86,23 +86,23 @@ A modern, full-featured medication tracking app built with **Expo** and **React 
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                    Expo Router (Screens)                 │
-│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌───────────┐  │
-│  │  Today   │ │   Meds   │ │ Reports  │ │  Profile   │  │
-│  └────┬─────┘ └────┬─────┘ └────┬─────┘ └─────┬─────┘  │
-│       │             │            │              │        │
+│                    Expo Router (Screens)                │
+│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌───────────┐   │
+│  │  Today   │ │   Meds   │ │ Reports  │ │  Profile  │   │
+│  └────┬─────┘ └─────┬────┘ └─────┬────┘ └───────┬───┘   │
+│       │             │            │              │       │
 │  ┌────▼─────────────▼────────────▼──────────────▼────┐  │
 │  │              TanStack Query (Server State)        │  │
 │  │     useMedications · useSchedules · useDoseLogs   │  │
 │  └──────────────────────┬────────────────────────────┘  │
-│                         │                                │
+│                         │                               │
 │  ┌──────────────────────▼────────────────────────────┐  │
 │  │               Supabase (Postgres + RLS)           │  │
 │  │     medications · schedules · dose_logs · profiles│  │
 │  └───────────────────────────────────────────────────┘  │
-│                                                          │
+│                                                         │
 │  ┌──────────────┐  ┌──────────────┐  ┌───────────────┐  │
-│  │ Zustand      │  │ AuthContext  │  │ ThemeContext   │  │
+│  │ Zustand      │  │ AuthContext  │  │ ThemeContext  │  │
 │  │ (Form Drafts)│  │ (Auth+User)  │  │ (Dark Mode)   │  │
 │  └──────────────┘  └──────────────┘  └───────────────┘  │
 └─────────────────────────────────────────────────────────┘
