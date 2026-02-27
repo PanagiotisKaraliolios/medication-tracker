@@ -1,21 +1,41 @@
 {
   "name": "medication-tracker",
   "version": "1.0.0",
-  "main": "index.ts",
+  "main": "expo-router/entry",
   "scripts": {
     "start": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
+    "start:tunnel": "expo start --tunnel",
+    "prebuild": "expo prebuild --clean",
+    "android": "bun run prebuild && expo run:android",
+    "ios": "bun run prebuild && expo run:ios",
     "web": "expo start --web"
   },
   "dependencies": {
-    "expo": "~54.0.33",
-    "expo-status-bar": "~3.0.9",
-    "react": "19.1.0",
-    "react-native": "0.81.5"
+    "@expo/metro-runtime": "~55.0.6",
+    "@expo/vector-icons": "^15.0.3",
+    "@react-native-async-storage/async-storage": "2.2.0",
+    "@supabase/supabase-js": "^2.97.0",
+    "expo": "^55.0.2",
+    "expo-constants": "~55.0.7",
+    "expo-dev-client": "~55.0.9",
+    "expo-linear-gradient": "~55.0.8",
+    "expo-linking": "~55.0.7",
+    "expo-notifications": "~55.0.10",
+    "expo-router": "~55.0.2",
+    "expo-status-bar": "~55.0.4",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "react-native": "0.83.2",
+    "react-native-safe-area-context": "~5.6.0",
+    "react-native-screens": "~4.23.0",
+    "react-native-svg": "15.15.3",
+    "react-native-toast-message": "2.2.1",
+    "react-native-url-polyfill": "^3.0.0",
+    "react-native-web": "^0.21.0"
   },
   "devDependencies": {
-    "@types/react": "~19.1.0",
+    "@expo/ngrok": "^4.1.3",
+    "@types/react": "~19.2.10",
     "typescript": "~5.9.2"
   },
   "private": true
