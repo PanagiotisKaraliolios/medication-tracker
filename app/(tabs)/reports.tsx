@@ -1,81 +1,53 @@
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useFocusEffect } from 'expo-router';
+import { useQueryClient } from '@tanstack/react-query';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { LoadingState } from '../../components/ui/LoadingState';
 import { ErrorState } from '../../components/ui/ErrorState';
 import { SegmentedControl } from '../../components/ui/SegmentedControl';
 import { type ColorScheme, gradients, borderRadius, shadows } from '../../components/ui/theme';
 import { useThemeColors } from '../../hooks/useThemeColors';
-import { useMedication } from '../../contexts/MedicationContext';
+import { useMedications, useSchedules, useDoseLogsByRange } from '../../hooks/useQueryHooks';
+import { queryKeys } from '../../lib/queryKeys';
 import { PERIOD_DAYS, PERIOD_OPTIONS } from '../../constants/reports';
 import { toISO } from '../../utils/date';
-import { buildReport, type DayBar, type MissedDose } from '../../utils/report';
+import { buildReport } from '../../utils/report';
 
 // ─── Component ───────────────────────────────────────────────────────
 
 export default function ReportsScreen() {
   const c = useThemeColors();
   const styles = useMemo(() => makeStyles(c), [c]);
-  const { fetchMedications, fetchAllSchedules, fetchDoseLogsForRange } = useMedication();
+  const queryClient = useQueryClient();
 
   const [period, setPeriod] = useState('30 Days');
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
-  const [adherence, setAdherence] = useState(0);
-  const [totalDoses, setTotalDoses] = useState(0);
-  const [takenDoses, setTakenDoses] = useState(0);
-  const [missedDoses, setMissedDoses] = useState(0);
-  const [skippedDoses, setSkippedDoses] = useState(0);
-  const [chartBars, setChartBars] = useState<DayBar[]>([]);
-  const [recentMissed, setRecentMissed] = useState<MissedDose[]>([]);
+  // ── Date range for the selected period ──
 
-  const fetchReports = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
+  const { startISO, endISO, days } = useMemo(() => {
+    const d = PERIOD_DAYS[period] ?? 30;
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(endDate.getDate() - d + 1);
+    return { startISO: toISO(startDate), endISO: toISO(endDate), days: d };
+  }, [period]);
 
-      const days = PERIOD_DAYS[period] ?? 30;
-      const endDate = new Date();
-      const startDate = new Date();
-      startDate.setDate(endDate.getDate() - days + 1);
-      const startISO = toISO(startDate);
-      const endISO = toISO(endDate);
+  // ── Queries ──
 
-      const [medsRes, schRes, logsRes] = await Promise.all([
-        fetchMedications(),
-        fetchAllSchedules(),
-        fetchDoseLogsForRange(startISO, endISO),
-      ]);
+  const { data: medications = [], isLoading: medsLoading, error: medsError } = useMedications();
+  const { data: schedules = [], isLoading: schLoading, error: schError } = useSchedules();
+  const { data: doseLogs = [], isLoading: logsLoading, error: logsError } = useDoseLogsByRange(startISO, endISO);
 
-      const firstError = medsRes.error ?? schRes.error ?? logsRes.error;
-      if (firstError) {
-        setError(firstError);
-        return;
-      }
+  const loading = medsLoading || schLoading || logsLoading;
+  const error = medsError ?? schError ?? logsError;
 
-      const report = buildReport(startISO, endISO, medsRes.data, schRes.data, logsRes.data, days);
-      setAdherence(report.adherence);
-      setTotalDoses(report.totalDoses);
-      setTakenDoses(report.takenDoses);
-      setMissedDoses(report.missedDoses);
-      setSkippedDoses(report.skippedDoses);
-      setChartBars(report.chartBars);
-      setRecentMissed(report.recentMissed);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load reports');
-    } finally {
-      setLoading(false);
-    }
-  }, [period, fetchMedications, fetchAllSchedules, fetchDoseLogsForRange]);
+  // ── Computed report data ──
 
-  useFocusEffect(
-    useCallback(() => {
-      fetchReports();
-    }, [fetchReports]),
+  const { adherence, totalDoses, takenDoses, missedDoses, skippedDoses, chartBars, recentMissed } = useMemo(
+    () => buildReport(startISO, endISO, medications, schedules, doseLogs, days),
+    [startISO, endISO, medications, schedules, doseLogs, days],
   );
 
   // ── Header (always shown) ──
@@ -107,8 +79,12 @@ export default function ReportsScreen() {
         {renderHeader()}
         <ErrorState
           title="Couldn't load reports"
-          message={error}
-          onRetry={fetchReports}
+          message={error.message}
+          onRetry={() => {
+            queryClient.invalidateQueries({ queryKey: queryKeys.medications.all });
+            queryClient.invalidateQueries({ queryKey: queryKeys.schedules.all });
+            queryClient.invalidateQueries({ queryKey: queryKeys.doseLogs.all });
+          }}
         />
       </View>
     );

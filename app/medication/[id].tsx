@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
-import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Button } from '../../components/ui/Button';
@@ -15,7 +15,7 @@ import { AlertDialog } from '../../components/ui/AlertDialog';
 import { InventoryProgressBar } from '../../components/ui/InventoryProgressBar';
 import { type ColorScheme, gradients, borderRadius, shadows } from '../../components/ui/theme';
 import { useThemeColors } from '../../hooks/useThemeColors';
-import { useMedication, type MedicationRow, type ScheduleRow } from '../../contexts/MedicationContext';
+import { useMedication as useMedicationQuery, useSchedulesByMedication, useDeleteMedication, useDeleteSchedule } from '../../hooks/useQueryHooks';
 import { ICON_MAP, TIME_ICON_MAP } from '../../constants/icons';
 
 export default function MedicationDetailScreen() {
@@ -23,33 +23,16 @@ export default function MedicationDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const c = useThemeColors();
   const styles = useMemo(() => makeStyles(c), [c]);
-  const { fetchMedication, fetchSchedules, deleteMedication, deleteSchedule } = useMedication();
+  const { data: med, isLoading } = useMedicationQuery(id);
+  const { data: schedules = [] } = useSchedulesByMedication(id);
+  const schedule = schedules.length > 0 ? schedules[0] : null;
+  const deleteMedicationMut = useDeleteMedication();
+  const deleteScheduleMut = useDeleteSchedule();
 
-  const [med, setMed] = useState<MedicationRow | null>(null);
-  const [schedule, setSchedule] = useState<ScheduleRow | null>(null);
-  const [loading, setLoading] = useState(true);
   const [deleteVisible, setDeleteVisible] = useState(false);
-  const [deleteLoading, setDeleteLoading] = useState(false);
   const [clearScheduleVisible, setClearScheduleVisible] = useState(false);
-  const [clearScheduleLoading, setClearScheduleLoading] = useState(false);
 
-  useFocusEffect(
-    useCallback(() => {
-      if (!id) return;
-      (async () => {
-        setLoading(true);
-        const [medResult, schedResult] = await Promise.all([
-          fetchMedication(id),
-          fetchSchedules(id),
-        ]);
-        setMed(medResult.data);
-        setSchedule(schedResult.data.length > 0 ? schedResult.data[0] : null);
-        setLoading(false);
-      })();
-    }, [id]),
-  );
-
-  if (loading || !med) {
+  if (isLoading || !med) {
     return (
       <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
         <ActivityIndicator size="large" color={c.teal} />
@@ -60,21 +43,22 @@ export default function MedicationDetailScreen() {
   const featherIcon = ICON_MAP[med.icon] ?? 'package';
 
   const handleDelete = async () => {
-    setDeleteLoading(true);
-    await deleteMedication(med.id);
-    setDeleteLoading(false);
-    setDeleteVisible(false);
-    router.replace('/(tabs)/medications');
+    try {
+      await deleteMedicationMut.mutateAsync(med.id);
+      setDeleteVisible(false);
+      router.replace('/(tabs)/medications');
+    } catch (err) {
+      // mutation error handled by TanStack Query
+    }
   };
 
   const handleClearSchedule = async () => {
     if (!schedule) return;
-    setClearScheduleLoading(true);
-    const { error } = await deleteSchedule(schedule.id);
-    setClearScheduleLoading(false);
-    setClearScheduleVisible(false);
-    if (!error) {
-      setSchedule(null);
+    try {
+      await deleteScheduleMut.mutateAsync(schedule.id);
+      setClearScheduleVisible(false);
+    } catch (err) {
+      // mutation error handled by TanStack Query
     }
   };
 
@@ -242,7 +226,7 @@ export default function MedicationDetailScreen() {
         confirmLabel="Clear"
         cancelLabel="Cancel"
         onConfirm={handleClearSchedule}
-        loading={clearScheduleLoading}
+        loading={deleteScheduleMut.isPending}
       />
 
       <AlertDialog
@@ -255,7 +239,7 @@ export default function MedicationDetailScreen() {
         confirmLabel="Delete"
         cancelLabel="Cancel"
         onConfirm={handleDelete}
-        loading={deleteLoading}
+        loading={deleteMedicationMut.isPending}
       />
     </View>
   );

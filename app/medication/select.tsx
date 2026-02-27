@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -14,37 +14,22 @@ import { ErrorState } from '../../components/ui/ErrorState';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { type ColorScheme, borderRadius, shadows } from '../../components/ui/theme';
 import { useThemeColors } from '../../hooks/useThemeColors';
-import { useMedication, type MedicationRow } from '../../contexts/MedicationContext';
+import { useMedications } from '../../hooks/useQueryHooks';
+import { useScheduleDraft } from '../../stores/draftStores';
+import { useAuth } from '../../contexts/AuthContext';
+import { supabase } from '../../lib/supabase';
 import { ICON_MAP } from '../../constants/icons';
+import type { MedicationRow } from '../../types/database';
 
 export default function SelectMedicationScreen() {
   const router = useRouter();
   const c = useThemeColors();
   const styles = useMemo(() => makeStyles(c), [c]);
-  const { fetchMedications, fetchSchedules, resetScheduleDraft, updateScheduleDraft, setSchedulingMedId } = useMedication();
+  const { data: medications = [], isLoading, error, refetch } = useMedications();
+  const { resetScheduleDraft, updateScheduleDraft, setSchedulingMedId } = useScheduleDraft();
+  const { user } = useAuth();
 
-  const [medications, setMedications] = useState<MedicationRow[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
-
-  const loadMedications = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const { data, error: err } = await fetchMedications();
-      if (err) throw new Error(err);
-      setMedications(data);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load medications');
-    } finally {
-      setLoading(false);
-    }
-  }, [fetchMedications]);
-
-  useEffect(() => {
-    loadMedications();
-  }, [loadMedications]);
 
   const filtered = useMemo(() => {
     if (!search.trim()) return medications;
@@ -63,9 +48,16 @@ export default function SelectMedicationScreen() {
     setSchedulingMedId(med.id);
 
     // If an existing schedule exists, pre-populate the draft with its values
-    const { data: schedules } = await fetchSchedules(med.id);
-    if (schedules.length > 0) {
-      const s = schedules[0]; // use the first (most recent) schedule
+    const { data: schedules } = await supabase
+      .from('schedules')
+      .select('*')
+      .eq('medication_id', med.id)
+      .eq('user_id', user!.id)
+      .eq('is_active', true)
+      .order('created_at', { ascending: false });
+
+    if (schedules && schedules.length > 0) {
+      const s = schedules[0];
       updateScheduleDraft({
         frequency: s.frequency.charAt(0).toUpperCase() + s.frequency.slice(1),
         selectedDays: s.selected_days ?? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
@@ -125,17 +117,17 @@ export default function SelectMedicationScreen() {
         )}
       </View>
 
-      {loading && <LoadingState message="Loading medications…" />}
+      {isLoading && <LoadingState message="Loading medications…" />}
 
-      {!loading && error && (
+      {!isLoading && error && (
         <ErrorState
           title="Couldn't load medications"
-          message={error}
-          onRetry={loadMedications}
+          message={error.message}
+          onRetry={() => refetch()}
         />
       )}
 
-      {!loading && !error && medications.length === 0 && (
+      {!isLoading && !error && medications.length === 0 && (
         <EmptyState
           variant="medications"
           title="No medications yet"
@@ -145,14 +137,14 @@ export default function SelectMedicationScreen() {
         />
       )}
 
-      {!loading && !error && medications.length > 0 && filtered.length === 0 && (
+      {!isLoading && !error && medications.length > 0 && filtered.length === 0 && (
         <View style={styles.noResults}>
           <Feather name="search" size={32} color={c.gray300} />
           <Text style={styles.noResultsText}>No medications match "{search}"</Text>
         </View>
       )}
 
-      {!loading && !error && filtered.length > 0 && (
+      {!isLoading && !error && filtered.length > 0 && (
         <FlatList
           data={filtered}
           keyExtractor={(item) => item.id}

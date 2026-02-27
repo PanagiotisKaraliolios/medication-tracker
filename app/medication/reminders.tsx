@@ -6,12 +6,12 @@ import { SegmentedControl } from '../../components/ui/SegmentedControl';
 import { NotificationCard } from '../../components/ui/NotificationCard';
 import { type ColorScheme, borderRadius } from '../../components/ui/theme';
 import { useThemeColors } from '../../hooks/useThemeColors';
-import { useMedication } from '../../contexts/MedicationContext';
+import { useScheduleDraft } from '../../stores/draftStores';
 import { SNOOZE_OPTIONS } from '../../constants/schedule';
 
 export default function RemindersScreen() {
   const router = useRouter();
-  const { scheduleDraft, updateScheduleDraft } = useMedication();
+  const { scheduleDraft, updateScheduleDraft } = useScheduleDraft();
   const c = useThemeColors();
   const styles = useMemo(() => makeStyles(c), [c]);
 

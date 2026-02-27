@@ -6,13 +6,14 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Button } from '../../components/ui/Button';
 import { type ColorScheme, gradients, borderRadius } from '../../components/ui/theme';
 import { useThemeColors } from '../../hooks/useThemeColors';
-import { useMedication } from '../../contexts/MedicationContext';
+import { useMedicationDraft, useScheduleDraft } from '../../stores/draftStores';
 
 export default function SuccessScreen() {
   const router = useRouter();
   const c = useThemeColors();
   const styles = useMemo(() => makeStyles(c), [c]);
-  const { resetDraft, resetScheduleDraft, schedulingMedId } = useMedication();
+  const { resetDraft } = useMedicationDraft();
+  const { resetScheduleDraft, schedulingMedId } = useScheduleDraft();
   const isScheduling = !!schedulingMedId;
 
   const handleDone = () => {

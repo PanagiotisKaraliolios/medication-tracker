@@ -5,7 +5,10 @@ import { Feather } from '@expo/vector-icons';
 import { Button } from '../../components/ui/Button';
 import { type ColorScheme, borderRadius, shadows } from '../../components/ui/theme';
 import { useThemeColors } from '../../hooks/useThemeColors';
-import { useMedication } from '../../contexts/MedicationContext';
+import { useScheduleDraft } from '../../stores/draftStores';
+import { useCreateSchedule, useUpdateSchedule } from '../../hooks/useQueryHooks';
+import { useAuth } from '../../contexts/AuthContext';
+import { supabase } from '../../lib/supabase';
 import Toast from 'react-native-toast-message';
 import { formatDateLabel } from '../../utils/date';
 
@@ -13,7 +16,10 @@ export default function ReviewScreen() {
   const router = useRouter();
   const c = useThemeColors();
   const styles = useMemo(() => makeStyles(c), [c]);
-  const { scheduleDraft, saveSchedule, schedulingMedId, fetchSchedules, updateSchedule } = useMedication();
+  const { scheduleDraft, schedulingMedId } = useScheduleDraft();
+  const createScheduleMut = useCreateSchedule();
+  const updateScheduleMut = useUpdateSchedule();
+  const { user } = useAuth();
   const [saving, setSaving] = useState(false);
 
   const reviewSections = useMemo(() => {
@@ -65,40 +71,50 @@ export default function ReviewScreen() {
   }, [scheduleDraft, c]);
 
   const handleSave = async () => {
-    if (!schedulingMedId) return;
+    if (!schedulingMedId || !user?.id) return;
     setSaving(true);
 
-    // Check if there's an existing schedule to update
-    const { data: existing } = await fetchSchedules(schedulingMedId);
+    try {
+      // Check if there's an existing schedule to update
+      const { data: existing } = await supabase
+        .from('schedules')
+        .select('*')
+        .eq('medication_id', schedulingMedId)
+        .eq('user_id', user.id)
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
 
-    let error: string | null;
-    if (existing.length > 0) {
-      // Update existing schedule
-      const result = await updateSchedule(existing[0].id, {
-        frequency: scheduleDraft.frequency.toLowerCase(),
-        selected_days: scheduleDraft.selectedDays,
-        times_of_day: scheduleDraft.timesOfDay,
-        dosage_per_dose: scheduleDraft.dosagePerDose,
-        push_notifications: scheduleDraft.pushNotifications,
-        sms_alerts: scheduleDraft.smsAlerts,
-        snooze_duration: scheduleDraft.snoozeDuration,
-        instructions: scheduleDraft.instructions,
-        start_date: scheduleDraft.startDate,
-        end_date: scheduleDraft.endDate,
-      });
-      error = result.error;
-    } else {
-      // Create new schedule
-      const result = await saveSchedule(schedulingMedId);
-      error = result.error;
-    }
+      if (existing && existing.length > 0) {
+        // Update existing schedule
+        await updateScheduleMut.mutateAsync({
+          id: existing[0].id,
+          updates: {
+            frequency: scheduleDraft.frequency.toLowerCase(),
+            selected_days: scheduleDraft.selectedDays,
+            times_of_day: scheduleDraft.timesOfDay,
+            dosage_per_dose: scheduleDraft.dosagePerDose,
+            push_notifications: scheduleDraft.pushNotifications,
+            sms_alerts: scheduleDraft.smsAlerts,
+            snooze_duration: scheduleDraft.snoozeDuration,
+            instructions: scheduleDraft.instructions,
+            start_date: scheduleDraft.startDate,
+            end_date: scheduleDraft.endDate,
+          },
+        });
+      } else {
+        // Create new schedule
+        await createScheduleMut.mutateAsync({
+          medicationId: schedulingMedId,
+          scheduleDraft,
+        });
+      }
 
-    setSaving(false);
-    if (error) {
-      Toast.show({ type: 'error', text1: 'Save failed', text2: error });
-      return;
+      router.push('/medication/success');
+    } catch (err: any) {
+      Toast.show({ type: 'error', text1: 'Save failed', text2: err.message });
+    } finally {
+      setSaving(false);
     }
-    router.push('/medication/success');
   };
 
   return (

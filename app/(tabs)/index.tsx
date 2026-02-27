@@ -1,8 +1,9 @@
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
-import { router, useFocusEffect } from 'expo-router';
-import { useState, useCallback, useMemo } from 'react';
+import { router } from 'expo-router';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useQueryClient } from '@tanstack/react-query';
 import { ProgressRing } from '../../components/ui/ProgressRing';
 import { MedicationCard } from '../../components/ui/MedicationCard';
 import { AlertDialog } from '../../components/ui/AlertDialog';
@@ -14,10 +15,19 @@ import { type ColorScheme, gradients, shadows } from '../../components/ui/theme'
 import { useThemeColors } from '../../hooks/useThemeColors';
 import { useCalendar } from '../../hooks/useCalendar';
 import { useSnooze } from '../../hooks/useSnooze';
-import { useMedication } from '../../contexts/MedicationContext';
+import {
+  useMedications,
+  useSchedules,
+  useDoseLogsByDate,
+  useDoseLogsByRange,
+  useLogDose,
+  useDeleteDoseLog,
+  useAdjustSupply,
+} from '../../hooks/useQueryHooks';
+import { queryKeys } from '../../lib/queryKeys';
 import { toISO } from '../../utils/date';
 import { buildTodayDoses, type TodayDose } from '../../utils/dose';
-import { computeDayStatusMap, type DayStatus } from '../../utils/calendar';
+import { computeDayStatusMap } from '../../utils/calendar';
 import { formatTimeLeft } from '../../utils/snooze';
 
 // ─ Component ───────────────────────────────────────────────────────
@@ -25,58 +35,19 @@ import { formatTimeLeft } from '../../utils/snooze';
 export default function TodayDashboard() {
   const c = useThemeColors();
   const styles = useMemo(() => makeStyles(c), [c]);
-  const {
-    fetchMedications,
-    fetchAllSchedules,
-    fetchDoseLogsForDate,
-    fetchDoseLogsForRange,
-    logDose,
-    deleteDoseLog,
-    adjustSupply,
-  } = useMedication();
+  const queryClient = useQueryClient();
 
   const calendar = useCalendar();
   const { selectedISO, selectedDayLabel, todayISO, isToday, dateStr } = calendar;
 
-  const [doses, setDoses] = useState<TodayDose[]>([]);
-  const [hasMedications, setHasMedications] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [dayStatusMap, setDayStatusMap] = useState<Record<string, DayStatus>>({});
+  // ── Data queries ──
 
-  // ── Data loading ──
+  const { data: medications = [], isLoading: medsLoading, error: medsError } = useMedications();
+  const { data: schedules = [], isLoading: schLoading, error: schError } = useSchedules();
+  const { data: doseLogs = [], isLoading: logsLoading, error: logsError } = useDoseLogsByDate(selectedISO);
 
-  const loadDoses = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const [medsRes, schRes, logsRes] = await Promise.all([
-        fetchMedications(),
-        fetchAllSchedules(),
-        fetchDoseLogsForDate(selectedISO),
-      ]);
-
-      const firstError = medsRes.error ?? schRes.error ?? logsRes.error;
-      if (firstError) {
-        setError(firstError);
-        return;
-      }
-
-      setHasMedications(medsRes.data.length > 0);
-      setDoses(buildTodayDoses(medsRes.data, schRes.data, logsRes.data, selectedDayLabel, selectedISO));
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load schedule');
-    } finally {
-      setLoading(false);
-    }
-  }, [fetchMedications, fetchAllSchedules, fetchDoseLogsForDate, selectedISO, selectedDayLabel]);
-
-  useFocusEffect(useCallback(() => { loadDoses(); }, [loadDoses]));
-
-  // ── Day status indicators ──
-
-  const loadDayStatuses = useCallback(async () => {
+  // Day status range (covers both week strip and expanded month)
+  const { rangeStartISO, rangeEndISO } = useMemo(() => {
     const today = new Date();
     const weekStart = new Date(today);
     weekStart.setDate(weekStart.getDate() - 3);
@@ -88,24 +59,38 @@ export default function TodayDashboard() {
 
     const rangeStart = weekStart < monthStart ? weekStart : monthStart;
     const rangeEnd = weekEnd > monthEnd ? weekEnd : monthEnd;
-    const startISO = toISO(rangeStart);
-    const endISO = toISO(rangeEnd);
+    return { rangeStartISO: toISO(rangeStart), rangeEndISO: toISO(rangeEnd) };
+  }, [calendar.selectedDate, todayISO]);
 
-    const [medsRes, schRes, logsRes] = await Promise.all([
-      fetchMedications(),
-      fetchAllSchedules(),
-      fetchDoseLogsForRange(startISO, endISO),
-    ]);
+  const { data: rangeLogs = [] } = useDoseLogsByRange(rangeStartISO, rangeEndISO);
 
-    if (medsRes.error || schRes.error || logsRes.error) return;
-    setDayStatusMap(computeDayStatusMap(startISO, endISO, medsRes.data, schRes.data, logsRes.data));
-  }, [fetchMedications, fetchAllSchedules, fetchDoseLogsForRange, calendar.selectedDate, todayISO]);
+  // ── Mutations ──
 
-  useFocusEffect(useCallback(() => { loadDayStatuses(); }, [loadDayStatuses]));
+  const logDoseMut = useLogDose();
+  const deleteDoseLogMut = useDeleteDoseLog();
+  const adjustSupplyMut = useAdjustSupply();
 
-  const refreshStatuses = useCallback(() => {
-    setTimeout(loadDayStatuses, 300);
-  }, [loadDayStatuses]);
+  // ── Derived state ──
+
+  const loading = medsLoading || schLoading || logsLoading;
+  const error = medsError ?? schError ?? logsError;
+  const hasMedications = medications.length > 0;
+
+  const computedDoses = useMemo(
+    () => buildTodayDoses(medications, schedules, doseLogs, selectedDayLabel, selectedISO),
+    [medications, schedules, doseLogs, selectedDayLabel, selectedISO],
+  );
+
+  const [doses, setDoses] = useState<TodayDose[]>([]);
+
+  useEffect(() => {
+    setDoses(computedDoses);
+  }, [computedDoses]);
+
+  const dayStatusMap = useMemo(
+    () => computeDayStatusMap(rangeStartISO, rangeEndISO, medications, schedules, rangeLogs),
+    [rangeStartISO, rangeEndISO, medications, schedules, rangeLogs],
+  );
 
   // ── Dose actions ──
 
@@ -113,23 +98,25 @@ export default function TodayDashboard() {
     async (dose: TodayDose, newStatus: 'taken' | 'skipped') => {
       setDoses((prev) => prev.map((d) => (d.key === dose.key ? { ...d, status: newStatus } : d)));
 
-      const { data, error: err } = await logDose(
-        dose.scheduleId, dose.medicationId, selectedISO, dose.timeLabel, newStatus,
-      );
+      try {
+        const data = await logDoseMut.mutateAsync({
+          scheduleId: dose.scheduleId,
+          medicationId: dose.medicationId,
+          date: selectedISO,
+          timeLabel: dose.timeLabel,
+          status: newStatus,
+        });
 
-      if (err) {
-        setDoses((prev) => prev.map((d) => (d.key === dose.key ? { ...d, status: 'pending', doseLogId: null } : d)));
-        return;
-      }
-
-      if (data) {
         setDoses((prev) => prev.map((d) => (d.key === dose.key ? { ...d, doseLogId: data.id } : d)));
-      }
 
-      if (newStatus === 'taken') adjustSupply(dose.medicationId, -dose.dosagePerDose);
-      refreshStatuses();
+        if (newStatus === 'taken') {
+          adjustSupplyMut.mutate({ medicationId: dose.medicationId, delta: -dose.dosagePerDose });
+        }
+      } catch {
+        setDoses((prev) => prev.map((d) => (d.key === dose.key ? { ...d, status: 'pending', doseLogId: null } : d)));
+      }
     },
-    [logDose, adjustSupply, selectedISO, refreshStatuses],
+    [logDoseMut, adjustSupplyMut, selectedISO],
   );
 
   const handleUndo = useCallback(
@@ -138,24 +125,49 @@ export default function TodayDashboard() {
       const prevStatus = dose.status;
       setDoses((prev) => prev.map((d) => (d.key === dose.key ? { ...d, status: 'pending', doseLogId: null } : d)));
 
-      const { error: err } = await deleteDoseLog(dose.doseLogId);
-      if (err) {
+      try {
+        await deleteDoseLogMut.mutateAsync(dose.doseLogId);
+        if (prevStatus === 'taken') {
+          adjustSupplyMut.mutate({ medicationId: dose.medicationId, delta: dose.dosagePerDose });
+        }
+      } catch {
         setDoses((prev) => prev.map((d) => (d.key === dose.key ? { ...d, status: prevStatus, doseLogId: dose.doseLogId } : d)));
-      } else {
-        if (prevStatus === 'taken') adjustSupply(dose.medicationId, dose.dosagePerDose);
-        refreshStatuses();
       }
     },
-    [deleteDoseLog, adjustSupply, refreshStatuses],
+    [deleteDoseLogMut, adjustSupplyMut],
   );
 
-  // ── Snooze ──
+  // ── Snooze adapters ──
+
+  const logDoseAdapter = useCallback(
+    async (scheduleId: string, medicationId: string, date: string, timeLabel: string, status: 'taken' | 'skipped') => {
+      try {
+        const data = await logDoseMut.mutateAsync({ scheduleId, medicationId, date, timeLabel, status });
+        return { data, error: null };
+      } catch (err: unknown) {
+        return { data: null, error: err instanceof Error ? err.message : 'Failed to log dose' };
+      }
+    },
+    [logDoseMut],
+  );
+
+  const adjustSupplyAdapter = useCallback(
+    (medicationId: string, delta: number) => {
+      adjustSupplyMut.mutate({ medicationId, delta });
+    },
+    [adjustSupplyMut],
+  );
+
+  const refreshDoses = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.doseLogs.all });
+    queryClient.invalidateQueries({ queryKey: queryKeys.medications.all });
+  }, [queryClient]);
 
   const snooze = useSnooze({
     selectedISO,
-    loadDoses,
-    logDose,
-    adjustSupply,
+    loadDoses: refreshDoses,
+    logDose: logDoseAdapter,
+    adjustSupply: adjustSupplyAdapter,
     handleStatusChange,
   });
 
@@ -311,7 +323,11 @@ export default function TodayDashboard() {
 
           {/* Error state */}
           {!loading && error && (
-            <ErrorState title="Couldn't load schedule" message={error} onRetry={loadDoses} />
+            <ErrorState title="Couldn't load schedule" message={error.message} onRetry={() => {
+              queryClient.invalidateQueries({ queryKey: queryKeys.medications.all });
+              queryClient.invalidateQueries({ queryKey: queryKeys.schedules.all });
+              queryClient.invalidateQueries({ queryKey: queryKeys.doseLogs.all });
+            }} />
           )}
 
           {/* Empty state — no medications at all */}

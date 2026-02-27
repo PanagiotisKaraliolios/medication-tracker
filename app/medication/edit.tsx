@@ -16,50 +16,42 @@ import { Button } from '../../components/ui/Button';
 import { Stepper } from '../../components/ui/Stepper';
 import { type ColorScheme, borderRadius, shadows } from '../../components/ui/theme';
 import { useThemeColors } from '../../hooks/useThemeColors';
-import { useMedication, type MedicationRow, type MedicationUpdate } from '../../contexts/MedicationContext';
+import { useMedication as useMedicationQuery, useUpdateMedication } from '../../hooks/useQueryHooks';
 import { scheduleLowSupplyReminder, cancelLowSupplyReminder } from '../../lib/notifications';
 import Toast from 'react-native-toast-message';
 import { ICON_OPTIONS } from '../../constants/icons';
 import { FORM_OPTIONS } from '../../constants/medications';
+import type { MedicationUpdate } from '../../types/database';
 
 export default function EditMedicationScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const c = useThemeColors();
   const styles = useMemo(() => makeStyles(c), [c]);
-  const { fetchMedication, updateMedication } = useMedication();
+  const { data: original, isLoading: loading, error: queryError } = useMedicationQuery(id);
+  const updateMedicationMut = useUpdateMedication();
 
-  // Local form state (not shared draft — isolated to this screen)
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [original, setOriginal] = useState<MedicationRow | null>(null);
-
   const [name, setName] = useState('');
   const [dosage, setDosage] = useState('');
   const [form, setForm] = useState('tablet');
   const [icon, setIcon] = useState('pill');
   const [currentSupply, setCurrentSupply] = useState(30);
   const [lowSupplyThreshold, setLowSupplyThreshold] = useState(10);
+  const [initialized, setInitialized] = useState(false);
 
-  // Load existing medication
+  // Populate local form state when data loads
   useEffect(() => {
-    if (!id) return;
-    (async () => {
-      setLoading(true);
-      const medResult = await fetchMedication(id);
-      const data = medResult.data;
-      if (data) {
-        setOriginal(data);
-        setName(data.name);
-        setDosage(data.dosage);
-        setForm(data.form ?? 'tablet');
-        setIcon(data.icon ?? 'pill');
-        setCurrentSupply(data.current_supply ?? 30);
-        setLowSupplyThreshold(data.low_supply_threshold ?? 10);
-      }
-      setLoading(false);
-    })();
-  }, [id]);
+    if (original && !initialized) {
+      setName(original.name);
+      setDosage(original.dosage);
+      setForm(original.form ?? 'tablet');
+      setIcon(original.icon ?? 'pill');
+      setCurrentSupply(original.current_supply ?? 30);
+      setLowSupplyThreshold(original.low_supply_threshold ?? 10);
+      setInitialized(true);
+    }
+  }, [original, initialized]);
 
   const isFormValid = name.trim().length > 0 && dosage.trim().length > 0;
 
@@ -76,23 +68,23 @@ export default function EditMedicationScreen() {
       low_supply_threshold: lowSupplyThreshold,
     };
 
-    const { error: medError } = await updateMedication(id, medUpdates);
-    setSaving(false);
+    try {
+      await updateMedicationMut.mutateAsync({ id, updates: medUpdates });
 
-    if (medError) {
-      Toast.show({ type: 'error', text1: 'Update failed', text2: medError });
-      return;
+      // Re-evaluate low-supply reminder after manual edit of supply or threshold
+      if (currentSupply <= lowSupplyThreshold) {
+        scheduleLowSupplyReminder(id, name, currentSupply).catch(() => {});
+      } else {
+        cancelLowSupplyReminder(id).catch(() => {});
+      }
+
+      Toast.show({ type: 'success', text1: 'Medication updated' });
+      router.back();
+    } catch (err: any) {
+      Toast.show({ type: 'error', text1: 'Update failed', text2: err.message });
+    } finally {
+      setSaving(false);
     }
-
-    // Re-evaluate low-supply reminder after manual edit of supply or threshold
-    if (currentSupply <= lowSupplyThreshold) {
-      scheduleLowSupplyReminder(id, name, currentSupply).catch(() => {});
-    } else {
-      cancelLowSupplyReminder(id).catch(() => {});
-    }
-
-    Toast.show({ type: 'success', text1: 'Medication updated' });
-    router.back();
   };
 
   if (loading) {
@@ -103,7 +95,7 @@ export default function EditMedicationScreen() {
     );
   }
 
-  if (!original) {
+  if (!original && !loading) {
     return (
       <View style={[styles.container, { justifyContent: 'center', alignItems: 'center', padding: 24 }]}>
         <Feather name="alert-circle" size={48} color={c.error} />

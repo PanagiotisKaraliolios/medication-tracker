@@ -1,6 +1,6 @@
 import { DAY_LABELS } from '../constants/days';
 import { toISO } from './date';
-import type { MedicationRow, ScheduleRow, DoseLogRow } from '../contexts/MedicationContext';
+import type { MedicationRow, ScheduleRow, DoseLogRow } from '../types/database';
 
 /**
  * Compute overall adherence percentage for the given date range.

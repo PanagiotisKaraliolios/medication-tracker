@@ -71,7 +71,7 @@ export function TimePickerModal({ visible, onClose, onConfirm }: TimePickerModal
                   <TouchableOpacity
                     style={styles.arrowBtn}
                     onPress={() => cycleHour(1)}
-                    activeOpacity={0.6}s
+                    activeOpacity={0.6}
                   >
                     <Feather name="chevron-up" size={24} color={c.gray500} />
                   </TouchableOpacity>

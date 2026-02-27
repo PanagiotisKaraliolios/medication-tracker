@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -14,7 +14,8 @@ import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { type ColorScheme, borderRadius, shadows } from '../../components/ui/theme';
 import { useThemeColors } from '../../hooks/useThemeColors';
-import { useMedication } from '../../contexts/MedicationContext';
+import { useMedicationDraft } from '../../stores/draftStores';
+import { useCreateMedication } from '../../hooks/useQueryHooks';
 import Toast from 'react-native-toast-message';
 import { ICON_OPTIONS } from '../../constants/icons';
 import { FORM_OPTIONS } from '../../constants/medications';
@@ -23,8 +24,8 @@ export default function AddMedicationScreen() {
   const router = useRouter();
   const c = useThemeColors();
   const styles = useMemo(() => makeStyles(c), [c]);
-  const { draft, updateDraft, resetDraft, saveMedication } = useMedication();
-  const [saving, setSaving] = useState(false);
+  const { draft, updateDraft, resetDraft } = useMedicationDraft();
+  const createMedication = useCreateMedication();
 
   // Reset draft when opening screen
   useEffect(() => {
@@ -34,14 +35,12 @@ export default function AddMedicationScreen() {
   const isFormValid = draft.name.trim().length > 0 && draft.dosage.trim().length > 0;
 
   const handleSave = async () => {
-    setSaving(true);
-    const { error } = await saveMedication();
-    setSaving(false);
-    if (error) {
-      Toast.show({ type: 'error', text1: 'Save failed', text2: error });
-      return;
+    try {
+      await createMedication.mutateAsync();
+      router.push('/medication/success');
+    } catch (err: any) {
+      Toast.show({ type: 'error', text1: 'Save failed', text2: err.message });
     }
-    router.push('/medication/success');
   };
 
   return (
@@ -170,8 +169,8 @@ export default function AddMedicationScreen() {
       </ScrollView>
 
       <View style={styles.footer}>
-        <Button variant="primary" onPress={handleSave} disabled={!isFormValid || saving}>
-          {saving ? 'Saving…' : 'Save Medication'}
+        <Button variant="primary" onPress={handleSave} disabled={!isFormValid || createMedication.isPending}>
+          {createMedication.isPending ? 'Saving…' : 'Save Medication'}
         </Button>
       </View>
     </KeyboardAvoidingView>

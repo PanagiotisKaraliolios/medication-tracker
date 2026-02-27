@@ -12,13 +12,13 @@ import { Stepper } from '../../components/ui/Stepper';
 import { DateRangeSection } from '../../components/ui/DateRangeSection';
 import { type ColorScheme, borderRadius } from '../../components/ui/theme';
 import { useThemeColors } from '../../hooks/useThemeColors';
-import { useMedication } from '../../contexts/MedicationContext';
+import { useScheduleDraft } from '../../stores/draftStores';
 import { PRESET_LABELS, FREQUENCY_OPTIONS } from '../../constants/schedule';
 import { WEEKDAY_ORDER } from '../../constants/days';
 
 export default function ScheduleScreen() {
   const router = useRouter();
-  const { scheduleDraft, updateScheduleDraft } = useMedication();
+  const { scheduleDraft, updateScheduleDraft } = useScheduleDraft();
   const c = useThemeColors();
   const styles = useMemo(() => makeStyles(c), [c]);
   const [showTimePicker, setShowTimePicker] = useState(false);

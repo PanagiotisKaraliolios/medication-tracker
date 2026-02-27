@@ -1,11 +1,11 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter, useFocusEffect } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useAuth } from '../../contexts/AuthContext';
-import { useMedication } from '../../contexts/MedicationContext';
 import { useThemePreference, type ThemePreference } from '../../contexts/ThemeContext';
+import { useMedications, useSchedules, useDoseLogsByRange } from '../../hooks/useQueryHooks';
 import { AlertDialog } from '../../components/ui/AlertDialog';
 import { type ColorScheme, gradients, borderRadius, shadows } from '../../components/ui/theme';
 import { useThemeColors } from '../../hooks/useThemeColors';
@@ -38,56 +38,48 @@ export default function ProfileScreen() {
   const c = useThemeColors();
   const styles = useMemo(() => makeStyles(c), [c]);
   const { user, profileName, signOut } = useAuth();
-  const { fetchMedications, fetchAllSchedules, fetchDoseLogsForRange } = useMedication();
   const { preference, setPreference } = useThemePreference();
   const router = useRouter();
   const [logoutVisible, setLogoutVisible] = useState(false);
   const [logoutLoading, setLogoutLoading] = useState(false);
 
-  const [medCount, setMedCount] = useState(0);
-  const [adherence, setAdherence] = useState(0);
-  const [streak, setStreak] = useState(0);
+  // ── Date ranges for stats ──
 
-  // Fetch stats whenever the tab gains focus
-  const loadStats = useCallback(async () => {
+  const { todayISO, adherenceStartISO, rangeStartISO } = useMemo(() => {
     const today = new Date();
-    const todayISO = toISO(today);
+    const tISO = toISO(today);
 
-    // Adherence window: last 30 days
     const start = new Date(today);
     start.setDate(start.getDate() - 29);
-    const startISO = toISO(start);
+    const aStartISO = toISO(start);
 
-    // Streak window: up to 365 days back
     const streakStart = new Date(today);
     streakStart.setDate(streakStart.getDate() - 365);
-    const streakStartISO = toISO(streakStart);
+    const sStartISO = toISO(streakStart);
 
-    // Use the earlier date for the log range
-    const rangeStartISO = streakStartISO < startISO ? streakStartISO : startISO;
+    return {
+      todayISO: tISO,
+      adherenceStartISO: aStartISO,
+      rangeStartISO: sStartISO < aStartISO ? sStartISO : aStartISO,
+    };
+  }, []);
 
-    const [medsRes, schRes, logsRes] = await Promise.all([
-      fetchMedications(),
-      fetchAllSchedules(),
-      fetchDoseLogsForRange(rangeStartISO, todayISO),
-    ]);
+  // ── Queries ──
 
-    const firstError = medsRes.error ?? schRes.error ?? logsRes.error;
-    if (firstError) return;
+  const { data: medications = [] } = useMedications();
+  const { data: schedules = [] } = useSchedules();
+  const { data: logs = [] } = useDoseLogsByRange(rangeStartISO, todayISO);
 
-    const meds = medsRes.data;
-    const schedules = schRes.data;
-    const logs = logsRes.data;
+  // ── Computed stats ──
 
-    setMedCount(meds.length);
-    setAdherence(computeAdherence(startISO, todayISO, meds, schedules, logs));
-    setStreak(computeStreak(todayISO, meds, schedules, logs));
-  }, [fetchMedications, fetchAllSchedules, fetchDoseLogsForRange]);
-
-  useFocusEffect(
-    useCallback(() => {
-      loadStats();
-    }, [loadStats]),
+  const medCount = medications.length;
+  const adherence = useMemo(
+    () => computeAdherence(adherenceStartISO, todayISO, medications, schedules, logs),
+    [adherenceStartISO, todayISO, medications, schedules, logs],
+  );
+  const streak = useMemo(
+    () => computeStreak(todayISO, medications, schedules, logs),
+    [todayISO, medications, schedules, logs],
   );
 
   const handleLogout = async () => {

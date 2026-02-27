@@ -23,23 +23,22 @@ import { DateRangeSection } from '../../components/ui/DateRangeSection';
 import { NotificationCard } from '../../components/ui/NotificationCard';
 import { type ColorScheme, borderRadius } from '../../components/ui/theme';
 import { useThemeColors } from '../../hooks/useThemeColors';
-import { useMedication, type ScheduleRow, type ScheduleUpdate } from '../../contexts/MedicationContext';
+import { useSchedule, useUpdateSchedule } from '../../hooks/useQueryHooks';
 import Toast from 'react-native-toast-message';
 import { PRESET_LABELS, FREQUENCY_OPTIONS, SNOOZE_OPTIONS } from '../../constants/schedule';
 import { WEEKDAY_ORDER } from '../../constants/days';
 import { capitalize } from '../../utils/string';
+import type { ScheduleUpdate } from '../../types/database';
 
 export default function EditScheduleScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const c = useThemeColors();
   const styles = useMemo(() => makeStyles(c), [c]);
-  const { fetchSchedule, updateSchedule } = useMedication();
+  const { data: original, isLoading: loading, error: queryError } = useSchedule(id);
+  const updateScheduleMut = useUpdateSchedule();
 
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [original, setOriginal] = useState<ScheduleRow | null>(null);
-
   const [frequency, setFrequency] = useState('Daily');
   const [selectedDays, setSelectedDays] = useState<string[]>(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']);
   const [timesOfDay, setTimesOfDay] = useState<string[]>(['Morning']);
@@ -50,30 +49,25 @@ export default function EditScheduleScreen() {
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [startDate, setStartDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [endDate, setEndDate] = useState<string | null>(null);
+  const [initialized, setInitialized] = useState(false);
 
   const customTimes = timesOfDay.filter((t) => !PRESET_LABELS.has(t));
 
+  // Populate local form state when data loads
   useEffect(() => {
-    if (!id) return;
-    (async () => {
-      setLoading(true);
-      const result = await fetchSchedule(id);
-      const data = result.data;
-      if (data) {
-        setOriginal(data);
-        setFrequency(capitalize(data.frequency));
-        setSelectedDays(data.selected_days);
-        setTimesOfDay(data.times_of_day);
-        setDosagePerDose(data.dosage_per_dose);
-        setPushNotifications(data.push_notifications);
-        setSnoozeDuration(data.snooze_duration);
-        setInstructions(data.instructions ?? '');
-        setStartDate(data.start_date ?? new Date().toISOString().slice(0, 10));
-        setEndDate(data.end_date ?? null);
-      }
-      setLoading(false);
-    })();
-  }, [id]);
+    if (original && !initialized) {
+      setFrequency(capitalize(original.frequency));
+      setSelectedDays(original.selected_days);
+      setTimesOfDay(original.times_of_day);
+      setDosagePerDose(original.dosage_per_dose);
+      setPushNotifications(original.push_notifications);
+      setSnoozeDuration(original.snooze_duration);
+      setInstructions(original.instructions ?? '');
+      setStartDate(original.start_date ?? new Date().toISOString().slice(0, 10));
+      setEndDate(original.end_date ?? null);
+      setInitialized(true);
+    }
+  }, [original, initialized]);
 
   const toggleTime = (label: string) => {
     setTimesOfDay((prev) =>
@@ -106,16 +100,15 @@ export default function EditScheduleScreen() {
       end_date: endDate,
     };
 
-    const { error } = await updateSchedule(id, updates);
-    setSaving(false);
-
-    if (error) {
-      Toast.show({ type: 'error', text1: 'Update failed', text2: error });
-      return;
+    try {
+      await updateScheduleMut.mutateAsync({ id, updates });
+      Toast.show({ type: 'success', text1: 'Schedule updated' });
+      router.back();
+    } catch (err: any) {
+      Toast.show({ type: 'error', text1: 'Update failed', text2: err.message });
+    } finally {
+      setSaving(false);
     }
-
-    Toast.show({ type: 'success', text1: 'Schedule updated' });
-    router.back();
   };
 
   if (loading) {
@@ -126,7 +119,7 @@ export default function EditScheduleScreen() {
     );
   }
 
-  if (!original) {
+  if (!original && !loading) {
     return (
       <View style={[styles.container, { justifyContent: 'center', alignItems: 'center', padding: 24 }]}>
         <Feather name="alert-circle" size={48} color={c.error} />

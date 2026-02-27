@@ -1,46 +1,23 @@
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
-import { useState, useCallback, useMemo } from 'react';
-import { router, useFocusEffect } from 'expo-router';
+import { useMemo } from 'react';
+import { router } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { InventoryProgressBar } from '../../components/ui/InventoryProgressBar';
-import { Button } from '../../components/ui/Button';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { LoadingState } from '../../components/ui/LoadingState';
 import { ErrorState } from '../../components/ui/ErrorState';
 import { type ColorScheme, gradients, borderRadius, shadows } from '../../components/ui/theme';
 import { useThemeColors } from '../../hooks/useThemeColors';
-import { useMedication, type MedicationRow } from '../../contexts/MedicationContext';
+import { useMedications } from '../../hooks/useQueryHooks';
+import type { MedicationRow } from '../../types/database';
 
 export default function MedicationsScreen() {
   const c = useThemeColors();
   const styles = useMemo(() => makeStyles(c), [c]);
-  const { fetchMedications } = useMedication();
-  const [medications, setMedications] = useState<MedicationRow[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { data: medications = [], isLoading, error, refetch } = useMedications();
 
-  const loadMedications = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const { data, error: err } = await fetchMedications();
-      if (err) throw new Error(err);
-      setMedications(data);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load medications');
-    } finally {
-      setLoading(false);
-    }
-  }, [fetchMedications]);
-
-  useFocusEffect(
-    useCallback(() => {
-      loadMedications();
-    }, [loadMedications]),
-  );
-
-  if (loading) {
+  if (isLoading) {
     return (
       <View style={styles.container}>
         <LinearGradient
@@ -70,8 +47,8 @@ export default function MedicationsScreen() {
         </LinearGradient>
         <ErrorState
           title="Couldn't load medications"
-          message={error}
-          onRetry={loadMedications}
+          message={error.message}
+          onRetry={() => refetch()}
         />
       </View>
     );

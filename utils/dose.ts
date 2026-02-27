@@ -1,6 +1,6 @@
 import { TIME_SLOT_MAP } from '../constants/schedule';
 import { parseTimeToMinutes } from './date';
-import type { MedicationRow, ScheduleRow, DoseLogRow } from '../contexts/MedicationContext';
+import type { MedicationRow, ScheduleRow, DoseLogRow } from '../types/database';
 
 /** Represents a single dose to take/track on the Today screen. */
 export type TodayDose = {

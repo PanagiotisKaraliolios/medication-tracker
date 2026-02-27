@@ -1,9 +1,13 @@
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { ThemeProvider, DefaultTheme, DarkTheme } from '@react-navigation/native';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { useReactQueryDevTools } from '@dev-plugins/react-query';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import { ThemePreferenceProvider, useThemePreference } from '../contexts/ThemeContext';
-import { MedicationProvider, useMedication } from '../contexts/MedicationContext';
+import { queryClient } from '../lib/queryClient';
 import { registerNotificationHandler, rescheduleAllMedicationReminders, recheckAllLowSupplyReminders } from '../lib/notifications';
+import { supabase } from '../lib/supabase';
+import type { MedicationRow, ScheduleRow } from '../types/database';
 import { useEffect, useRef } from 'react';
 
 // Register notification handler ASAP so foreground notifications display correctly
@@ -37,11 +41,12 @@ const DarkNavTheme = {
 };
 
 function RootLayoutNav() {
+  useReactQueryDevTools(queryClient);
+
   const { session, loading, hasProfile } = useAuth();
   const segments = useSegments();
   const router = useRouter();
   const { resolvedScheme, colors: c } = useThemePreference();
-  const { fetchAllSchedules, fetchMedications } = useMedication();
   const remindersRegistered = useRef(false);
 
   // Re-register medication reminders on app launch once user is authenticated
@@ -51,23 +56,26 @@ function RootLayoutNav() {
 
     (async () => {
       try {
-        const [schedRes, medRes] = await Promise.all([
-          fetchAllSchedules(),
-          fetchMedications(),
+        const [{ data: schedData, error: schedErr }, { data: medData, error: medErr }] = await Promise.all([
+          supabase.from('schedules').select('*').eq('user_id', session.user.id).eq('is_active', true),
+          supabase.from('medications').select('*').eq('user_id', session.user.id).eq('is_active', true),
         ]);
-        if (schedRes.error || medRes.error) return;
+        if (schedErr || medErr) return;
+
+        const schedules = (schedData ?? []) as ScheduleRow[];
+        const meds = (medData ?? []) as MedicationRow[];
 
         // Build a map from schedule ID → medication name
         const medNameById = Object.fromEntries(
-          medRes.data.map((m) => [m.id, m.name]),
+          meds.map((m) => [m.id, m.name]),
         );
         const scheduleToMedName: Record<string, string> = {};
-        for (const s of schedRes.data) {
+        for (const s of schedules) {
           scheduleToMedName[s.id] = medNameById[s.medication_id] ?? 'your medication';
         }
 
         await rescheduleAllMedicationReminders(
-          schedRes.data.map((s) => ({
+          schedules.map((s) => ({
             id: s.id,
             medication_id: s.medication_id,
             frequency: s.frequency,
@@ -81,7 +89,7 @@ function RootLayoutNav() {
         );
 
         // Check all medications for low supply and schedule/cancel reminders
-        await recheckAllLowSupplyReminders(medRes.data);
+        await recheckAllLowSupplyReminders(meds);
       } catch (err) {
         console.warn('[Layout] Failed to re-register reminders:', err);
       }
@@ -147,13 +155,13 @@ export default function RootLayout() {
 function RootLayoutInner() {
   const { resolvedScheme } = useThemePreference();
   return (
-    <ThemeProvider value={resolvedScheme === 'dark' ? DarkNavTheme : LightNavTheme}>
-      <AuthProvider>
-        <MedicationProvider>
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider value={resolvedScheme === 'dark' ? DarkNavTheme : LightNavTheme}>
+        <AuthProvider>
           <RootLayoutNav />
-        </MedicationProvider>
-        <Toast />
-      </AuthProvider>
-    </ThemeProvider>
+          <Toast />
+        </AuthProvider>
+      </ThemeProvider>
+    </QueryClientProvider>
   );
 }
