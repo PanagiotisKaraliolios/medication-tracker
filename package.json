@@ -8,7 +8,8 @@
     "prebuild": "expo prebuild --clean",
     "android": "bun run prebuild && expo run:android",
     "ios": "bun run prebuild && expo run:ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@expo/metro-runtime": "~55.0.6",

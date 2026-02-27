@@ -1,0 +1,130 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version tag (e.g. v1.1.0)"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+env:
+  JAVA_VERSION: "17"
+  NODE_VERSION: "20"
+
+jobs:
+  build-and-release:
+    name: Build APK & Create Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Determine version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            VERSION="${GITHUB_REF#refs/tags/}"
+          fi
+          echo "tag=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "📦 Building version: $VERSION"
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: TypeScript check
+        run: bun run typecheck
+
+      - name: Generate native project
+        run: npx expo prebuild --clean --platform android
+
+      - name: Decode keystore
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/release.keystore
+
+      - name: Inject release signing config
+        run: |
+          # Patch build.gradle to add release signing config
+          sed -i '/signingConfigs {/,/}/ {
+            /debug {/,/}/!b
+            /}/a\
+              release {\
+                storeFile file("release.keystore")\
+                storePassword System.getenv("KEYSTORE_PASSWORD")\
+                keyAlias System.getenv("KEY_ALIAS")\
+                keyPassword System.getenv("KEY_PASSWORD")\
+              }
+          }' android/app/build.gradle
+
+          # Point the release buildType to our release signing config
+          sed -i 's/signingConfig signingConfigs.debug\b/signingConfig signingConfigs.release/' android/app/build.gradle
+
+          # Verify the patch
+          grep -A4 'release {' android/app/build.gradle
+
+      - name: Build release APK
+        working-directory: android
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: ./gradlew assembleRelease --no-daemon
+
+      - name: Rename APK
+        run: |
+          VERSION="${{ steps.version.outputs.tag }}"
+          APK_PATH=$(find android/app/build/outputs/apk/release -name "*.apk" | head -1)
+          cp "$APK_PATH" "MediTrack-${VERSION}.apk"
+          echo "apk_path=MediTrack-${VERSION}.apk" >> "$GITHUB_OUTPUT"
+        id: rename
+
+      - name: Create tag (manual dispatch only)
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          VERSION="${{ steps.version.outputs.tag }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "$VERSION" -m "$VERSION"
+          git push origin "$VERSION"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: ${{ steps.version.outputs.tag }}
+          body: |
+            ## 💊 MediTrack ${{ steps.version.outputs.tag }}
+
+            ### Installation
+            1. Download `MediTrack-${{ steps.version.outputs.tag }}.apk` below
+            2. Transfer to your Android device
+            3. Open the APK to install (enable "Install from unknown sources" if prompted)
+
+            > **Note:** You will need a Supabase backend configured. See the [README](https://github.com/${{ github.repository }}#-getting-started) for setup instructions.
+          files: ${{ steps.rename.outputs.apk_path }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true

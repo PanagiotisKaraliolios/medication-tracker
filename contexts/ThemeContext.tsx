@@ -47,7 +47,7 @@ export function ThemePreferenceProvider({ children }: { children: React.ReactNod
 
   const resolvedScheme: 'light' | 'dark' =
     preference === 'system'
-      ? (systemScheme ?? 'light')
+      ? ((systemScheme === 'dark' ? 'dark' : 'light') as 'light' | 'dark')
       : preference;
 
   const value: ThemeContextType = {

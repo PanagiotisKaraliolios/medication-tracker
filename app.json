@@ -40,6 +40,13 @@
           }
         }
       ]
-    ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "f015c455-1e93-4fe0-8aab-b1cfde09d1cc"
+      }
+    },
+    "owner": "karalioliospanagiotis"
   }
 }
