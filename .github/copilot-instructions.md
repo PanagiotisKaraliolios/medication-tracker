@@ -2,7 +2,7 @@
 
 ## Architecture
 
-**Stack:** Expo SDK 55, React 19.2, React Native 0.83.2, Expo Router 55 (file-based routing), Supabase (auth + Postgres with RLS), TanStack Query v5 (server state), Zustand v5 (client draft state), TypeScript strict mode, Bun package manager.
+**Stack:** Expo SDK 55.0.4, React 19.2, React Native 0.83.2, Expo Router 55.0.3 (file-based routing), Supabase (auth + Postgres with RLS), TanStack Query v5 (server state), Zustand v5 (client draft state), TypeScript 5.9.3 strict mode, Bun package manager.
 
 **Provider hierarchy** (defined in `app/_layout.tsx`):
 `ThemePreferenceProvider` → `QueryClientProvider` → `ThemeProvider` → `AuthProvider` → `RootLayoutNav` + `<Toast />`

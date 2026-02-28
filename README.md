@@ -3,9 +3,9 @@
 A modern, full-featured medication tracking app built with **Expo** and **React Native**. Track medications, set smart reminders, monitor adherence, and stay on top of your health — all from your phone.
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Expo-55-000020?logo=expo&logoColor=white" alt="Expo SDK 55" />
-  <img src="https://img.shields.io/badge/React_Native-0.83-61DAFB?logo=react&logoColor=black" alt="React Native" />
-  <img src="https://img.shields.io/badge/TypeScript-5.9-3178C6?logo=typescript&logoColor=white" alt="TypeScript" />
+  <img src="https://img.shields.io/badge/Expo-55.0.4-000020?logo=expo&logoColor=white" alt="Expo SDK 55" />
+  <img src="https://img.shields.io/badge/React_Native-0.83.2-61DAFB?logo=react&logoColor=black" alt="React Native" />
+  <img src="https://img.shields.io/badge/TypeScript-5.9.3-3178C6?logo=typescript&logoColor=white" alt="TypeScript" />
   <img src="https://img.shields.io/badge/Supabase-Auth_+_Postgres-3FCF8E?logo=supabase&logoColor=white" alt="Supabase" />
   <img src="https://img.shields.io/badge/TanStack_Query-v5-FF4154?logo=reactquery&logoColor=white" alt="TanStack Query" />
 </p>
@@ -112,9 +112,9 @@ A modern, full-featured medication tracking app built with **Expo** and **React 
 
 | Layer | Technology | Purpose |
 |---|---|---|
-| **Framework** | Expo SDK 55, React Native 0.83.2 | Cross-platform mobile |
-| **Routing** | Expo Router 55 | File-based navigation |
-| **Language** | TypeScript 5.9 (strict) | Type safety |
+| **Framework** | Expo SDK 55.0.4, React Native 0.83.2 | Cross-platform mobile |
+| **Routing** | Expo Router 55.0.3 | File-based navigation |
+| **Language** | TypeScript 5.9.3 (strict) | Type safety |
 | **Server State** | TanStack Query v5 | Data fetching, caching, mutations |
 | **Client State** | Zustand v5 | Form draft state for multi-step flows |
 | **Auth & DB** | Supabase | Authentication, Postgres, Row-Level Security |
@@ -350,6 +350,7 @@ function makeStyles(c: ColorScheme) {
 - [Zustand](https://zustand-demo.pmnd.rs/) — Lightweight client state
 - [expo-notifications](https://docs.expo.dev/versions/latest/sdk/notifications/) — Push notifications
 - [expo-linear-gradient](https://docs.expo.dev/versions/latest/sdk/linear-gradient/) — Gradient UI elements
+- [expo-system-ui](https://docs.expo.dev/versions/latest/sdk/system-ui/) — System UI style (light/dark) support
 - [react-native-toast-message](https://github.com/calintamas/react-native-toast-message) — Toast notifications
 
 ---
