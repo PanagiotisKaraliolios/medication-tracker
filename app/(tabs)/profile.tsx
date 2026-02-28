@@ -171,7 +171,9 @@ export default function ProfileScreen() {
                 onPress={
                   item.label === 'Edit Profile'
                     ? () => router.push('/profile/edit')
-                    : undefined
+                    : item.label === 'Notifications'
+                      ? () => router.push('/notification-settings')
+                      : undefined
                 }
               >
                 <View style={styles.menuIcon}>
@@ -181,7 +183,7 @@ export default function ProfileScreen() {
                   <Text style={styles.menuLabel}>{item.label}</Text>
                   {item.subtitle && (
                     <Text style={styles.menuSubtitle}>{item.subtitle}</Text>
-                  )}
+                  )}ss
                 </View>
                 <Feather name="chevron-right" size={20} color={c.gray400} />
               </TouchableOpacity>
@@ -198,7 +200,7 @@ export default function ProfileScreen() {
             <Text style={styles.logoutText}>Log Out</Text>
           </TouchableOpacity>
 
-          <Text style={styles.version}>MediTrack v1.0.0</Text>
+          <Text style={styles.version}>MediTrack v1.0.3</Text>
 
           <View style={{ height: 40 }} />
         </View>

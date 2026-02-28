@@ -3,7 +3,7 @@
     "name": "medication-tracker",
     "slug": "medication-tracker",
     "scheme": "medication-tracker",
-    "version": "1.0.2",
+    "version": "1.0.3",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
@@ -23,7 +23,10 @@
         "backgroundColor": "#1FA2A6"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.anonymous.medicationtracker"
+      "package": "com.anonymous.medicationtracker",
+      "permissions": [
+        "android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"

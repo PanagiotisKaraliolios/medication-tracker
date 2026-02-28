@@ -9,6 +9,8 @@ import { registerNotificationHandler, rescheduleAllMedicationReminders, recheckA
 import { supabase } from '../lib/supabase';
 import type { MedicationRow, ScheduleRow } from '../types/database';
 import { useEffect, useRef } from 'react';
+import { useBatteryOptimization } from '../hooks/useBatteryOptimization';
+import { BatteryOptimizationModal } from '../components/ui/BatteryOptimizationModal';
 
 // Register notification handler ASAP so foreground notifications display correctly
 registerNotificationHandler();
@@ -48,6 +50,7 @@ function RootLayoutNav() {
   const router = useRouter();
   const { resolvedScheme, colors: c } = useThemePreference();
   const remindersRegistered = useRef(false);
+  const { shouldShowModal, openBatterySettings, dismissModal } = useBatteryOptimization();
 
   // Re-register medication reminders on app launch once user is authenticated
   useEffect(() => {
@@ -124,23 +127,36 @@ function RootLayoutNav() {
   }
 
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="index" />
-      <Stack.Screen name="auth/login" />
-      <Stack.Screen name="auth/signup" />
-      <Stack.Screen name="auth/profile-setup" />
-      <Stack.Screen name="(tabs)" />
-      <Stack.Screen name="medication/add" options={{ presentation: 'modal', headerShown: true, title: 'Add Medication' }} />
-      <Stack.Screen name="medication/select" options={{ headerShown: true, title: 'Select Medication' }} />
-      <Stack.Screen name="medication/schedule" options={{ headerShown: true, title: 'Set Schedule' }} />
-      <Stack.Screen name="medication/reminders" options={{ headerShown: true, title: 'Reminders' }} />
-      <Stack.Screen name="medication/review" options={{ headerShown: true, title: 'Review Details' }} />
-      <Stack.Screen name="medication/success" options={{ headerShown: false }} />
-      <Stack.Screen name="medication/[id]" options={{ headerShown: true, title: 'Medication Details' }} />
-      <Stack.Screen name="medication/edit" options={{ headerShown: true, title: 'Edit Medication' }} />
-      <Stack.Screen name="medication/edit-schedule" options={{ headerShown: true, title: 'Edit Schedule' }} />
-      <Stack.Screen name="profile/edit" options={{ headerShown: true, title: 'Edit Profile' }} />
-    </Stack>
+    <>
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="index" />
+        <Stack.Screen name="auth/login" />
+        <Stack.Screen name="auth/signup" />
+        <Stack.Screen name="auth/profile-setup" />
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="medication/add" options={{ presentation: 'modal', headerShown: true, title: 'Add Medication' }} />
+        <Stack.Screen name="medication/select" options={{ headerShown: true, title: 'Select Medication' }} />
+        <Stack.Screen name="medication/schedule" options={{ headerShown: true, title: 'Set Schedule' }} />
+        <Stack.Screen name="medication/reminders" options={{ headerShown: true, title: 'Reminders' }} />
+        <Stack.Screen name="medication/review" options={{ headerShown: true, title: 'Review Details' }} />
+        <Stack.Screen name="medication/success" options={{ headerShown: false }} />
+        <Stack.Screen name="medication/[id]" options={{ headerShown: true, title: 'Medication Details' }} />
+        <Stack.Screen name="medication/edit" options={{ headerShown: true, title: 'Edit Medication' }} />
+        <Stack.Screen name="medication/edit-schedule" options={{ headerShown: true, title: 'Edit Schedule' }} />
+        <Stack.Screen name="profile/edit" options={{ headerShown: true, title: 'Edit Profile' }} />
+        <Stack.Screen name="notification-settings" options={{ headerShown: false }} />
+        <Stack.Screen name="notifications" options={{ headerShown: false }} />
+      </Stack>
+
+      {/* Battery optimization prompt — Android only, shown once for authenticated users */}
+      {session && hasProfile === true && (
+        <BatteryOptimizationModal
+          visible={shouldShowModal}
+          onOpenSettings={openBatterySettings}
+          onDismiss={dismissModal}
+        />
+      )}
+    </>
   );
 }
 
