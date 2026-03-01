@@ -1,5 +1,5 @@
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
-import { useState, useMemo } from 'react';
+import { View, Text, StyleSheet, ScrollView, RefreshControl } from 'react-native';
+import { useState, useMemo, useCallback } from 'react';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useQueryClient } from '@tanstack/react-query';
@@ -36,12 +36,19 @@ export default function ReportsScreen() {
 
   // ── Queries ──
 
-  const { data: medications = [], isLoading: medsLoading, error: medsError } = useMedications();
-  const { data: schedules = [], isLoading: schLoading, error: schError } = useSchedules();
-  const { data: doseLogs = [], isLoading: logsLoading, error: logsError } = useDoseLogsByRange(startISO, endISO);
+  const { data: medications = [], isLoading: medsLoading, error: medsError, refetch: refetchMeds } = useMedications();
+  const { data: schedules = [], isLoading: schLoading, error: schError, refetch: refetchSchedules } = useSchedules();
+  const { data: doseLogs = [], isLoading: logsLoading, error: logsError, refetch: refetchLogs } = useDoseLogsByRange(startISO, endISO);
 
   const loading = medsLoading || schLoading || logsLoading;
   const error = medsError ?? schError ?? logsError;
+
+  const [refreshing, setRefreshing] = useState(false);
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await Promise.all([refetchMeds(), refetchSchedules(), refetchLogs()]);
+    setRefreshing(false);
+  }, [refetchMeds, refetchSchedules, refetchLogs]);
 
   // ── Computed report data ──
 
@@ -103,7 +110,12 @@ export default function ReportsScreen() {
 
   return (
     <View style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[c.teal]} tintColor={c.teal} />
+        }
+      >
         {/* Gradient header with adherence */}
         {renderHeader(
           <View style={styles.adherenceRow}>

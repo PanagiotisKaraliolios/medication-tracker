@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
@@ -23,14 +24,21 @@ export default function MedicationDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const c = useThemeColors();
   const styles = useMemo(() => makeStyles(c), [c]);
-  const { data: med, isLoading } = useMedicationQuery(id);
-  const { data: schedules = [] } = useSchedulesByMedication(id);
+  const { data: med, isLoading, refetch: refetchMed } = useMedicationQuery(id);
+  const { data: schedules = [], refetch: refetchSchedules } = useSchedulesByMedication(id);
   const schedule = schedules.length > 0 ? schedules[0] : null;
   const deleteMedicationMut = useDeleteMedication();
   const deleteScheduleMut = useDeleteSchedule();
 
   const [deleteVisible, setDeleteVisible] = useState(false);
   const [clearScheduleVisible, setClearScheduleVisible] = useState(false);
+
+  const [refreshing, setRefreshing] = useState(false);
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await Promise.all([refetchMed(), refetchSchedules()]);
+    setRefreshing(false);
+  }, [refetchMed, refetchSchedules]);
 
   if (isLoading || !med) {
     return (
@@ -67,6 +75,9 @@ export default function MedicationDetailScreen() {
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[c.teal]} tintColor={c.teal} />
+        }
       >
         {/* Medication Header */}
         <View style={styles.headerCard}>

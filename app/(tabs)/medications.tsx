@@ -1,5 +1,5 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
-import { useMemo } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
+import { useMemo, useState, useCallback } from 'react';
 import { router } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -16,6 +16,13 @@ export default function MedicationsScreen() {
   const c = useThemeColors();
   const styles = useMemo(() => makeStyles(c), [c]);
   const { data: medications = [], isLoading, error, refetch } = useMedications();
+
+  const [refreshing, setRefreshing] = useState(false);
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await refetch();
+    setRefreshing(false);
+  }, [refetch]);
 
   if (isLoading) {
     return (
@@ -57,7 +64,14 @@ export default function MedicationsScreen() {
   if (medications.length === 0) {
     return (
       <View style={styles.container}>
-        <View style={styles.emptyHeader} />
+        <LinearGradient
+          colors={[...gradients.primary]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.header}
+        >
+          <Text style={styles.headerTitle}>Medications</Text>
+        </LinearGradient>
         <EmptyState
           variant="medications"
           actionLabel="Add Medication"
@@ -69,7 +83,12 @@ export default function MedicationsScreen() {
 
   return (
     <View style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[c.teal]} tintColor={c.teal} />
+        }
+      >
         {/* Header */}
         <LinearGradient
           colors={[...gradients.primary]}
@@ -146,14 +165,10 @@ function makeStyles(c: ColorScheme) {
       flex: 1,
       backgroundColor: c.background,
     },
-    emptyHeader: {
-      height: 100,
-      backgroundColor: c.teal,
-    },
     header: {
       paddingTop: 60,
       paddingHorizontal: 24,
-      paddingBottom: 24,
+      paddingBottom: 32,
       borderBottomLeftRadius: 24,
       borderBottomRightRadius: 24,
     },
@@ -161,6 +176,7 @@ function makeStyles(c: ColorScheme) {
       fontSize: 28,
       fontWeight: '700',
       color: c.white,
+      marginBottom: 16,
     },
     headerSub: {
       fontSize: 15,

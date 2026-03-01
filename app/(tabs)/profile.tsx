@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useState, useMemo, useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -66,9 +66,18 @@ export default function ProfileScreen() {
 
   // ── Queries ──
 
-  const { data: medications = [] } = useMedications();
-  const { data: schedules = [] } = useSchedules();
-  const { data: logs = [] } = useDoseLogsByRange(rangeStartISO, todayISO);
+  const { data: medications = [], refetch: refetchMeds } = useMedications();
+  const { data: schedules = [], refetch: refetchSchedules } = useSchedules();
+  const { data: logs = [], refetch: refetchLogs } = useDoseLogsByRange(rangeStartISO, todayISO);
+
+  // ── Pull-to-refresh ──
+
+  const [refreshing, setRefreshing] = useState(false);
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await Promise.all([refetchMeds(), refetchSchedules(), refetchLogs()]);
+    setRefreshing(false);
+  }, [refetchMeds, refetchSchedules, refetchLogs]);
 
   // ── Computed stats ──
 
@@ -95,7 +104,12 @@ export default function ProfileScreen() {
 
   return (
     <View style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[c.teal]} tintColor={c.teal} />
+        }
+      >
         {/* Gradient header */}
         <LinearGradient
           colors={[...gradients.primary]}

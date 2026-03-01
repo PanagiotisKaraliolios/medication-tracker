@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, RefreshControl } from 'react-native';
 import { router } from 'expo-router';
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import { Feather } from '@expo/vector-icons';
@@ -42,9 +42,9 @@ export default function TodayDashboard() {
 
   // ── Data queries ──
 
-  const { data: medications = [], isLoading: medsLoading, error: medsError } = useMedications();
-  const { data: schedules = [], isLoading: schLoading, error: schError } = useSchedules();
-  const { data: doseLogs = [], isLoading: logsLoading, error: logsError } = useDoseLogsByDate(selectedISO);
+  const { data: medications = [], isLoading: medsLoading, error: medsError, refetch: refetchMeds } = useMedications();
+  const { data: schedules = [], isLoading: schLoading, error: schError, refetch: refetchSchedules } = useSchedules();
+  const { data: doseLogs = [], isLoading: logsLoading, error: logsError, refetch: refetchLogs } = useDoseLogsByDate(selectedISO);
 
   // Day status range (covers both week strip and expanded month)
   const { rangeStartISO, rangeEndISO } = useMemo(() => {
@@ -62,7 +62,16 @@ export default function TodayDashboard() {
     return { rangeStartISO: toISO(rangeStart), rangeEndISO: toISO(rangeEnd) };
   }, [calendar.selectedDate, todayISO]);
 
-  const { data: rangeLogs = [] } = useDoseLogsByRange(rangeStartISO, rangeEndISO);
+  const { data: rangeLogs = [], refetch: refetchRangeLogs } = useDoseLogsByRange(rangeStartISO, rangeEndISO);
+
+  // ── Pull-to-refresh ──
+
+  const [refreshing, setRefreshing] = useState(false);
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await Promise.all([refetchMeds(), refetchSchedules(), refetchLogs(), refetchRangeLogs()]);
+    setRefreshing(false);
+  }, [refetchMeds, refetchSchedules, refetchLogs, refetchRangeLogs]);
 
   // ── Mutations ──
 
@@ -262,7 +271,12 @@ export default function TodayDashboard() {
 
   return (
     <View style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[c.teal]} tintColor={c.teal} />
+        }
+      >
         {/* Gradient header */}
         <LinearGradient
           colors={[...gradients.primary]}
