@@ -56,6 +56,9 @@ export default function LoginScreen() {
   const handleGoogleSignIn = async () => {
     const { error } = await signInWithGoogle();
 
+    console.log('🚀 ~ login.tsx:59 ~ handleGoogleSignIn ~ error:', error);
+
+
     if (error) {
       Toast.show({ type: 'error', text1: 'Google Sign-In Error', text2: error });
     }
