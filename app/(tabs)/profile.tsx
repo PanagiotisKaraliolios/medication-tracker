@@ -216,7 +216,7 @@ export default function ProfileScreen() {
             <Text style={styles.logoutText}>Log Out</Text>
           </TouchableOpacity>
 
-          <Text style={styles.version}>MediTrack v1.1.0</Text>
+          <Text style={styles.version}>MediTrack v1.1.1</Text>
 
           <View style={{ height: 40 }} />
         </View>
