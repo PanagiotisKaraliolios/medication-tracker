@@ -7,6 +7,7 @@ import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { type ColorScheme, borderRadius } from '../../components/ui/theme';
 import { useThemeColors } from '../../hooks/useThemeColors';
+import { useGoogleAuth } from '../../hooks/useGoogleAuth';
 import Toast from 'react-native-toast-message';
 
 export default function SignupScreen() {
@@ -19,10 +20,15 @@ export default function SignupScreen() {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const { signInWithGoogle, loading: googleLoading } = useGoogleAuth();
 
   const handleSignup = async () => {
     if (!email || !password) {
       Toast.show({ type: 'error', text1: 'Error', text2: 'Please enter email and password' });
+      return;
+    }
+    if (password.length < 8) {
+      Toast.show({ type: 'error', text1: 'Error', text2: 'Password must be at least 8 characters' });
       return;
     }
     if (password !== confirmPassword) {
@@ -53,6 +59,13 @@ export default function SignupScreen() {
 
     // Session created — the auth redirect in _layout.tsx will navigate to profile-setup
     Toast.show({ type: 'success', text1: 'Success', text2: 'Account created successfully' });
+  };
+
+  const handleGoogleSignIn = async () => {
+    const { error } = await signInWithGoogle();
+    if (error) {
+      Toast.show({ type: 'error', text1: 'Google Sign-In Error', text2: error });
+    }
   };
 
   return (
@@ -121,9 +134,16 @@ export default function SignupScreen() {
           <View style={styles.dividerLine} />
         </View>
 
-        <TouchableOpacity style={styles.googleButton} activeOpacity={0.7}>
+        <TouchableOpacity
+          style={styles.googleButton}
+          activeOpacity={0.7}
+          onPress={handleGoogleSignIn}
+          disabled={googleLoading}
+        >
           <Feather name="globe" size={20} color={c.gray900} />
-          <Text style={styles.googleButtonText}>Continue with Google</Text>
+          <Text style={styles.googleButtonText}>
+            {googleLoading ? 'Signing in…' : 'Continue with Google'}
+          </Text>
         </TouchableOpacity>
 
         <TouchableOpacity

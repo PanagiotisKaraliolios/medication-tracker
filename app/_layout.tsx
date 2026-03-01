@@ -143,9 +143,12 @@ function RootLayoutNav() {
         <Stack.Screen name="medication/[id]" options={{ headerShown: true, title: 'Medication Details' }} />
         <Stack.Screen name="medication/edit" options={{ headerShown: true, title: 'Edit Medication' }} />
         <Stack.Screen name="medication/edit-schedule" options={{ headerShown: true, title: 'Edit Schedule' }} />
-        <Stack.Screen name="profile/edit" options={{ headerShown: true, title: 'Edit Profile' }} />
+        <Stack.Screen name="profile/edit" options={{ headerShown: false }} />
         <Stack.Screen name="notification-settings" options={{ headerShown: false }} />
         <Stack.Screen name="notifications" options={{ headerShown: false }} />
+        <Stack.Screen name="privacy-security" options={{ headerShown: false }} />
+        <Stack.Screen name="set-password" options={{ headerShown: false }} />
+        <Stack.Screen name="change-password" options={{ headerShown: false }} />
       </Stack>
 
       {/* Battery optimization prompt — Android only, shown once for authenticated users */}

@@ -1,5 +1,6 @@
 import { DAY_LABELS } from '../constants/days';
 import { toISO } from './date';
+import { resolveTimeSlot } from './dose';
 import type { MedicationRow, ScheduleRow, DoseLogRow } from '../types/database';
 
 export type DayBar = { label: string; taken: number; total: number };
@@ -27,6 +28,10 @@ export function buildReport(
   const medMap = new Map(medications.map((m) => [m.id, m]));
   const medIds = new Set(medications.map((m) => m.id));
 
+  const todayISO = toISO(new Date());
+  const now = new Date();
+  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+
   let totalDoses = 0;
   let takenDoses = 0;
   let skippedDoses = 0;
@@ -50,6 +55,12 @@ export function buildReport(
       if (sch.end_date && iso > sch.end_date) continue;
 
       for (const label of sch.times_of_day) {
+        // Skip today's doses whose scheduled time hasn't passed yet
+        if (iso === todayISO) {
+          const { sortOrder } = resolveTimeSlot(label);
+          if (sortOrder > nowMinutes) continue;
+        }
+
         totalDoses++;
         dayTotal++;
         const status = logMap.get(`${iso}|${sch.id}|${label}`);
@@ -60,7 +71,7 @@ export function buildReport(
           skippedDoses++;
         } else {
           const med = medMap.get(sch.medication_id);
-          if (iso < toISO(new Date())) {
+          if (iso < todayISO || iso === todayISO) {
             missed.push({
               medName: med ? `${med.name} ${med.dosage}` : 'Unknown',
               dateLabel: new Date(iso + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),

@@ -1,5 +1,6 @@
 import { DAY_LABELS } from '../constants/days';
 import { toISO } from './date';
+import { resolveTimeSlot } from './dose';
 import type { MedicationRow, ScheduleRow, DoseLogRow } from '../types/database';
 
 /**
@@ -18,6 +19,10 @@ export function computeAdherence(
   );
   const medIds = new Set(medications.map((m) => m.id));
 
+  const todayISO = toISO(new Date());
+  const now = new Date();
+  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+
   let total = 0;
   let taken = 0;
 
@@ -35,6 +40,12 @@ export function computeAdherence(
       if (sch.end_date && iso > sch.end_date) continue;
 
       for (const label of sch.times_of_day) {
+        // Skip today's doses whose scheduled time hasn't passed yet
+        if (iso === todayISO) {
+          const { sortOrder } = resolveTimeSlot(label);
+          if (sortOrder > nowMinutes) continue;
+        }
+
         total++;
         if (logMap.get(`${iso}|${sch.id}|${label}`) === 'taken') taken++;
       }

@@ -7,6 +7,7 @@ import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { type ColorScheme, borderRadius } from '../../components/ui/theme';
 import { useThemeColors } from '../../hooks/useThemeColors';
+import { useGoogleAuth } from '../../hooks/useGoogleAuth';
 import Toast from 'react-native-toast-message';
 
 export default function LoginScreen() {
@@ -17,6 +18,7 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const { signInWithGoogle, loading: googleLoading } = useGoogleAuth();
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -48,6 +50,14 @@ export default function LoginScreen() {
         text1: 'Success',
         text2: 'Logged in successfully'
       });
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    const { error } = await signInWithGoogle();
+
+    if (error) {
+      Toast.show({ type: 'error', text1: 'Google Sign-In Error', text2: error });
     }
   };
 
@@ -110,9 +120,16 @@ export default function LoginScreen() {
           <View style={styles.dividerLine} />
         </View>
 
-        <TouchableOpacity style={styles.googleButton} activeOpacity={0.7}>
+        <TouchableOpacity
+          style={styles.googleButton}
+          activeOpacity={0.7}
+          onPress={handleGoogleSignIn}
+          disabled={googleLoading}
+        >
           <Feather name="globe" size={20} color={c.gray900} />
-          <Text style={styles.googleButtonText}>Continue with Google</Text>
+          <Text style={styles.googleButtonText}>
+            {googleLoading ? 'Signing in…' : 'Continue with Google'}
+          </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
