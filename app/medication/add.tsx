@@ -9,7 +9,7 @@ import {
   Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Feather } from '@expo/vector-icons';
+import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { type ColorScheme, borderRadius, shadows } from '../../components/ui/theme';
@@ -17,8 +17,7 @@ import { useThemeColors } from '../../hooks/useThemeColors';
 import { useMedicationDraft } from '../../stores/draftStores';
 import { useCreateMedication } from '../../hooks/useQueryHooks';
 import Toast from 'react-native-toast-message';
-import { ICON_OPTIONS } from '../../constants/icons';
-import { FORM_OPTIONS } from '../../constants/medications';
+import { MEDICATION_TYPES } from '../../constants/medications';
 
 export default function AddMedicationScreen() {
   const router = useRouter();
@@ -73,48 +72,26 @@ export default function AddMedicationScreen() {
           />
         </View>
 
-        {/* Form Type */}
+        {/* Medication Type */}
         <View style={styles.fieldGroup}>
-          <Text style={styles.fieldLabel}>Form</Text>
-          <View style={styles.chipGrid}>
-            {FORM_OPTIONS.map((form) => {
-              const isSelected = draft.form === form;
-              return (
-                <TouchableOpacity
-                  key={form}
-                  style={[styles.chip, isSelected && styles.chipSelected]}
-                  activeOpacity={0.7}
-                  onPress={() => updateDraft({ form })}
-                >
-                  <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>
-                    {form.charAt(0).toUpperCase() + form.slice(1)}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        </View>
-
-        {/* Icon Picker */}
-        <View style={styles.fieldGroup}>
-          <Text style={styles.fieldLabel}>Icon</Text>
+          <Text style={styles.fieldLabel}>Medication Type</Text>
           <View style={styles.iconGrid}>
-            {ICON_OPTIONS.map((opt) => {
-              const isSelected = draft.icon === opt.key;
+            {MEDICATION_TYPES.map((mt) => {
+              const isSelected = draft.form === mt.form;
               return (
                 <TouchableOpacity
-                  key={opt.key}
+                  key={mt.form}
                   style={[styles.iconOption, isSelected && styles.iconOptionSelected]}
                   activeOpacity={0.7}
-                  onPress={() => updateDraft({ icon: opt.key })}
+                  onPress={() => updateDraft({ form: mt.form, icon: mt.form })}
                 >
-                  <Feather
-                    name={opt.feather}
-                    size={22}
+                  <MaterialCommunityIcons
+                    name={mt.icon}
+                    size={24}
                     color={isSelected ? c.white : c.gray600}
                   />
                   <Text style={[styles.iconLabel, isSelected && styles.iconLabelSelected]}>
-                    {opt.label}
+                    {mt.label}
                   </Text>
                 </TouchableOpacity>
               );
@@ -202,31 +179,6 @@ function makeStyles(c: ColorScheme) {
       color: c.gray500,
       marginBottom: 10,
       marginTop: -4,
-    },
-    chipGrid: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: 10,
-    },
-    chip: {
-      paddingHorizontal: 16,
-      paddingVertical: 10,
-      borderRadius: borderRadius.round,
-      backgroundColor: c.card,
-      borderWidth: 1.5,
-      borderColor: c.gray200,
-    },
-    chipSelected: {
-      backgroundColor: c.teal,
-      borderColor: c.teal,
-    },
-    chipText: {
-      fontSize: 14,
-      fontWeight: '500',
-      color: c.gray700,
-    },
-    chipTextSelected: {
-      color: c.white,
     },
     iconGrid: {
       flexDirection: 'row',

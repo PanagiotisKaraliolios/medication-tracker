@@ -9,7 +9,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { Feather } from '@expo/vector-icons';
+import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Button } from '../../components/ui/Button';
 import { AlertDialog } from '../../components/ui/AlertDialog';
@@ -17,7 +17,7 @@ import { InventoryProgressBar } from '../../components/ui/InventoryProgressBar';
 import { type ColorScheme, gradients, borderRadius, shadows } from '../../components/ui/theme';
 import { useThemeColors } from '../../hooks/useThemeColors';
 import { useMedication as useMedicationQuery, useSchedulesByMedication, useDeleteMedication, useDeleteSchedule } from '../../hooks/useQueryHooks';
-import { ICON_MAP, TIME_ICON_MAP } from '../../constants/icons';
+import { getIconForForm, TIME_ICON_MAP } from '../../constants/icons';
 
 export default function MedicationDetailScreen() {
   const router = useRouter();
@@ -48,7 +48,7 @@ export default function MedicationDetailScreen() {
     );
   }
 
-  const featherIcon = ICON_MAP[med.icon] ?? 'package';
+  const mciIcon = getIconForForm(med.form);
 
   const handleDelete = async () => {
     try {
@@ -87,7 +87,7 @@ export default function MedicationDetailScreen() {
             end={{ x: 1, y: 1 }}
             style={styles.medIcon}
           >
-            <Feather name={featherIcon} size={24} color={c.white} />
+            <MaterialCommunityIcons name={mciIcon} size={24} color={c.white} />
           </LinearGradient>
           <View style={styles.headerInfo}>
             <Text style={styles.medName}>{med.name}</Text>

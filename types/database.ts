@@ -14,7 +14,7 @@ export const emptyMedicationDraft: MedicationDraft = {
   name: '',
   dosage: '',
   form: 'tablet',
-  icon: 'pill',
+  icon: 'tablet',
   currentSupply: 30,
   lowSupplyThreshold: 10,
 };

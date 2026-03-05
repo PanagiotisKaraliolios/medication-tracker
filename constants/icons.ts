@@ -1,29 +1,33 @@
-import type { Feather } from '@expo/vector-icons';
+import type { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 
-/** Map medication icon key → Feather icon name. */
-export const ICON_MAP: Record<string, keyof typeof Feather.glyphMap> = {
-  pill: 'disc',
-  capsule: 'package',
-  syringe: 'crosshair',
-  drop: 'droplet',
-  cream: 'sun',
-  inhaler: 'wind',
-  patch: 'square',
-  vitamin: 'heart',
-  brain: 'cpu',
+/**
+ * Map medication icon key (stored in DB) → MaterialCommunityIcons glyph name.
+ * New records use the form value as the icon key (e.g., 'tablet').
+ * Legacy keys from before the migration are also supported.
+ */
+export const FORM_ICON_MAP: Record<string, keyof typeof MaterialCommunityIcons.glyphMap> = {
+  // Current keys (form value = icon key)
+  tablet:    'pill',
+  capsule:   'medication',
+  liquid:    'bottle-tonic',
+  injection: 'needle',
+  cream:     'lotion-outline',
+  drops:     'eyedropper',
+  inhaler:   'lungs',
+  patch:     'bandage',
+
+  // Legacy keys (backward compat for existing DB records)
+  pill:      'pill',
+  syringe:   'needle',
+  drop:      'eyedropper',
+  vitamin:   'pill',
+  brain:     'pill',
 };
 
-/** Icon options with key, Feather name, and display label for pickers. */
-export const ICON_OPTIONS: { key: string; feather: keyof typeof Feather.glyphMap; label: string }[] = [
-  { key: 'pill', feather: 'disc', label: 'Pill' },
-  { key: 'capsule', feather: 'package', label: 'Capsule' },
-  { key: 'syringe', feather: 'crosshair', label: 'Syringe' },
-  { key: 'drop', feather: 'droplet', label: 'Drops' },
-  { key: 'cream', feather: 'sun', label: 'Cream' },
-  { key: 'inhaler', feather: 'wind', label: 'Inhaler' },
-  { key: 'patch', feather: 'square', label: 'Patch' },
-  { key: 'vitamin', feather: 'heart', label: 'Vitamin' },
-];
+/** Get the MaterialCommunityIcons name for a medication form. */
+export function getIconForForm(form: string): keyof typeof MaterialCommunityIcons.glyphMap {
+  return FORM_ICON_MAP[form] ?? 'pill';
+}
 
 /** Map time-of-day label → Feather icon name. */
 export const TIME_ICON_MAP: Record<string, keyof typeof Feather.glyphMap> = {

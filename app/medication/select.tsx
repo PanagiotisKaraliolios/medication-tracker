@@ -8,7 +8,7 @@ import {
   TextInput,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Feather } from '@expo/vector-icons';
+import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LoadingState } from '../../components/ui/LoadingState';
 import { ErrorState } from '../../components/ui/ErrorState';
 import { EmptyState } from '../../components/ui/EmptyState';
@@ -18,7 +18,7 @@ import { useMedications } from '../../hooks/useQueryHooks';
 import { useScheduleDraft } from '../../stores/draftStores';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
-import { ICON_MAP } from '../../constants/icons';
+import { getIconForForm } from '../../constants/icons';
 import type { MedicationRow } from '../../types/database';
 
 export default function SelectMedicationScreen() {
@@ -74,7 +74,7 @@ export default function SelectMedicationScreen() {
   };
 
   const renderItem = ({ item }: { item: MedicationRow }) => {
-    const featherIcon = ICON_MAP[item.icon] ?? 'disc';
+    const mciIcon = getIconForForm(item.form);
 
     return (
       <TouchableOpacity
@@ -83,7 +83,7 @@ export default function SelectMedicationScreen() {
         onPress={() => handleSelect(item)}
       >
         <View style={styles.iconCircle}>
-          <Feather name={featherIcon} size={22} color={c.teal} />
+          <MaterialCommunityIcons name={mciIcon} size={22} color={c.teal} />
         </View>
         <View style={styles.cardInfo}>
           <Text style={styles.medName}>{item.name}</Text>

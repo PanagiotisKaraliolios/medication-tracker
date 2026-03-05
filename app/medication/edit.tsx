@@ -10,7 +10,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { Feather } from '@expo/vector-icons';
+import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { Stepper } from '../../components/ui/Stepper';
@@ -19,8 +19,7 @@ import { useThemeColors } from '../../hooks/useThemeColors';
 import { useMedication as useMedicationQuery, useUpdateMedication } from '../../hooks/useQueryHooks';
 import { scheduleLowSupplyReminder, cancelLowSupplyReminder } from '../../lib/notifications';
 import Toast from 'react-native-toast-message';
-import { ICON_OPTIONS } from '../../constants/icons';
-import { FORM_OPTIONS } from '../../constants/medications';
+import { MEDICATION_TYPES } from '../../constants/medications';
 import type { MedicationUpdate } from '../../types/database';
 
 export default function EditMedicationScreen() {
@@ -35,7 +34,6 @@ export default function EditMedicationScreen() {
   const [name, setName] = useState('');
   const [dosage, setDosage] = useState('');
   const [form, setForm] = useState('tablet');
-  const [icon, setIcon] = useState('pill');
   const [currentSupply, setCurrentSupply] = useState(30);
   const [lowSupplyThreshold, setLowSupplyThreshold] = useState(10);
   const [initialized, setInitialized] = useState(false);
@@ -46,7 +44,6 @@ export default function EditMedicationScreen() {
       setName(original.name);
       setDosage(original.dosage);
       setForm(original.form ?? 'tablet');
-      setIcon(original.icon ?? 'pill');
       setCurrentSupply(original.current_supply ?? 30);
       setLowSupplyThreshold(original.low_supply_threshold ?? 10);
       setInitialized(true);
@@ -63,7 +60,7 @@ export default function EditMedicationScreen() {
       name,
       dosage,
       form,
-      icon,
+      icon: form,
       current_supply: currentSupply,
       low_supply_threshold: lowSupplyThreshold,
     };
@@ -137,48 +134,26 @@ export default function EditMedicationScreen() {
           />
         </View>
 
-        {/* Form Type */}
+        {/* Medication Type */}
         <View style={styles.fieldGroup}>
-          <Text style={styles.fieldLabel}>Form</Text>
-          <View style={styles.chipGrid}>
-            {FORM_OPTIONS.map((f) => {
-              const isSelected = form === f;
-              return (
-                <TouchableOpacity
-                  key={f}
-                  style={[styles.chip, isSelected && styles.chipSelected]}
-                  activeOpacity={0.7}
-                  onPress={() => setForm(f)}
-                >
-                  <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>
-                    {f.charAt(0).toUpperCase() + f.slice(1)}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        </View>
-
-        {/* Icon Picker */}
-        <View style={styles.fieldGroup}>
-          <Text style={styles.fieldLabel}>Icon</Text>
+          <Text style={styles.fieldLabel}>Medication Type</Text>
           <View style={styles.iconGrid}>
-            {ICON_OPTIONS.map((opt) => {
-              const isSelected = icon === opt.key;
+            {MEDICATION_TYPES.map((mt) => {
+              const isSelected = form === mt.form;
               return (
                 <TouchableOpacity
-                  key={opt.key}
+                  key={mt.form}
                   style={[styles.iconOption, isSelected && styles.iconOptionSelected]}
                   activeOpacity={0.7}
-                  onPress={() => setIcon(opt.key)}
+                  onPress={() => setForm(mt.form)}
                 >
-                  <Feather
-                    name={opt.feather}
-                    size={22}
+                  <MaterialCommunityIcons
+                    name={mt.icon}
+                    size={24}
                     color={isSelected ? c.white : c.gray600}
                   />
                   <Text style={[styles.iconLabel, isSelected && styles.iconLabelSelected]}>
-                    {opt.label}
+                    {mt.label}
                   </Text>
                 </TouchableOpacity>
               );
@@ -246,31 +221,6 @@ function makeStyles(c: ColorScheme) {
       color: c.gray500,
       marginBottom: 10,
       marginTop: -4,
-    },
-    chipGrid: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: 10,
-    },
-    chip: {
-      paddingHorizontal: 16,
-      paddingVertical: 10,
-      borderRadius: borderRadius.round,
-      backgroundColor: c.card,
-      borderWidth: 1.5,
-      borderColor: c.gray200,
-    },
-    chipSelected: {
-      backgroundColor: c.teal,
-      borderColor: c.teal,
-    },
-    chipText: {
-      fontSize: 14,
-      fontWeight: '500',
-      color: c.gray700,
-    },
-    chipTextSelected: {
-      color: c.white,
     },
     iconGrid: {
       flexDirection: 'row',
