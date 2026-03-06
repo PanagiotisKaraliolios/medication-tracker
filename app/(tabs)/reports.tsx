@@ -7,6 +7,7 @@ import { EmptyState } from '../../components/ui/EmptyState';
 import { LoadingState } from '../../components/ui/LoadingState';
 import { ErrorState } from '../../components/ui/ErrorState';
 import { SegmentedControl } from '../../components/ui/SegmentedControl';
+import { AdBanner } from '../../components/ui/AdBanner';
 import { type ColorScheme, gradients, borderRadius, shadows } from '../../components/ui/theme';
 import { useThemeColors } from '../../hooks/useThemeColors';
 import { useMedications, useSchedules, useDoseLogsByRange } from '../../hooks/useQueryHooks';
@@ -191,6 +192,7 @@ export default function ReportsScreen() {
           <View style={{ height: 40 }} />
         </View>
       </ScrollView>
+      <AdBanner />
     </View>
   );
 }

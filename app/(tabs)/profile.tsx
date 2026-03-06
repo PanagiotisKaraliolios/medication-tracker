@@ -7,6 +7,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useThemePreference, type ThemePreference } from '../../contexts/ThemeContext';
 import { useMedications, useSchedules, useDoseLogsByRange } from '../../hooks/useQueryHooks';
 import { AlertDialog } from '../../components/ui/AlertDialog';
+import { AdBanner } from '../../components/ui/AdBanner';
 import { type ColorScheme, gradients, borderRadius, shadows } from '../../components/ui/theme';
 import { useThemeColors } from '../../hooks/useThemeColors';
 import Toast from 'react-native-toast-message';
@@ -221,6 +222,8 @@ export default function ProfileScreen() {
           <View style={{ height: 40 }} />
         </View>
       </ScrollView>
+
+      <AdBanner />
 
       <AlertDialog
         visible={logoutVisible}

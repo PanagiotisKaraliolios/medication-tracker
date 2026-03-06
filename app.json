@@ -7,7 +7,6 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -42,7 +41,15 @@
           }
         }
       ],
-      "@react-native-google-signin/google-signin"
+      "@react-native-google-signin/google-signin",
+      [
+        "react-native-google-mobile-ads",
+        {
+          "androidAppId": "ca-app-pub-2807646854687473~3597996742",
+          "iosAppId": "ca-app-pub-xxxxxxxx~yyyyyyyy"
+        }
+      ],
+      "expo-font"
     ],
     "extra": {
       "router": {},

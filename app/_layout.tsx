@@ -11,9 +11,13 @@ import type { MedicationRow, ScheduleRow } from '../types/database';
 import { useEffect, useRef } from 'react';
 import { useBatteryOptimization } from '../hooks/useBatteryOptimization';
 import { BatteryOptimizationModal } from '../components/ui/BatteryOptimizationModal';
+import { initializeAds } from '../lib/ads';
 
 // Register notification handler ASAP so foreground notifications display correctly
 registerNotificationHandler();
+
+// Initialize Mobile Ads SDK once at module level
+initializeAds();
 import { ActivityIndicator, View } from 'react-native';
 import Toast from 'react-native-toast-message';
 import { colors, darkColors } from '../components/ui/theme';

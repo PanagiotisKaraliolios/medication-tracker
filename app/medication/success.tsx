@@ -1,12 +1,16 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { InterstitialAd, AdEventType } from 'react-native-google-mobile-ads';
 import { Button } from '../../components/ui/Button';
 import { type ColorScheme, gradients, borderRadius } from '../../components/ui/theme';
 import { useThemeColors } from '../../hooks/useThemeColors';
 import { useMedicationDraft, useScheduleDraft } from '../../stores/draftStores';
+import { AD_UNIT_IDS } from '../../lib/ads';
+
+const interstitial = InterstitialAd.createForAdRequest(AD_UNIT_IDS.INTERSTITIAL);
 
 export default function SuccessScreen() {
   const router = useRouter();
@@ -16,10 +20,36 @@ export default function SuccessScreen() {
   const { resetScheduleDraft, schedulingMedId } = useScheduleDraft();
   const isScheduling = !!schedulingMedId;
 
-  const handleDone = () => {
+  const [adLoaded, setAdLoaded] = useState(false);
+
+  useEffect(() => {
+    const loadListener = interstitial.addAdEventListener(AdEventType.LOADED, () => {
+      setAdLoaded(true);
+    });
+    const closeListener = interstitial.addAdEventListener(AdEventType.CLOSED, () => {
+      navigateToDashboard();
+    });
+
+    interstitial.load();
+
+    return () => {
+      loadListener();
+      closeListener();
+    };
+  }, []);
+
+  const navigateToDashboard = () => {
     resetDraft();
     resetScheduleDraft();
     router.replace('/(tabs)');
+  };
+
+  const handleDone = () => {
+    if (adLoaded) {
+      interstitial.show();
+    } else {
+      navigateToDashboard();
+    }
   };
 
   return (

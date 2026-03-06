@@ -7,6 +7,7 @@ import { InventoryProgressBar } from '../../components/ui/InventoryProgressBar';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { LoadingState } from '../../components/ui/LoadingState';
 import { ErrorState } from '../../components/ui/ErrorState';
+import { AdBanner } from '../../components/ui/AdBanner';
 import { type ColorScheme, gradients, borderRadius, shadows } from '../../components/ui/theme';
 import { useThemeColors } from '../../hooks/useThemeColors';
 import { useMedications } from '../../hooks/useQueryHooks';
@@ -139,6 +140,8 @@ export default function MedicationsScreen() {
           <View style={{ height: 100 }} />
         </View>
       </ScrollView>
+
+      <AdBanner />
 
       {/* FAB */}
       <TouchableOpacity

@@ -43,3 +43,4 @@ release.keystore
 # generated native folders
 /ios
 /android
+play-store-key.json
