@@ -11,6 +11,7 @@ import { EmptyState } from '../../components/ui/EmptyState';
 import { LoadingState } from '../../components/ui/LoadingState';
 import { ErrorState } from '../../components/ui/ErrorState';
 import { CalendarSection } from '../../components/ui/CalendarSection';
+import { AdBanner } from '../../components/ui/AdBanner';
 import { type ColorScheme, gradients, shadows } from '../../components/ui/theme';
 import { useThemeColors } from '../../hooks/useThemeColors';
 import { useCalendar } from '../../hooks/useCalendar';
@@ -386,6 +387,8 @@ export default function TodayDashboard() {
           <View style={{ height: 80 }} />
         </View>
       </ScrollView>
+
+      <AdBanner placement="todayBanner" />
 
       {/* Snooze Confirmation Dialog */}
       <AlertDialog

@@ -25,6 +25,7 @@ const menuItems: MenuItem[] = [
   { icon: 'edit', label: 'Edit Profile', subtitle: 'View and edit your profile' },
   { icon: 'share-2', label: 'Caregiver Sharing', subtitle: 'Share with family or caregivers' },
   { icon: 'bell', label: 'Notifications', subtitle: 'Manage alert preferences' },
+  { icon: 'sliders', label: 'Ad Preferences', subtitle: 'Choose where you see ads' },
   { icon: 'shield', label: 'Privacy & Security', subtitle: 'Data and account settings' },
   { icon: 'help-circle', label: 'Help & Support', subtitle: 'FAQ and contact' },
 ];
@@ -188,9 +189,11 @@ export default function ProfileScreen() {
                     ? () => router.push('/profile/edit')
                     : item.label === 'Notifications'
                       ? () => router.push('/notification-settings')
-                      : item.label === 'Privacy & Security'
-                        ? () => router.push('/privacy-security')
-                        : undefined
+                      : item.label === 'Ad Preferences'
+                        ? () => router.push('/ad-preferences')
+                        : item.label === 'Privacy & Security'
+                          ? () => router.push('/privacy-security')
+                          : undefined
                 }
               >
                 <View style={styles.menuIcon}>
@@ -217,13 +220,13 @@ export default function ProfileScreen() {
             <Text style={styles.logoutText}>Log Out</Text>
           </TouchableOpacity>
 
-          <Text style={styles.version}>MediTrack v1.1.1</Text>
+          <Text style={styles.version}>MediTrack v1.2.0</Text>
 
           <View style={{ height: 40 }} />
         </View>
       </ScrollView>
 
-      <AdBanner />
+      <AdBanner placement="profileBanner" />
 
       <AlertDialog
         visible={logoutVisible}

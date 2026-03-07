@@ -3,7 +3,7 @@
     "name": "MediTrack",
     "slug": "medication-tracker",
     "scheme": "medication-tracker",
-    "version": "1.1.1",
+    "version": "1.2.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
@@ -24,7 +24,9 @@
       "predictiveBackGestureEnabled": false,
       "package": "com.anonymous.medicationtracker",
       "permissions": [
-        "android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"
+        "android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS",
+        "android.permission.SCHEDULE_EXACT_ALARM",
+        "android.permission.USE_EXACT_ALARM"
       ]
     },
     "web": {

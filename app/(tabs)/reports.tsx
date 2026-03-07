@@ -192,7 +192,7 @@ export default function ReportsScreen() {
           <View style={{ height: 40 }} />
         </View>
       </ScrollView>
-      <AdBanner />
+      <AdBanner placement="reportsBanner" />
     </View>
   );
 }

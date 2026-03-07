@@ -456,3 +456,76 @@ export async function recheckAllLowSupplyReminders(
   }
   console.log(`[Notifications] Low-supply check complete for ${medications.length} medication(s)`);
 }
+
+// ── Missed-dose catch-up notifications ───────────────────────────────
+
+/** Data needed per schedule for missed-dose detection */
+export type MissedDoseScheduleInput = {
+  id: string;
+  medication_id: string;
+  frequency: string;
+  selected_days: string[];
+  times_of_day: string[];
+  push_notifications: boolean;
+};
+
+/** Data needed per dose log for missed-dose detection */
+export type MissedDoseLogInput = {
+  schedule_id: string;
+  time_label: string;
+};
+
+/**
+ * Fire immediate catch-up notifications for doses scheduled earlier today
+ * that were never delivered (e.g. phone was off at the scheduled time).
+ * Skips doses that already have a log entry (taken/skipped).
+ */
+export async function fireMissedDoseReminders(
+  schedules: MissedDoseScheduleInput[],
+  todayLogs: MissedDoseLogInput[],
+  medicationNames: Record<string, string>,
+): Promise<void> {
+  const now = new Date();
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+  const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const todayLabel = dayLabels[now.getDay()];
+
+  const loggedKeys = new Set(
+    todayLogs.map((l) => `${l.schedule_id}-${l.time_label}`),
+  );
+
+  const channelId = Platform.OS === 'android' ? 'medication-reminders' : undefined;
+  let fired = 0;
+
+  for (const sch of schedules) {
+    if (!sch.push_notifications) continue;
+    if (!sch.selected_days.includes(todayLabel)) continue;
+
+    for (const timeLabel of sch.times_of_day) {
+      const parsed = parseTimeToHourMinute(timeLabel);
+      if (!parsed) continue;
+
+      const scheduleMinutes = parsed.hour * 60 + parsed.minute;
+      if (scheduleMinutes >= currentMinutes) continue;
+      if (loggedKeys.has(`${sch.id}-${timeLabel}`)) continue;
+
+      const medName = medicationNames[sch.id] ?? 'your medication';
+
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: `💊 Missed: ${medName}`,
+          body: `You had a dose scheduled at ${timeLabel}. Don't forget to take it!`,
+          sound: true,
+          ...(channelId ? { channelId } : {}),
+        },
+        trigger: null, // immediate
+      });
+      fired++;
+    }
+  }
+
+  if (fired > 0) {
+    console.log(`[Notifications] Fired ${fired} missed-dose catch-up notification(s)`);
+  }
+}

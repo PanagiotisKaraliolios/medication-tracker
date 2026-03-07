@@ -21,6 +21,7 @@ import { scheduleLowSupplyReminder, cancelLowSupplyReminder } from '../../lib/no
 import Toast from 'react-native-toast-message';
 import { MEDICATION_TYPES } from '../../constants/medications';
 import type { MedicationUpdate } from '../../types/database';
+import { showInterstitial } from '../../lib/interstitialManager';
 
 export default function EditMedicationScreen() {
   const router = useRouter();
@@ -76,7 +77,7 @@ export default function EditMedicationScreen() {
       }
 
       Toast.show({ type: 'success', text1: 'Medication updated' });
-      router.back();
+      showInterstitial(() => router.back());
     } catch (err: any) {
       Toast.show({ type: 'error', text1: 'Update failed', text2: err.message });
     } finally {

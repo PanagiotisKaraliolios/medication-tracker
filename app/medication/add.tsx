@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -12,9 +12,10 @@ import { useRouter } from 'expo-router';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
+import { AlertDialog } from '../../components/ui/AlertDialog';
 import { type ColorScheme, borderRadius, shadows } from '../../components/ui/theme';
 import { useThemeColors } from '../../hooks/useThemeColors';
-import { useMedicationDraft } from '../../stores/draftStores';
+import { useMedicationDraft, useScheduleDraft } from '../../stores/draftStores';
 import { useCreateMedication } from '../../hooks/useQueryHooks';
 import Toast from 'react-native-toast-message';
 import { MEDICATION_TYPES } from '../../constants/medications';
@@ -25,6 +26,10 @@ export default function AddMedicationScreen() {
   const styles = useMemo(() => makeStyles(c), [c]);
   const { draft, updateDraft, resetDraft } = useMedicationDraft();
   const createMedication = useCreateMedication();
+  const { resetScheduleDraft, setSchedulingMedId } = useScheduleDraft();
+
+  const [showSchedulePrompt, setShowSchedulePrompt] = useState(false);
+  const createdMedIdRef = useRef<string | null>(null);
 
   // Reset draft when opening screen
   useEffect(() => {
@@ -35,11 +40,25 @@ export default function AddMedicationScreen() {
 
   const handleSave = async () => {
     try {
-      await createMedication.mutateAsync();
-      router.push('/medication/success');
+      const created = await createMedication.mutateAsync();
+      createdMedIdRef.current = created.id;
+      setShowSchedulePrompt(true);
     } catch (err: any) {
       Toast.show({ type: 'error', text1: 'Save failed', text2: err.message });
     }
+  };
+
+  const handleSchedule = () => {
+    setShowSchedulePrompt(false);
+    resetScheduleDraft();
+    setSchedulingMedId(createdMedIdRef.current!);
+    router.replace('/medication/schedule');
+  };
+
+  const handleSkip = () => {
+    setShowSchedulePrompt(false);
+    Toast.show({ type: 'success', text1: 'Medication added' });
+    router.back();
   };
 
   return (
@@ -150,6 +169,18 @@ export default function AddMedicationScreen() {
           {createMedication.isPending ? 'Saving…' : 'Save Medication'}
         </Button>
       </View>
+
+      <AlertDialog
+        visible={showSchedulePrompt}
+        onClose={handleSkip}
+        title="Set Up Schedule?"
+        message="Would you like to set up a dosing schedule for this medication now?"
+        variant="success"
+        icon="calendar"
+        confirmLabel="Set Schedule"
+        cancelLabel="Not Now"
+        onConfirm={handleSchedule}
+      />
     </KeyboardAvoidingView>
   );
 }

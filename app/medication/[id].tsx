@@ -13,6 +13,7 @@ import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Button } from '../../components/ui/Button';
 import { AlertDialog } from '../../components/ui/AlertDialog';
+import { AdBanner } from '../../components/ui/AdBanner';
 import { InventoryProgressBar } from '../../components/ui/InventoryProgressBar';
 import { type ColorScheme, gradients, borderRadius, shadows } from '../../components/ui/theme';
 import { useThemeColors } from '../../hooks/useThemeColors';
@@ -226,6 +227,8 @@ export default function MedicationDetailScreen() {
           </Button>
         </View>
       </ScrollView>
+
+      <AdBanner placement="medicationDetailBanner" />
 
       <AlertDialog
         visible={clearScheduleVisible}

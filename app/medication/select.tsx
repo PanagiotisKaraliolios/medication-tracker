@@ -151,6 +151,22 @@ export default function SelectMedicationScreen() {
           renderItem={renderItem}
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
+          ListHeaderComponent={
+            <TouchableOpacity
+              style={styles.addNewCard}
+              activeOpacity={0.7}
+              onPress={() => router.push('/medication/add')}
+            >
+              <View style={[styles.iconCircle, { backgroundColor: c.tealLight }]}>
+                <Feather name="plus" size={22} color={c.teal} />
+              </View>
+              <View style={styles.cardInfo}>
+                <Text style={styles.medName}>Add New Medication</Text>
+                <Text style={styles.medDetail}>Create and schedule a new medication</Text>
+              </View>
+              <Feather name="chevron-right" size={20} color={c.gray400} />
+            </TouchableOpacity>
+          }
         />
       )}
     </View>
@@ -231,6 +247,17 @@ function makeStyles(c: ColorScheme) {
       fontSize: 15,
       color: c.gray500,
       textAlign: 'center',
+    },
+    addNewCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: c.card,
+      borderRadius: borderRadius.xl,
+      padding: 16,
+      marginBottom: 12,
+      borderWidth: 1,
+      borderColor: c.teal,
+      borderStyle: 'dashed',
     },
   });
 }

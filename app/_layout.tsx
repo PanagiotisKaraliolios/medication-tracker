@@ -5,19 +5,22 @@ import { useReactQueryDevTools } from '@dev-plugins/react-query';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import { ThemePreferenceProvider, useThemePreference } from '../contexts/ThemeContext';
 import { queryClient } from '../lib/queryClient';
-import { registerNotificationHandler, rescheduleAllMedicationReminders, recheckAllLowSupplyReminders } from '../lib/notifications';
+import { registerNotificationHandler, rescheduleAllMedicationReminders, recheckAllLowSupplyReminders, fireMissedDoseReminders, type MissedDoseLogInput } from '../lib/notifications';
 import { supabase } from '../lib/supabase';
 import type { MedicationRow, ScheduleRow } from '../types/database';
 import { useEffect, useRef } from 'react';
 import { useBatteryOptimization } from '../hooks/useBatteryOptimization';
 import { BatteryOptimizationModal } from '../components/ui/BatteryOptimizationModal';
 import { initializeAds } from '../lib/ads';
+import { preloadInterstitial } from '../lib/interstitialManager';
+import { useAppOpenAd } from '../hooks/useAppOpenAd';
+import { useAdPreferences } from '../stores/adPreferencesStore';
 
 // Register notification handler ASAP so foreground notifications display correctly
 registerNotificationHandler();
 
-// Initialize Mobile Ads SDK once at module level
-initializeAds();
+// Initialize Mobile Ads SDK (consent + init) once at module level
+initializeAds().then(() => preloadInterstitial());
 import { ActivityIndicator, View } from 'react-native';
 import Toast from 'react-native-toast-message';
 import { colors, darkColors } from '../components/ui/theme';
@@ -55,6 +58,14 @@ function RootLayoutNav() {
   const { resolvedScheme, colors: c } = useThemePreference();
   const remindersRegistered = useRef(false);
   const { shouldShowModal, openBatterySettings, dismissModal } = useBatteryOptimization();
+
+  // Show App Open ad when returning from background (authenticated users only)
+  useAppOpenAd();
+
+  // Load persisted ad preferences
+  useEffect(() => {
+    useAdPreferences.getState().load();
+  }, []);
 
   // Re-register medication reminders on app launch once user is authenticated
   useEffect(() => {
@@ -97,6 +108,27 @@ function RootLayoutNav() {
 
         // Check all medications for low supply and schedule/cancel reminders
         await recheckAllLowSupplyReminders(meds);
+
+        // Fire catch-up notifications for doses missed while the phone was off
+        const todayISO = new Date().toISOString().slice(0, 10);
+        const { data: logData } = await supabase
+          .from('dose_logs')
+          .select('schedule_id, time_label')
+          .eq('user_id', session.user.id)
+          .eq('scheduled_date', todayISO);
+
+        await fireMissedDoseReminders(
+          schedules.map((s) => ({
+            id: s.id,
+            medication_id: s.medication_id,
+            frequency: s.frequency,
+            selected_days: s.selected_days,
+            times_of_day: s.times_of_day,
+            push_notifications: s.push_notifications,
+          })),
+          (logData ?? []) as MissedDoseLogInput[],
+          scheduleToMedName,
+        );
       } catch (err) {
         console.warn('[Layout] Failed to re-register reminders:', err);
       }
@@ -153,6 +185,7 @@ function RootLayoutNav() {
         <Stack.Screen name="privacy-security" options={{ headerShown: false }} />
         <Stack.Screen name="set-password" options={{ headerShown: false }} />
         <Stack.Screen name="change-password" options={{ headerShown: false }} />
+        <Stack.Screen name="ad-preferences" options={{ headerShown: false }} />
       </Stack>
 
       {/* Battery optimization prompt — Android only, shown once for authenticated users */}

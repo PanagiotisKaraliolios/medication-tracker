@@ -23,6 +23,7 @@ import { DateRangeSection } from '../../components/ui/DateRangeSection';
 import { NotificationCard } from '../../components/ui/NotificationCard';
 import { type ColorScheme, borderRadius } from '../../components/ui/theme';
 import { useThemeColors } from '../../hooks/useThemeColors';
+import { showInterstitial } from '../../lib/interstitialManager';
 import { useSchedule, useUpdateSchedule } from '../../hooks/useQueryHooks';
 import Toast from 'react-native-toast-message';
 import { PRESET_LABELS, FREQUENCY_OPTIONS, SNOOZE_OPTIONS } from '../../constants/schedule';
@@ -103,7 +104,7 @@ export default function EditScheduleScreen() {
     try {
       await updateScheduleMut.mutateAsync({ id, updates });
       Toast.show({ type: 'success', text1: 'Schedule updated' });
-      router.back();
+      showInterstitial(() => router.back());
     } catch (err: any) {
       Toast.show({ type: 'error', text1: 'Update failed', text2: err.message });
     } finally {

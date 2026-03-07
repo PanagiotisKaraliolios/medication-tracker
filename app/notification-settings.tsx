@@ -15,6 +15,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as Notifications from 'expo-notifications';
 import { type ColorScheme, gradients, borderRadius, shadows } from '../components/ui/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
+import { AdBanner } from '../components/ui/AdBanner';
 import { useBatteryOptimization } from '../hooks/useBatteryOptimization';
 import Toast from 'react-native-toast-message';
 
@@ -289,6 +290,8 @@ export default function NotificationSettingsScreen() {
 
         <View style={{ height: 40 }} />
       </ScrollView>
+
+      <AdBanner placement="notificationSettingsBanner" />
     </View>
   );
 }

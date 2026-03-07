@@ -12,6 +12,7 @@ import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Notifications from 'expo-notifications';
 import { EmptyState } from '../components/ui/EmptyState';
+import { AdBanner } from '../components/ui/AdBanner';
 import { LoadingState } from '../components/ui/LoadingState';
 import { type ColorScheme, gradients, borderRadius, shadows } from '../components/ui/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
@@ -187,6 +188,8 @@ export default function NotificationsScreen() {
 
         <View style={{ height: 40 }} />
       </ScrollView>
+
+      <AdBanner placement="notificationsBanner" />
     </View>
   );
 }

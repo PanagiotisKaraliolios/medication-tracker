@@ -141,23 +141,7 @@ export default function MedicationsScreen() {
         </View>
       </ScrollView>
 
-      <AdBanner />
-
-      {/* FAB */}
-      <TouchableOpacity
-        style={styles.fabWrapper}
-        activeOpacity={0.85}
-        onPress={() => router.push('/medication/add')}
-      >
-        <LinearGradient
-          colors={[...gradients.primary]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.fab}
-        >
-          <Feather name="plus" size={28} color={c.white} />
-        </LinearGradient>
-      </TouchableOpacity>
+      <AdBanner placement="medicationsBanner" />
     </View>
   );
 }
@@ -244,19 +228,6 @@ function makeStyles(c: ColorScheme) {
     nextDoseText: {
       fontSize: 14,
       color: c.gray500,
-    },
-    fabWrapper: {
-      position: 'absolute',
-      bottom: 24,
-      right: 24,
-    },
-    fab: {
-      width: 64,
-      height: 64,
-      borderRadius: 32,
-      alignItems: 'center',
-      justifyContent: 'center',
-      ...shadows.lg,
     },
   });
 }

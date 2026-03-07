@@ -40,6 +40,13 @@ We use Supabase for authentication and data storage. Your data is stored securel
 ### Google AdMob
 We use Google AdMob to display advertisements. AdMob may collect device identifiers and usage data for ad personalization. See [Google's Privacy Policy](https://policies.google.com/privacy).
 
+### Ad Consent (GDPR / EEA)
+If you are located in the European Economic Area (EEA) or another region that requires consent for personalized advertising, you will be shown a consent dialog when you first use the app. You may choose to:
+- **Accept personalized ads** — AdMob will use device identifiers and usage data to show ads relevant to your interests.
+- **Decline personalized ads** — AdMob will show non-personalized, contextual ads only.
+
+You can update your consent preferences at any time by clearing the app's data or reinstalling the app.
+
 ### Google Sign-In
 If you choose to sign in with Google, we receive your email address and basic profile information from Google. See [Google's Privacy Policy](https://policies.google.com/privacy).
 
