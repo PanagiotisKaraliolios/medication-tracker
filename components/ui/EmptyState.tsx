@@ -108,7 +108,7 @@ function makeStyles(c: ColorScheme) {
       lineHeight: 22,
     },
     buttonWrapper: {
-      width: 200,
+      width: '100%',
     },
   });
 }
