@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { AppState, type AppStateStatus } from 'react-native';
 import { AppOpenAd, AdEventType } from 'react-native-google-mobile-ads';
 import { AD_UNIT_IDS } from '../lib/ads';
-import { useAdPreferences } from '../stores/adPreferencesStore';
+import { useAdPreferences, areAdPreferencesLoaded } from '../stores/adPreferencesStore';
 
 const MIN_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes between App Open ads
 
@@ -50,6 +50,7 @@ export function useAppOpenAd() {
         if (
           adLoaded &&
           now - lastShownAt >= MIN_INTERVAL_MS &&
+          areAdPreferencesLoaded() &&
           useAdPreferences.getState().appOpenAds
         ) {
           lastShownAt = now;

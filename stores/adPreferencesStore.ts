@@ -39,6 +39,13 @@ type AdPreferencesStore = AdPreferences & {
   disableAll: () => void;
 };
 
+let _loaded = false;
+
+/** Whether persisted ad preferences have been loaded from AsyncStorage. */
+export function areAdPreferencesLoaded(): boolean {
+  return _loaded;
+}
+
 function persist(prefs: AdPreferences) {
   AsyncStorage.setItem(AD_PREFERENCES_KEY, JSON.stringify(prefs)).catch(() => {});
 }
@@ -68,6 +75,8 @@ export const useAdPreferences = create<AdPreferencesStore>((set, get) => ({
       }
     } catch {
       // Defaults are fine
+    } finally {
+      _loaded = true;
     }
   },
 
