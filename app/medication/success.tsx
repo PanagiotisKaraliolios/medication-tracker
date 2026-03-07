@@ -1,27 +1,37 @@
-import React, { useMemo } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useMemo, useEffect, useCallback } from 'react';
+import { View, Text, StyleSheet, BackHandler } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Button } from '../../components/ui/Button';
 import { type ColorScheme, gradients, borderRadius } from '../../components/ui/theme';
 import { useThemeColors } from '../../hooks/useThemeColors';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useMedicationDraft, useScheduleDraft } from '../../stores/draftStores';
 import { showInterstitial } from '../../lib/interstitialManager';
 
 export default function SuccessScreen() {
   const router = useRouter();
   const c = useThemeColors();
-  const styles = useMemo(() => makeStyles(c), [c]);
+  const insets = useSafeAreaInsets();
+  const styles = useMemo(() => makeStyles(c, insets.bottom), [c, insets.bottom]);
   const { resetDraft } = useMedicationDraft();
   const { resetScheduleDraft, schedulingMedId } = useScheduleDraft();
   const isScheduling = !!schedulingMedId;
 
-  const navigateToDashboard = () => {
+  const navigateToDashboard = useCallback(() => {
     resetDraft();
     resetScheduleDraft();
     router.replace('/(tabs)');
-  };
+  }, [resetDraft, resetScheduleDraft, router]);
+
+  useEffect(() => {
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      navigateToDashboard();
+      return true;
+    });
+    return () => sub.remove();
+  }, [navigateToDashboard]);
 
   const handleDone = () => {
     showInterstitial(navigateToDashboard);
@@ -56,7 +66,7 @@ export default function SuccessScreen() {
   );
 }
 
-function makeStyles(c: ColorScheme) {
+function makeStyles(c: ColorScheme, bottomInset: number) {
   return StyleSheet.create({
     container: {
       flex: 1,
@@ -90,7 +100,7 @@ function makeStyles(c: ColorScheme) {
     },
     footer: {
       paddingHorizontal: 24,
-      paddingBottom: 40,
+      paddingBottom: Math.max(40, bottomInset + 16),
     },
   });
 }

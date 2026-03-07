@@ -5,6 +5,7 @@ import { Feather } from '@expo/vector-icons';
 import { Button } from '../../components/ui/Button';
 import { type ColorScheme, borderRadius, shadows } from '../../components/ui/theme';
 import { useThemeColors } from '../../hooks/useThemeColors';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useScheduleDraft } from '../../stores/draftStores';
 import { useCreateSchedule, useUpdateSchedule } from '../../hooks/useQueryHooks';
 import { useAuth } from '../../contexts/AuthContext';
@@ -15,7 +16,8 @@ import { formatDateLabel } from '../../utils/date';
 export default function ReviewScreen() {
   const router = useRouter();
   const c = useThemeColors();
-  const styles = useMemo(() => makeStyles(c), [c]);
+  const insets = useSafeAreaInsets();
+  const styles = useMemo(() => makeStyles(c, insets.bottom), [c, insets.bottom]);
   const { scheduleDraft, schedulingMedId } = useScheduleDraft();
   const createScheduleMut = useCreateSchedule();
   const updateScheduleMut = useUpdateSchedule();
@@ -109,7 +111,7 @@ export default function ReviewScreen() {
         });
       }
 
-      router.push('/medication/success');
+      router.replace('/medication/success');
     } catch (err: any) {
       Toast.show({ type: 'error', text1: 'Save failed', text2: err.message });
     } finally {
@@ -156,7 +158,7 @@ export default function ReviewScreen() {
   );
 }
 
-function makeStyles(c: ColorScheme) {
+function makeStyles(c: ColorScheme, bottomInset: number) {
   return StyleSheet.create({
     container: {
       flex: 1,
@@ -225,7 +227,7 @@ function makeStyles(c: ColorScheme) {
       backgroundColor: c.card,
       paddingHorizontal: 24,
       paddingTop: 16,
-      paddingBottom: 32,
+      paddingBottom: Math.max(32, bottomInset + 16),
       borderTopWidth: 1,
       borderTopColor: c.gray100,
     },

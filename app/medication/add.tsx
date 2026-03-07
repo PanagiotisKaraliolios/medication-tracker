@@ -15,6 +15,7 @@ import { Button } from '../../components/ui/Button';
 import { AlertDialog } from '../../components/ui/AlertDialog';
 import { type ColorScheme, borderRadius, shadows } from '../../components/ui/theme';
 import { useThemeColors } from '../../hooks/useThemeColors';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useMedicationDraft, useScheduleDraft } from '../../stores/draftStores';
 import { useCreateMedication } from '../../hooks/useQueryHooks';
 import Toast from 'react-native-toast-message';
@@ -23,7 +24,8 @@ import { MEDICATION_TYPES } from '../../constants/medications';
 export default function AddMedicationScreen() {
   const router = useRouter();
   const c = useThemeColors();
-  const styles = useMemo(() => makeStyles(c), [c]);
+  const insets = useSafeAreaInsets();
+  const styles = useMemo(() => makeStyles(c, insets.bottom), [c, insets.bottom]);
   const { draft, updateDraft, resetDraft } = useMedicationDraft();
   const createMedication = useCreateMedication();
   const { resetScheduleDraft, setSchedulingMedId } = useScheduleDraft();
@@ -185,7 +187,7 @@ export default function AddMedicationScreen() {
   );
 }
 
-function makeStyles(c: ColorScheme) {
+function makeStyles(c: ColorScheme, bottomInset: number) {
   return StyleSheet.create({
     container: {
       flex: 1,
@@ -273,7 +275,7 @@ function makeStyles(c: ColorScheme) {
       backgroundColor: c.card,
       paddingHorizontal: 24,
       paddingTop: 16,
-      paddingBottom: 32,
+      paddingBottom: Math.max(32, bottomInset + 16),
       borderTopWidth: 1,
       borderTopColor: c.gray100,
     },

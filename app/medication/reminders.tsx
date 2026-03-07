@@ -6,6 +6,7 @@ import { SegmentedControl } from '../../components/ui/SegmentedControl';
 import { NotificationCard } from '../../components/ui/NotificationCard';
 import { type ColorScheme, borderRadius } from '../../components/ui/theme';
 import { useThemeColors } from '../../hooks/useThemeColors';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useScheduleDraft } from '../../stores/draftStores';
 import { SNOOZE_OPTIONS } from '../../constants/schedule';
 
@@ -13,7 +14,8 @@ export default function RemindersScreen() {
   const router = useRouter();
   const { scheduleDraft, updateScheduleDraft } = useScheduleDraft();
   const c = useThemeColors();
-  const styles = useMemo(() => makeStyles(c), [c]);
+  const insets = useSafeAreaInsets();
+  const styles = useMemo(() => makeStyles(c, insets.bottom), [c, insets.bottom]);
 
   return (
     <View style={styles.container}>
@@ -64,7 +66,7 @@ export default function RemindersScreen() {
   );
 }
 
-function makeStyles(c: ColorScheme) {
+function makeStyles(c: ColorScheme, bottomInset: number) {
   return StyleSheet.create({
     container: {
       flex: 1,
@@ -103,7 +105,7 @@ function makeStyles(c: ColorScheme) {
       backgroundColor: c.card,
       paddingHorizontal: 24,
       paddingTop: 16,
-      paddingBottom: 32,
+      paddingBottom: Math.max(32, bottomInset + 16),
       borderTopWidth: 1,
       borderTopColor: c.gray100,
     },

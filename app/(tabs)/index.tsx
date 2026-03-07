@@ -14,6 +14,7 @@ import { CalendarSection } from '../../components/ui/CalendarSection';
 import { AdBanner } from '../../components/ui/AdBanner';
 import { type ColorScheme, gradients, shadows } from '../../components/ui/theme';
 import { useThemeColors } from '../../hooks/useThemeColors';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCalendar } from '../../hooks/useCalendar';
 import { useSnooze } from '../../hooks/useSnooze';
 import {
@@ -35,7 +36,8 @@ import { formatTimeLeft } from '../../utils/snooze';
 
 export default function TodayDashboard() {
   const c = useThemeColors();
-  const styles = useMemo(() => makeStyles(c), [c]);
+  const insets = useSafeAreaInsets();
+  const styles = useMemo(() => makeStyles(c, insets.bottom), [c, insets.bottom]);
   const queryClient = useQueryClient();
 
   const calendar = useCalendar();
@@ -426,7 +428,7 @@ export default function TodayDashboard() {
   );
 }
 
-function makeStyles(c: ColorScheme) {
+function makeStyles(c: ColorScheme, bottomInset: number) {
   return StyleSheet.create({
     container: {
       flex: 1,
@@ -501,7 +503,7 @@ function makeStyles(c: ColorScheme) {
     },
     fabWrapper: {
       position: 'absolute',
-      bottom: 24,
+      bottom: Math.max(24, bottomInset + 8),
       right: 24,
     },
     fab: {
