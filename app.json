@@ -25,8 +25,7 @@
       "package": "com.anonymous.medicationtracker",
       "permissions": [
         "android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS",
-        "android.permission.SCHEDULE_EXACT_ALARM",
-        "android.permission.USE_EXACT_ALARM"
+        "android.permission.SCHEDULE_EXACT_ALARM"
       ]
     },
     "web": {
