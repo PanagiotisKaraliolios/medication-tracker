@@ -1,7 +1,11 @@
-import { QueryClient } from '@tanstack/react-query';
+import { QueryClient, onlineManager } from '@tanstack/react-query';
 import { AppState, Platform } from 'react-native';
 import type { AppStateStatus } from 'react-native';
 import { focusManager } from '@tanstack/react-query';
+import NetInfo from '@react-native-community/netinfo';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister';
+import { QUERY_CACHE_KEY } from '../constants/storage';
 
 // ── App-focus refetch for React Native ──────────────────────────────
 
@@ -13,19 +17,38 @@ function onAppStateChange(status: AppStateStatus) {
 
 AppState.addEventListener('change', onAppStateChange);
 
+// ── Online Manager (NetInfo integration) ────────────────────────────
+
+onlineManager.setEventListener((setOnline) => {
+  return NetInfo.addEventListener((state) => {
+    setOnline(!!state.isConnected);
+  });
+});
+
 // ── Query Client ────────────────────────────────────────────────────
+
+const TWENTY_FOUR_HOURS = 1000 * 60 * 60 * 24;
 
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 1000 * 60 * 2,    // 2 minutes — data considered fresh
-      gcTime: 1000 * 60 * 10,      // 10 minutes — garbage collect unused cache
+      gcTime: TWENTY_FOUR_HOURS,    // 24 hours — survive app restarts with persister
       retry: 2,
       refetchOnWindowFocus: true,
       refetchOnReconnect: true,
     },
     mutations: {
       retry: 1,
+      networkMode: 'offlineFirst',
     },
   },
+});
+
+// ── AsyncStorage Persister ──────────────────────────────────────────
+
+export const queryPersister = createAsyncStoragePersister({
+  storage: AsyncStorage,
+  key: QUERY_CACHE_KEY,
+  throttleTime: 1000,
 });

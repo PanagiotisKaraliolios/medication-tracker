@@ -1,16 +1,17 @@
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { ThemeProvider, DefaultTheme, DarkTheme } from '@react-navigation/native';
-import { QueryClientProvider } from '@tanstack/react-query';
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { useReactQueryDevTools } from '@dev-plugins/react-query';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import { ThemePreferenceProvider, useThemePreference } from '../contexts/ThemeContext';
-import { queryClient } from '../lib/queryClient';
+import { queryClient, queryPersister } from '../lib/queryClient';
 import { registerNotificationHandler, rescheduleAllMedicationReminders, recheckAllLowSupplyReminders, fireMissedDoseReminders, type MissedDoseLogInput } from '../lib/notifications';
 import { supabase } from '../lib/supabase';
 import type { MedicationRow, ScheduleRow } from '../types/database';
 import { useEffect, useRef } from 'react';
 import { useBatteryOptimization } from '../hooks/useBatteryOptimization';
 import { BatteryOptimizationModal } from '../components/ui/BatteryOptimizationModal';
+import { OfflineBanner } from '../components/ui/OfflineBanner';
 import { initializeAds } from '../lib/ads';
 import { preloadInterstitial } from '../lib/interstitialManager';
 import { useAppOpenAd } from '../hooks/useAppOpenAd';
@@ -164,6 +165,7 @@ function RootLayoutNav() {
 
   return (
     <>
+      <OfflineBanner />
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="index" />
         <Stack.Screen name="auth/login" />
@@ -212,13 +214,13 @@ export default function RootLayout() {
 function RootLayoutInner() {
   const { resolvedScheme } = useThemePreference();
   return (
-    <QueryClientProvider client={queryClient}>
+    <PersistQueryClientProvider client={queryClient} persistOptions={{ persister: queryPersister }}>
       <ThemeProvider value={resolvedScheme === 'dark' ? DarkNavTheme : LightNavTheme}>
         <AuthProvider>
           <RootLayoutNav />
           <Toast />
         </AuthProvider>
       </ThemeProvider>
-    </QueryClientProvider>
+    </PersistQueryClientProvider>
   );
 }

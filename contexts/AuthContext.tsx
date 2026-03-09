@@ -1,7 +1,9 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import { Session, User } from '@supabase/supabase-js';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../lib/supabase';
 import { queryClient } from '../lib/queryClient';
+import { PROFILE_CACHE_KEY } from '../constants/storage';
 
 type AuthContextType = {
   session: Session | null;
@@ -41,12 +43,33 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setProfileAge(null);
       return;
     }
-    const { data } = await supabase.from('profiles').select('id, full_name, age').eq('id', uid).single();
+    const { data, error } = await supabase.from('profiles').select('id, full_name, age').eq('id', uid).single();
     if (data) {
       setHasProfile(true);
       setProfileName(data.full_name ?? null);
       setProfileAge(data.age ?? null);
+      // Cache profile for offline fallback
+      await AsyncStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify({
+        hasProfile: true,
+        fullName: data.full_name ?? null,
+        age: data.age ?? null,
+      }));
+    } else if (error && error.code !== 'PGRST116') {
+      // Network/server error (not "row not found") — try cached profile
+      try {
+        const cached = await AsyncStorage.getItem(PROFILE_CACHE_KEY);
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          setHasProfile(parsed.hasProfile);
+          setProfileName(parsed.fullName);
+          setProfileAge(parsed.age);
+          return;
+        }
+      } catch {}
+      // No cache available — keep hasProfile as null (loading state) rather than false
+      setHasProfile(null);
     } else {
+      // PGRST116 (row not found) or no data — user genuinely has no profile
       setHasProfile(false);
       setProfileName(null);
       setProfileAge(null);
@@ -87,6 +110,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const signOut = async () => {
     setLoading(true);
     queryClient.clear();
+    await AsyncStorage.removeItem(PROFILE_CACHE_KEY);
     await supabase.auth.signOut();
   };
 
