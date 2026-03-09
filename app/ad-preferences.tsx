@@ -10,6 +10,7 @@ import {
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { type ColorScheme, gradients, borderRadius, shadows } from '../components/ui/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
 import { useAdPreferences, type AdPreferences } from '../stores/adPreferencesStore';
@@ -37,6 +38,7 @@ const otherItems: ToggleItem[] = [
 
 export default function AdPreferencesScreen() {
   const c = useThemeColors();
+  const insets = useSafeAreaInsets();
   const styles = useMemo(() => makeStyles(c), [c]);
   const router = useRouter();
   const prefs = useAdPreferences();
@@ -146,15 +148,28 @@ export default function AdPreferencesScreen() {
           </View>
         </View>
 
-        {/* Support message */}
-        <View style={styles.supportCard}>
-          <Feather name="heart" size={20} color={c.teal} />
-          <Text style={styles.supportText}>
-            Ads help keep MediTrack free for everyone. Thank you for your support!
-          </Text>
-        </View>
+        {/* Support the Developer */}
+        <TouchableOpacity
+          style={styles.supportButton}
+          onPress={() => router.push('/support-developer')}
+          activeOpacity={0.7}
+        >
+          <LinearGradient
+            colors={[...gradients.primary]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.supportButtonGradient}
+          >
+            <Feather name="heart" size={20} color="#FFFFFF" />
+            <View style={styles.supportButtonText}>
+              <Text style={styles.supportButtonTitle}>Support the Developer</Text>
+              <Text style={styles.supportButtonDesc}>View ads to help keep MediTrack free</Text>
+            </View>
+            <Feather name="chevron-right" size={20} color="rgba(255,255,255,0.7)" />
+          </LinearGradient>
+        </TouchableOpacity>
 
-        <View style={{ height: 40 }} />
+        <View style={{ height: Math.max(insets.bottom, 20) + 20 }} />
       </ScrollView>
     </View>
   );
@@ -292,6 +307,31 @@ function makeStyles(c: ColorScheme) {
       fontSize: 14,
       color: c.gray600,
       lineHeight: 20,
+    },
+    supportButton: {
+      borderRadius: borderRadius.lg,
+      overflow: 'hidden',
+      ...shadows.md,
+    },
+    supportButtonGradient: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      padding: 16,
+      borderRadius: borderRadius.lg,
+    },
+    supportButtonText: {
+      flex: 1,
+    },
+    supportButtonTitle: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: '#FFFFFF',
+    },
+    supportButtonDesc: {
+      fontSize: 13,
+      color: 'rgba(255,255,255,0.8)',
+      marginTop: 2,
     },
   });
 }

@@ -186,6 +186,7 @@ function RootLayoutNav() {
         <Stack.Screen name="set-password" options={{ headerShown: false }} />
         <Stack.Screen name="change-password" options={{ headerShown: false }} />
         <Stack.Screen name="ad-preferences" options={{ headerShown: false }} />
+        <Stack.Screen name="support-developer" options={{ headerShown: false }} />
       </Stack>
 
       {/* Battery optimization prompt — Android only, shown once for authenticated users */}
