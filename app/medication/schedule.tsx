@@ -57,8 +57,20 @@ export default function ScheduleScreen() {
           />
         </View>
 
-        {/* Day selector */}
-        {scheduleDraft.frequency !== 'Daily' && (
+        {/* Day selector (Weekly) or Interval stepper */}
+        {scheduleDraft.frequency === 'Interval' && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Repeat Every</Text>
+            <Stepper
+              value={scheduleDraft.intervalDays ?? 2}
+              onChange={(v) => updateScheduleDraft({ intervalDays: v })}
+              min={2}
+              max={90}
+              suffix={{ singular: 'day', plural: 'days' }}
+            />
+          </View>
+        )}
+        {scheduleDraft.frequency === 'Weekly' && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Days</Text>
             <DaySelector

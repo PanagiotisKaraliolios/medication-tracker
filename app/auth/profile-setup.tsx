@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useState, useMemo } from 'react';
 import { Feather } from '@expo/vector-icons';
@@ -7,6 +7,7 @@ import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
+import { DatePickerModal } from '../../components/ui/DatePickerModal';
 import { type ColorScheme, gradients, borderRadius } from '../../components/ui/theme';
 import { useThemeColors } from '../../hooks/useThemeColors';
 import Toast from 'react-native-toast-message';
@@ -17,12 +18,20 @@ export default function ProfileSetupScreen() {
   const router = useRouter();
   const { user, checkProfile } = useAuth();
   const [name, setName] = useState('');
-  const [age, setAge] = useState('');
+  const [dateOfBirth, setDateOfBirth] = useState<string | null>(null);
+  const [showDobPicker, setShowDobPicker] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  const todayISO = useMemo(() => new Date().toISOString().slice(0, 10), []);
+
+  const formatDisplayDate = (iso: string) => {
+    const d = new Date(iso + 'T00:00:00');
+    return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+  };
+
   const handleComplete = async () => {
-    if (!name || !age) {
-      Toast.show({ type: 'error', text1: 'Error', text2: 'Please fill in all fields' });
+    if (!name) {
+      Toast.show({ type: 'error', text1: 'Error', text2: 'Please enter your name' });
       return;
     }
 
@@ -45,7 +54,7 @@ export default function ProfileSetupScreen() {
       .upsert({
         id: userId,
         full_name: name,
-        age: parseInt(age, 10),
+        date_of_birth: dateOfBirth,
         updated_at: new Date().toISOString(),
       });
 
@@ -95,13 +104,32 @@ export default function ProfileSetupScreen() {
           </View>
 
           <View>
-            <Text style={styles.label}>Age</Text>
-            <Input
-              icon={<Feather name="calendar" size={20} color={c.gray400} />}
-              placeholder="Enter your age"
-              value={age}
-              onChangeText={setAge}
-              keyboardType="numeric"
+            <Text style={styles.label}>Date of Birth <Text style={styles.optionalBadge}>(optional)</Text></Text>
+            <TouchableOpacity
+              style={styles.dobButton}
+              onPress={() => setShowDobPicker(true)}
+              activeOpacity={0.7}
+            >
+              <Feather name="calendar" size={20} color={c.gray400} />
+              <Text style={[styles.dobText, !dateOfBirth && styles.dobPlaceholder]}>
+                {dateOfBirth ? formatDisplayDate(dateOfBirth) : 'Select date of birth'}
+              </Text>
+              {dateOfBirth && (
+                <TouchableOpacity
+                  onPress={() => setDateOfBirth(null)}
+                  hitSlop={8}
+                >
+                  <Feather name="x" size={18} color={c.gray400} />
+                </TouchableOpacity>
+              )}
+            </TouchableOpacity>
+            <DatePickerModal
+              visible={showDobPicker}
+              onClose={() => setShowDobPicker(false)}
+              onConfirm={(date) => setDateOfBirth(date)}
+              initialDate={dateOfBirth ?? '1990-01-01'}
+              maxDate={todayISO}
+              title="Date of Birth"
             />
           </View>
 
@@ -159,6 +187,30 @@ function makeStyles(c: ColorScheme) {
       fontWeight: '600',
       color: c.gray700,
       marginBottom: 8,
+    },
+    optionalBadge: {
+      fontSize: 12,
+      fontWeight: '400',
+      color: c.gray400,
+    },
+    dobButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      backgroundColor: c.card,
+      borderRadius: borderRadius.lg,
+      borderWidth: 1,
+      borderColor: c.gray200,
+      paddingHorizontal: 16,
+      paddingVertical: 14,
+    },
+    dobText: {
+      flex: 1,
+      fontSize: 15,
+      color: c.gray900,
+    },
+    dobPlaceholder: {
+      color: c.gray400,
     },
   });
 }

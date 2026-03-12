@@ -12,6 +12,7 @@ import {
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as Notifications from 'expo-notifications';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useMedications, useSchedules, useDoseLogsByRange } from '../hooks/useQueryHooks';
@@ -154,6 +155,8 @@ export default function PrivacySecurityScreen() {
       const body = await res.json();
       if (!res.ok) throw new Error(body.error ?? 'Failed to delete account');
 
+      // Cancel all local notifications before signing out
+      await Notifications.cancelAllScheduledNotificationsAsync();
       // User is already deleted server-side, just clear local session
       await supabase.auth.signOut();
       // Auth listener will handle navigation

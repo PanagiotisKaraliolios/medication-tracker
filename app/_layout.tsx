@@ -8,7 +8,8 @@ import { queryClient, queryPersister } from '../lib/queryClient';
 import { registerNotificationHandler, rescheduleAllMedicationReminders, recheckAllLowSupplyReminders, fireMissedDoseReminders, type MissedDoseLogInput } from '../lib/notifications';
 import { supabase } from '../lib/supabase';
 import type { MedicationRow, ScheduleRow } from '../types/database';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
+import { AppState, ActivityIndicator, View } from 'react-native';
 import { useBatteryOptimization } from '../hooks/useBatteryOptimization';
 import { BatteryOptimizationModal } from '../components/ui/BatteryOptimizationModal';
 import { OfflineBanner } from '../components/ui/OfflineBanner';
@@ -22,9 +23,8 @@ registerNotificationHandler();
 
 // Initialize Mobile Ads SDK (consent + init) once at module level
 initializeAds().then(() => preloadInterstitial());
-import { ActivityIndicator, View } from 'react-native';
-import Toast from 'react-native-toast-message';
-import { colors, darkColors } from '../components/ui/theme';
+import Toast, { BaseToast, ErrorToast, type BaseToastProps } from 'react-native-toast-message';
+import { colors, darkColors, borderRadius, shadows } from '../components/ui/theme';
 
 const LightNavTheme = {
   ...DefaultTheme,
@@ -68,73 +68,89 @@ function RootLayoutNav() {
     useAdPreferences.getState().load();
   }, []);
 
-  // Re-register medication reminders on app launch once user is authenticated
-  useEffect(() => {
-    if (!session || loading || hasProfile !== true || remindersRegistered.current) return;
-    remindersRegistered.current = true;
+  // Sync notification reminders from Supabase → local device
+  const syncReminders = useCallback(async () => {
+    if (!session || loading || hasProfile !== true) return;
+    try {
+      const [{ data: schedData, error: schedErr }, { data: medData, error: medErr }] = await Promise.all([
+        supabase.from('schedules').select('*').eq('user_id', session.user.id).eq('is_active', true),
+        supabase.from('medications').select('*').eq('user_id', session.user.id).eq('is_active', true),
+      ]);
+      if (schedErr || medErr) return;
 
-    (async () => {
-      try {
-        const [{ data: schedData, error: schedErr }, { data: medData, error: medErr }] = await Promise.all([
-          supabase.from('schedules').select('*').eq('user_id', session.user.id).eq('is_active', true),
-          supabase.from('medications').select('*').eq('user_id', session.user.id).eq('is_active', true),
-        ]);
-        if (schedErr || medErr) return;
+      const schedules = (schedData ?? []) as ScheduleRow[];
+      const meds = (medData ?? []) as MedicationRow[];
 
-        const schedules = (schedData ?? []) as ScheduleRow[];
-        const meds = (medData ?? []) as MedicationRow[];
-
-        // Build a map from schedule ID → medication name
-        const medNameById = Object.fromEntries(
-          meds.map((m) => [m.id, m.name]),
-        );
-        const scheduleToMedName: Record<string, string> = {};
-        for (const s of schedules) {
-          scheduleToMedName[s.id] = medNameById[s.medication_id] ?? 'your medication';
-        }
-
-        await rescheduleAllMedicationReminders(
-          schedules.map((s) => ({
-            id: s.id,
-            medication_id: s.medication_id,
-            frequency: s.frequency,
-            selected_days: s.selected_days,
-            times_of_day: s.times_of_day,
-            push_notifications: s.push_notifications,
-            snooze_duration: s.snooze_duration,
-            dosage_per_dose: s.dosage_per_dose,
-          })),
-          scheduleToMedName,
-        );
-
-        // Check all medications for low supply and schedule/cancel reminders
-        await recheckAllLowSupplyReminders(meds);
-
-        // Fire catch-up notifications for doses missed while the phone was off
-        const todayISO = new Date().toISOString().slice(0, 10);
-        const { data: logData } = await supabase
-          .from('dose_logs')
-          .select('schedule_id, time_label')
-          .eq('user_id', session.user.id)
-          .eq('scheduled_date', todayISO);
-
-        await fireMissedDoseReminders(
-          schedules.map((s) => ({
-            id: s.id,
-            medication_id: s.medication_id,
-            frequency: s.frequency,
-            selected_days: s.selected_days,
-            times_of_day: s.times_of_day,
-            push_notifications: s.push_notifications,
-          })),
-          (logData ?? []) as MissedDoseLogInput[],
-          scheduleToMedName,
-        );
-      } catch (err) {
-        console.warn('[Layout] Failed to re-register reminders:', err);
+      // Build a map from schedule ID → medication name
+      const medNameById = Object.fromEntries(
+        meds.map((m) => [m.id, m.name]),
+      );
+      const scheduleToMedName: Record<string, string> = {};
+      for (const s of schedules) {
+        scheduleToMedName[s.id] = medNameById[s.medication_id] ?? 'your medication';
       }
-    })();
+
+      await rescheduleAllMedicationReminders(
+        schedules.map((s) => ({
+          id: s.id,
+          medication_id: s.medication_id,
+          frequency: s.frequency,
+          selected_days: s.selected_days,
+          times_of_day: s.times_of_day,
+          push_notifications: s.push_notifications,
+          snooze_duration: s.snooze_duration,
+          dosage_per_dose: s.dosage_per_dose,
+          interval_days: s.interval_days,
+          start_date: s.start_date,
+        })),
+        scheduleToMedName,
+      );
+
+      // Check all medications for low supply and schedule/cancel reminders
+      await recheckAllLowSupplyReminders(meds);
+
+      // Fire catch-up notifications for doses missed while the phone was off
+      const todayISO = new Date().toISOString().slice(0, 10);
+      const { data: logData } = await supabase
+        .from('dose_logs')
+        .select('schedule_id, time_label')
+        .eq('user_id', session.user.id)
+        .eq('scheduled_date', todayISO);
+
+      await fireMissedDoseReminders(
+        schedules.map((s) => ({
+          id: s.id,
+          medication_id: s.medication_id,
+          frequency: s.frequency,
+          selected_days: s.selected_days,
+          times_of_day: s.times_of_day,
+          push_notifications: s.push_notifications,
+          interval_days: s.interval_days,
+          start_date: s.start_date,
+        })),
+        (logData ?? []) as MissedDoseLogInput[],
+        scheduleToMedName,
+      );
+    } catch (err) {
+      console.warn('[Layout] Failed to sync reminders:', err);
+    }
   }, [session, loading, hasProfile]);
+
+  // Register reminders on initial app launch
+  useEffect(() => {
+    if (remindersRegistered.current) return;
+    if (!session || loading || hasProfile !== true) return;
+    remindersRegistered.current = true;
+    syncReminders();
+  }, [session, loading, hasProfile, syncReminders]);
+
+  // Re-sync reminders when app returns to foreground (picks up changes from other devices)
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') syncReminders();
+    });
+    return () => sub.remove();
+  }, [syncReminders]);
 
   useEffect(() => {
     if (loading) return;
@@ -203,6 +219,51 @@ function RootLayoutNav() {
   );
 }
 
+function buildToastConfig(scheme: 'light' | 'dark') {
+  const c = scheme === 'dark' ? darkColors : colors;
+  const sharedStyle = {
+    backgroundColor: c.card,
+    borderRadius: borderRadius.lg,
+    ...shadows.md,
+    paddingHorizontal: 4,
+    height: undefined as unknown as number,
+    paddingVertical: 14,
+  };
+  const text1 = { fontSize: 14, fontWeight: '600' as const, color: c.gray900 };
+  const text2 = { fontSize: 12, color: c.gray500, marginTop: 2 };
+  const content = { paddingHorizontal: 14 };
+
+  return {
+    success: (props: BaseToastProps) => (
+      <BaseToast
+        {...props}
+        style={{ ...sharedStyle, borderLeftWidth: 4, borderLeftColor: c.success }}
+        contentContainerStyle={content}
+        text1Style={text1}
+        text2Style={text2}
+      />
+    ),
+    error: (props: BaseToastProps) => (
+      <ErrorToast
+        {...props}
+        style={{ ...sharedStyle, borderLeftWidth: 4, borderLeftColor: c.error }}
+        contentContainerStyle={content}
+        text1Style={text1}
+        text2Style={text2}
+      />
+    ),
+    info: (props: BaseToastProps) => (
+      <BaseToast
+        {...props}
+        style={{ ...sharedStyle, borderLeftWidth: 4, borderLeftColor: c.teal }}
+        contentContainerStyle={content}
+        text1Style={text1}
+        text2Style={text2}
+      />
+    ),
+  };
+}
+
 export default function RootLayout() {
   return (
     <ThemePreferenceProvider>
@@ -218,7 +279,7 @@ function RootLayoutInner() {
       <ThemeProvider value={resolvedScheme === 'dark' ? DarkNavTheme : LightNavTheme}>
         <AuthProvider>
           <RootLayoutNav />
-          <Toast />
+          <Toast config={buildToastConfig(resolvedScheme)} />
         </AuthProvider>
       </ThemeProvider>
     </PersistQueryClientProvider>

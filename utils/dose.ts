@@ -29,6 +29,14 @@ export function resolveTimeSlot(label: string): { time: string; sortOrder: numbe
   return { time: label, sortOrder: mins >= 0 ? mins : 9999 };
 }
 
+/** Check whether `dateISO` falls on an interval day anchored to `startDate`. */
+export function isIntervalDayMatch(startDate: string, dateISO: string, intervalDays: number): boolean {
+  const start = new Date(startDate + 'T00:00:00');
+  const date = new Date(dateISO + 'T00:00:00');
+  const diffDays = Math.round((date.getTime() - start.getTime()) / 86400000);
+  return diffDays >= 0 && diffDays % intervalDays === 0;
+}
+
 /**
  * Build the list of doses for a given day from medications, schedules, and logs.
  * Includes orphaned dose logs whose time_label is no longer in the current schedule.
@@ -50,7 +58,13 @@ export function buildTodayDoses(
   for (const sch of schedules) {
     const med = medMap.get(sch.medication_id);
     if (!med) continue;
-    if (!sch.selected_days.includes(todayLabel)) continue;
+
+    // Check if this schedule applies to the given day
+    if (sch.frequency === 'interval' && sch.interval_days && dateISO) {
+      if (!isIntervalDayMatch(sch.start_date, dateISO, sch.interval_days)) continue;
+    } else if (sch.frequency !== 'daily') {
+      if (!sch.selected_days.includes(todayLabel)) continue;
+    }
 
     if (dateISO) {
       if (sch.start_date && dateISO < sch.start_date) continue;

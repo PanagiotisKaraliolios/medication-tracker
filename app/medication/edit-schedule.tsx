@@ -52,6 +52,7 @@ export default function EditScheduleScreen() {
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [startDate, setStartDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [endDate, setEndDate] = useState<string | null>(null);
+  const [intervalDays, setIntervalDays] = useState<number | null>(null);
   const [initialized, setInitialized] = useState(false);
 
   const customTimes = timesOfDay.filter((t) => !PRESET_LABELS.has(t));
@@ -68,6 +69,7 @@ export default function EditScheduleScreen() {
       setInstructions(original.instructions ?? '');
       setStartDate(original.start_date ?? new Date().toISOString().slice(0, 10));
       setEndDate(original.end_date ?? null);
+      setIntervalDays(original.interval_days ?? null);
       setInitialized(true);
     }
   }, [original, initialized]);
@@ -85,7 +87,11 @@ export default function EditScheduleScreen() {
     setShowTimePicker(false);
   };
 
-  const isFormValid = timesOfDay.length > 0 && (frequency === 'Daily' || selectedDays.length > 0);
+  const isFormValid = timesOfDay.length > 0 && (
+    frequency === 'Daily' ||
+    frequency === 'Interval' ||
+    selectedDays.length > 0
+  );
 
   const handleSave = async () => {
     if (!id || !original) return;
@@ -101,6 +107,7 @@ export default function EditScheduleScreen() {
       instructions,
       start_date: startDate,
       end_date: endDate,
+      interval_days: frequency === 'Interval' ? (intervalDays ?? 2) : null,
     };
 
     try {
@@ -154,8 +161,20 @@ export default function EditScheduleScreen() {
           />
         </View>
 
-        {/* Day selector */}
-        {frequency !== 'Daily' && (
+        {/* Day selector (Weekly) or Interval stepper */}
+        {frequency === 'Interval' && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Repeat Every</Text>
+            <Stepper
+              value={intervalDays ?? 2}
+              onChange={setIntervalDays}
+              min={2}
+              max={90}
+              suffix={{ singular: 'day', plural: 'days' }}
+            />
+          </View>
+        )}
+        {frequency === 'Weekly' && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Days</Text>
             <DaySelector

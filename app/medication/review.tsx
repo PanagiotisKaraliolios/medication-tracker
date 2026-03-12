@@ -32,7 +32,11 @@ export default function ReviewScreen() {
       iconColor: c.blue,
       title: 'Schedule',
       items: [
-        scheduleDraft.frequency,
+        scheduleDraft.frequency === 'Interval' && scheduleDraft.intervalDays
+          ? `Every ${scheduleDraft.intervalDays} days`
+          : scheduleDraft.frequency === 'Weekly'
+            ? `${scheduleDraft.frequency} — ${scheduleDraft.selectedDays.join(', ')}`
+            : scheduleDraft.frequency,
         scheduleDraft.timesOfDay.join(', '),
         `${scheduleDraft.dosagePerDose} ${scheduleDraft.dosagePerDose === 1 ? 'pill' : 'pills'} per dose`,
       ],
@@ -101,6 +105,7 @@ export default function ReviewScreen() {
             instructions: scheduleDraft.instructions,
             start_date: scheduleDraft.startDate,
             end_date: scheduleDraft.endDate,
+            interval_days: scheduleDraft.frequency === 'Interval' ? (scheduleDraft.intervalDays ?? 2) : null,
           },
         });
       } else {

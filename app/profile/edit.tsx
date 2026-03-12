@@ -15,6 +15,7 @@ import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
+import { DatePickerModal } from '../../components/ui/DatePickerModal';
 import {
   type ColorScheme,
   gradients,
@@ -28,23 +29,27 @@ export default function EditProfileScreen() {
   const c = useThemeColors();
   const styles = useMemo(() => makeStyles(c), [c]);
   const router = useRouter();
-  const { user, profileName, profileAge, checkProfile } = useAuth();
+  const { user, profileName, profileDateOfBirth, checkProfile } = useAuth();
 
   const [name, setName] = useState(profileName ?? '');
-  const [age, setAge] = useState(profileAge != null ? String(profileAge) : '');
+  const [dateOfBirth, setDateOfBirth] = useState<string | null>(profileDateOfBirth);
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  const todayISO = new Date().toISOString().split('T')[0];
+
+  const formatDisplayDate = (iso: string) => {
+    const d = new Date(iso + 'T00:00:00');
+    return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+  };
 
   const hasChanges =
     name !== (profileName ?? '') ||
-    age !== (profileAge != null ? String(profileAge) : '');
+    dateOfBirth !== profileDateOfBirth;
 
   const handleSave = async () => {
     if (!name.trim()) {
       Toast.show({ type: 'error', text1: 'Error', text2: 'Name is required' });
-      return;
-    }
-    if (!age.trim() || Number.isNaN(parseInt(age, 10))) {
-      Toast.show({ type: 'error', text1: 'Error', text2: 'Please enter a valid age' });
       return;
     }
 
@@ -56,7 +61,7 @@ export default function EditProfileScreen() {
       .from('profiles')
       .update({
         full_name: name.trim(),
-        age: parseInt(age, 10),
+        date_of_birth: dateOfBirth,
         updated_at: new Date().toISOString(),
       })
       .eq('id', userId);
@@ -132,13 +137,31 @@ export default function EditProfileScreen() {
               </View>
 
               <View style={styles.field}>
-                <Text style={styles.label}>Age</Text>
-                <Input
-                  icon={<Feather name="calendar" size={20} color={c.gray400} />}
-                  placeholder="Enter your age"
-                  value={age}
-                  onChangeText={setAge}
-                  keyboardType="numeric"
+                <Text style={styles.label}>Date of Birth <Text style={styles.optionalBadge}>(optional)</Text></Text>
+                <TouchableOpacity
+                  style={styles.dobButton}
+                  onPress={() => setShowDatePicker(true)}
+                  activeOpacity={0.7}
+                >
+                  <Feather name="calendar" size={20} color={c.gray400} />
+                  <Text style={[styles.dobText, !dateOfBirth && styles.dobPlaceholder]}>
+                    {dateOfBirth ? formatDisplayDate(dateOfBirth) : 'Select date of birth'}
+                  </Text>
+                  {dateOfBirth && (
+                    <TouchableOpacity
+                      onPress={() => setDateOfBirth(null)}
+                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    >
+                      <Feather name="x" size={18} color={c.gray400} />
+                    </TouchableOpacity>
+                  )}
+                </TouchableOpacity>
+                <DatePickerModal
+                  visible={showDatePicker}
+                  onClose={() => setShowDatePicker(false)}
+                  onConfirm={(date) => setDateOfBirth(date)}
+                  initialDate={dateOfBirth ?? '1990-01-01'}
+                  maxDate={todayISO}
                 />
               </View>
             </View>
@@ -283,6 +306,30 @@ function makeStyles(c: ColorScheme) {
     },
     actions: {
       marginBottom: 16,
+    },
+    optionalBadge: {
+      fontSize: 12,
+      fontWeight: '400' as const,
+      color: c.gray400,
+    },
+    dobButton: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      backgroundColor: c.card,
+      borderRadius: borderRadius.lg,
+      borderWidth: 1,
+      borderColor: c.gray200,
+      paddingHorizontal: 14,
+      paddingVertical: 14,
+      gap: 10,
+    },
+    dobText: {
+      flex: 1,
+      fontSize: 16,
+      color: c.gray900,
+    },
+    dobPlaceholder: {
+      color: c.gray400,
     },
   });
 }

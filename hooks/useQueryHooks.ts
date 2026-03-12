@@ -316,6 +316,7 @@ export function useCreateSchedule() {
           instructions: merged.instructions,
           start_date: merged.startDate,
           end_date: merged.endDate,
+          interval_days: merged.intervalDays,
         })
         .select()
         .single();
@@ -340,6 +341,8 @@ export function useCreateSchedule() {
           push_notifications: row.push_notifications,
           snooze_duration: row.snooze_duration,
           dosage_per_dose: row.dosage_per_dose,
+          interval_days: row.interval_days,
+          start_date: row.start_date,
         },
         medName,
       ).catch((err) => console.warn('[useCreateSchedule] Failed to schedule reminders:', err));
@@ -389,6 +392,8 @@ export function useUpdateSchedule() {
           push_notifications: row.push_notifications,
           snooze_duration: row.snooze_duration,
           dosage_per_dose: row.dosage_per_dose,
+          interval_days: row.interval_days,
+          start_date: row.start_date,
         },
         medName,
       ).catch((err) => console.warn('[useUpdateSchedule] Failed to reschedule reminders:', err));

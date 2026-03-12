@@ -231,6 +231,13 @@ function NotificationCard({
             color={c.gray400}
           />
           <Text style={styles.cardTime}>{item.timeInfo}</Text>
+          {isScheduled && item.dateInfo && (
+            <>
+              <Text style={styles.cardTimeSep}>·</Text>
+              <Feather name="calendar" size={12} color={c.gray400} />
+              <Text style={styles.cardTime}>{item.dateInfo}</Text>
+            </>
+          )}
         </View>
       </View>
       {onDismiss && (
@@ -375,6 +382,11 @@ function makeStyles(c: ColorScheme) {
     cardTime: {
       fontSize: 12,
       color: c.gray400,
+    },
+    cardTimeSep: {
+      fontSize: 12,
+      color: c.gray400,
+      marginHorizontal: 2,
     },
     dismissButton: {
       width: 32,

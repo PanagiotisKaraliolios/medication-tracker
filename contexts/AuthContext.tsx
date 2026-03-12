@@ -1,6 +1,7 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Notifications from 'expo-notifications';
 import { supabase } from '../lib/supabase';
 import { queryClient } from '../lib/queryClient';
 import { PROFILE_CACHE_KEY } from '../constants/storage';
@@ -11,7 +12,7 @@ type AuthContextType = {
   loading: boolean;
   hasProfile: boolean | null;
   profileName: string | null;
-  profileAge: number | null;
+  profileDateOfBirth: string | null;
   checkProfile: (userId?: string) => Promise<void>;
   signOut: () => Promise<void>;
 };
@@ -22,7 +23,7 @@ const AuthContext = createContext<AuthContextType>({
   loading: true,
   hasProfile: null,
   profileName: null,
-  profileAge: null,
+  profileDateOfBirth: null,
   checkProfile: async () => {},
   signOut: async () => {},
 });
@@ -33,26 +34,26 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const [hasProfile, setHasProfile] = useState<boolean | null>(null);
   const [profileName, setProfileName] = useState<string | null>(null);
-  const [profileAge, setProfileAge] = useState<number | null>(null);
+  const [profileDateOfBirth, setProfileDateOfBirth] = useState<string | null>(null);
 
   const checkProfile = async (userId?: string) => {
     const uid = userId || user?.id;
     if (!uid) {
       setHasProfile(null);
       setProfileName(null);
-      setProfileAge(null);
+      setProfileDateOfBirth(null);
       return;
     }
-    const { data, error } = await supabase.from('profiles').select('id, full_name, age').eq('id', uid).single();
+    const { data, error } = await supabase.from('profiles').select('id, full_name, date_of_birth').eq('id', uid).single();
     if (data) {
       setHasProfile(true);
       setProfileName(data.full_name ?? null);
-      setProfileAge(data.age ?? null);
+      setProfileDateOfBirth(data.date_of_birth ?? null);
       // Cache profile for offline fallback
       await AsyncStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify({
         hasProfile: true,
         fullName: data.full_name ?? null,
-        age: data.age ?? null,
+        dateOfBirth: data.date_of_birth ?? null,
       }));
     } else if (error && error.code !== 'PGRST116') {
       // Network/server error (not "row not found") — try cached profile
@@ -62,7 +63,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           const parsed = JSON.parse(cached);
           setHasProfile(parsed.hasProfile);
           setProfileName(parsed.fullName);
-          setProfileAge(parsed.age);
+          setProfileDateOfBirth(parsed.dateOfBirth ?? null);
           return;
         }
       } catch {}
@@ -72,7 +73,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       // PGRST116 (row not found) or no data — user genuinely has no profile
       setHasProfile(false);
       setProfileName(null);
-      setProfileAge(null);
+      setProfileDateOfBirth(null);
     }
   };
 
@@ -97,7 +98,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       } else {
         setHasProfile(null);
         setProfileName(null);
-        setProfileAge(null);
+        setProfileDateOfBirth(null);
         setLoading(false);
       }
     });
@@ -111,11 +112,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setLoading(true);
     queryClient.clear();
     await AsyncStorage.removeItem(PROFILE_CACHE_KEY);
+    await Notifications.cancelAllScheduledNotificationsAsync();
     await supabase.auth.signOut();
   };
 
   return (
-    <AuthContext.Provider value={{ session, user, loading, hasProfile, profileName, profileAge, checkProfile, signOut }}>
+    <AuthContext.Provider value={{ session, user, loading, hasProfile, profileName, profileDateOfBirth, checkProfile, signOut }}>
       {children}
     </AuthContext.Provider>
   );

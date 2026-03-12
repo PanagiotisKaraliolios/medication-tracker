@@ -8,11 +8,12 @@ type Props = {
   value: number;
   onChange: (value: number) => void;
   min?: number;
+  max?: number;
   /** If provided, shown after the number (e.g. "pills"). Pluralized when value ≠ 1. */
   suffix?: { singular: string; plural: string };
 };
 
-export function Stepper({ value, onChange, min = 1, suffix }: Props) {
+export function Stepper({ value, onChange, min = 1, max, suffix }: Props) {
   const c = useThemeColors();
   const styles = useMemo(() => makeStyles(c), [c]);
 
@@ -32,7 +33,7 @@ export function Stepper({ value, onChange, min = 1, suffix }: Props) {
       <Text style={styles.value}>{displayText}</Text>
       <TouchableOpacity
         style={styles.button}
-        onPress={() => onChange(value + 1)}
+        onPress={() => onChange(max !== undefined ? Math.min(max, value + 1) : value + 1)}
         activeOpacity={0.7}
       >
         <Feather name="plus" size={20} color={c.gray600} />

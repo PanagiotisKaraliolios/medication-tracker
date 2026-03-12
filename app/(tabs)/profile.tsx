@@ -193,7 +193,11 @@ export default function ProfileScreen() {
                         ? () => router.push('/ad-preferences')
                         : item.label === 'Privacy & Security'
                           ? () => router.push('/privacy-security')
-                          : undefined
+                          : item.label === 'Help & Support'
+                            ? () => router.push('/help-support')
+                            : item.label === 'Caregiver Sharing'
+                              ? () => router.push('/caregiver-sharing')
+                              : undefined
                 }
               >
                 <View style={styles.menuIcon}>
@@ -220,9 +224,9 @@ export default function ProfileScreen() {
             <Text style={styles.logoutText}>Log Out</Text>
           </TouchableOpacity>
 
-          <Text style={styles.version}>MediTrack v1.2.0</Text>
+          <Text style={styles.version}>MediTrack v1.3.0</Text>
 
-          <View style={{ height: 40 }} />
+          <View style={{ height: 80 }} />
         </View>
       </ScrollView>
 

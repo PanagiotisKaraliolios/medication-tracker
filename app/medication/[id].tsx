@@ -97,7 +97,11 @@ export default function MedicationDetailScreen() {
             </Text>
             {schedule && (
               <View style={styles.frequencyBadge}>
-                <Text style={styles.frequencyText}>{schedule.frequency}</Text>
+                <Text style={styles.frequencyText}>
+                  {schedule.frequency === 'interval' && schedule.interval_days
+                    ? `Every ${schedule.interval_days} days`
+                    : schedule.frequency}
+                </Text>
               </View>
             )}
           </View>

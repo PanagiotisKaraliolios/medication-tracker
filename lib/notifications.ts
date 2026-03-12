@@ -230,12 +230,15 @@ export type ScheduleNotifInput = {
   push_notifications: boolean;
   snooze_duration: string;
   dosage_per_dose: number;
+  interval_days: number | null;
+  start_date: string;
 };
 
 /**
  * Schedule OS-level repeating notifications for a medication schedule.
  * - Daily schedules use DAILY triggers (fire every day).
- * - Weekly/Interval schedules use WEEKLY triggers (fire on specific weekdays).
+ * - Weekly schedules use WEEKLY triggers (fire on specific weekdays).
+ * - Interval schedules use DATE triggers for the next 7 occurrences.
  *
  * Stores notification IDs in AsyncStorage so they can be cancelled later.
  * Skips scheduling if push_notifications is disabled on the schedule.
@@ -291,8 +294,50 @@ export async function scheduleMedicationReminders(
         },
       });
       ids.push(id);
+    } else if (schedule.frequency === 'interval' && schedule.interval_days) {
+      // Interval — schedule DATE triggers for the next 7 occurrences
+      const intervalDays = schedule.interval_days;
+      const startDate = new Date(schedule.start_date + 'T00:00:00');
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      // Find the first occurrence on or after today
+      const diffMs = today.getTime() - startDate.getTime();
+      const diffDays = Math.floor(diffMs / 86400000);
+      let offset = diffDays >= 0
+        ? (intervalDays - (diffDays % intervalDays)) % intervalDays
+        : Math.abs(diffDays) % intervalDays === 0 ? 0 : intervalDays - (Math.abs(diffDays) % intervalDays);
+
+      for (let i = 0; i < 7; i++) {
+        const occDate = new Date(today);
+        occDate.setDate(occDate.getDate() + offset + i * intervalDays);
+        occDate.setHours(hour, minute, 0, 0);
+
+        // Skip if already in the past
+        if (occDate.getTime() <= Date.now()) continue;
+        // Skip if beyond end_date (if set) — check via schedule start/end constraints
+        const occISO = occDate.toISOString().slice(0, 10);
+        if (schedule.start_date && occISO < schedule.start_date) continue;
+
+        const id = await Notifications.scheduleNotificationAsync({
+          content: {
+            title: `💊 Time for ${medicationName}`,
+            body: `Scheduled dose at ${displayTime}`,
+            sound: true,
+            categoryIdentifier: SNOOZE_CATEGORY,
+            ...(channelId ? { channelId } : {}),
+            data: doseData as unknown as Record<string, unknown>,
+          },
+          trigger: {
+            type: Notifications.SchedulableTriggerInputTypes.DATE,
+            date: occDate,
+            ...(channelId ? { channelId } : {}),
+          },
+        });
+        ids.push(id);
+      }
     } else {
-      // Weekly / Interval — schedule one WEEKLY trigger per selected day
+      // Weekly — schedule one WEEKLY trigger per selected day
       for (const day of schedule.selected_days) {
         const weekday = DAY_TO_WEEKDAY[day];
         if (!weekday) continue;
@@ -467,6 +512,8 @@ export type MissedDoseScheduleInput = {
   selected_days: string[];
   times_of_day: string[];
   push_notifications: boolean;
+  interval_days: number | null;
+  start_date: string;
 };
 
 /** Data needed per dose log for missed-dose detection */
@@ -500,7 +547,17 @@ export async function fireMissedDoseReminders(
 
   for (const sch of schedules) {
     if (!sch.push_notifications) continue;
-    if (!sch.selected_days.includes(todayLabel)) continue;
+
+    // Check if today is a scheduled day for this frequency
+    if (sch.frequency === 'interval' && sch.interval_days) {
+      const startDate = new Date(sch.start_date + 'T00:00:00');
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const diffDays = Math.round((today.getTime() - startDate.getTime()) / 86400000);
+      if (diffDays < 0 || diffDays % sch.interval_days !== 0) continue;
+    } else if (sch.frequency !== 'daily') {
+      if (!sch.selected_days.includes(todayLabel)) continue;
+    }
 
     for (const timeLabel of sch.times_of_day) {
       const parsed = parseTimeToHourMinute(timeLabel);

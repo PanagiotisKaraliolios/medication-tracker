@@ -503,7 +503,7 @@ function makeStyles(c: ColorScheme, bottomInset: number) {
     },
     fabWrapper: {
       position: 'absolute',
-      bottom: Math.max(24, bottomInset + 8),
+      bottom: Math.max(90, bottomInset + 74),
       right: 24,
     },
     fab: {

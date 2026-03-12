@@ -58,6 +58,7 @@ export type ScheduleDraft = {
   instructions: string;
   startDate: string;        // ISO date string (YYYY-MM-DD)
   endDate: string | null;   // null = continue forever
+  intervalDays: number | null; // only used when frequency = 'Interval'
 };
 
 export const emptyScheduleDraft: ScheduleDraft = {
@@ -71,6 +72,7 @@ export const emptyScheduleDraft: ScheduleDraft = {
   instructions: '',
   startDate: new Date().toISOString().slice(0, 10),
   endDate: null,
+  intervalDays: null,
 };
 
 /** Row shape returned from Supabase schedules table */
@@ -88,6 +90,7 @@ export type ScheduleRow = {
   instructions: string;
   start_date: string;       // ISO date (YYYY-MM-DD)
   end_date: string | null;  // null = forever
+  interval_days: number | null;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -105,6 +108,7 @@ export type ScheduleUpdate = {
   instructions?: string;
   start_date?: string;
   end_date?: string | null;
+  interval_days?: number | null;
 };
 
 // ─── Dose-log types ──────────────────────────────────────────────────

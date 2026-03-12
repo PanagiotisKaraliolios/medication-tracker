@@ -1,6 +1,6 @@
 import { DAY_LABELS } from '../constants/days';
 import { toISO } from './date';
-import { resolveTimeSlot } from './dose';
+import { resolveTimeSlot, isIntervalDayMatch } from './dose';
 import type { MedicationRow, ScheduleRow, DoseLogRow } from '../types/database';
 
 /**
@@ -35,7 +35,13 @@ export function computeAdherence(
 
     for (const sch of schedules) {
       if (!medIds.has(sch.medication_id)) continue;
-      if (!sch.selected_days.includes(dayLabel)) continue;
+
+      if (sch.frequency === 'interval' && sch.interval_days) {
+        if (!isIntervalDayMatch(sch.start_date, iso, sch.interval_days)) continue;
+      } else if (sch.frequency !== 'daily') {
+        if (!sch.selected_days.includes(dayLabel)) continue;
+      }
+
       if (sch.start_date && iso < sch.start_date) continue;
       if (sch.end_date && iso > sch.end_date) continue;
 
@@ -86,7 +92,13 @@ export function computeStreak(
 
     for (const sch of schedules) {
       if (!medIds.has(sch.medication_id)) continue;
-      if (!sch.selected_days.includes(dayLabel)) continue;
+
+      if (sch.frequency === 'interval' && sch.interval_days) {
+        if (!isIntervalDayMatch(sch.start_date, iso, sch.interval_days)) continue;
+      } else if (sch.frequency !== 'daily') {
+        if (!sch.selected_days.includes(dayLabel)) continue;
+      }
+
       if (sch.start_date && iso < sch.start_date) continue;
       if (sch.end_date && iso > sch.end_date) continue;
 

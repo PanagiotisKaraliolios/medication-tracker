@@ -46,15 +46,19 @@ A modern, full-featured medication tracking app built with **Expo** and **React 
 - Support for all common medication forms (tablet, capsule, liquid, injection, etc.)
 
 ### ⏰ Smart Scheduling
-- Flexible frequency options — daily, specific days, or custom patterns
+- Flexible frequency options — daily, specific days, or custom interval (every N days)
 - Multiple time slots per day (Morning, Afternoon, Evening, Night, or custom times)
 - Start and end date support for limited-duration medications
 - Configurable snooze durations per schedule
+- Unified flow: add a medication and schedule it in one step, or schedule later
 
 ### 🔔 Push Notifications & Reminders
 - Per-schedule push notification toggles
 - Snooze actions directly from notifications (Take Now / Snooze Again)
+- Missed dose catch-up — get a reminder when you open the app after missing a scheduled time
 - Low-supply reminders when inventory drops below threshold
+- Exact alarm support on Android 12+ for reliable delivery after restarts
+- Battery optimization exemption prompt for uninterrupted notifications
 - All reminders auto-restored on app launch
 
 ### ✅ Dose Tracking
@@ -69,16 +73,38 @@ A modern, full-featured medication tracking app built with **Expo** and **React 
 - Per-medication missed-dose breakdown
 - Visual bar charts with color-coded adherence levels
 
-### 👤 User Profile
-- Secure authentication via Supabase (email/password)
-- Profile management (name, age)
+### 👤 User Profile & Account
+- Secure authentication via Supabase (email/password + Google Sign-In)
+- Profile management (name, optional date of birth)
 - At-a-glance stats: medication count, adherence rate, day streak
-- Dark mode / light mode / system theme preference
+- Change password or set a password for OAuth-only accounts
+- Privacy & Security settings with data export and account deletion
+
+### 👨‍👩‍👧 Caregiver Sharing
+- Share a plain-text medication summary with family or caregivers
+- Choose a time period (7, 30, or 90 days)
+- Summary includes adherence rate, streak, medications, schedules, and supply levels
+- Shared via the system share sheet (messaging, email, etc.)
+
+### ❓ Help & Support
+- In-app FAQ with expandable answers
+- Direct email link to support
+- Privacy policy link
+
+### 📡 Offline Support
+- Network status monitoring with visual offline indicator
+- Graceful handling when connectivity is lost
 
 ### 🌙 Dark Mode
 - Full dark mode support across every screen and component
 - System theme auto-detection
 - Manual toggle in profile settings
+
+### 📢 Ads (Support the Developer)
+- Non-intrusive banner, interstitial, and app-open ads
+- Granular per-screen ad controls in Ad Preferences
+- UMP consent integration for GDPR compliance
+- All ads can be toggled off individually
 
 ---
 
@@ -118,8 +144,11 @@ A modern, full-featured medication tracking app built with **Expo** and **React 
 | **Server State** | TanStack Query v5 | Data fetching, caching, mutations |
 | **Client State** | Zustand v5 | Form draft state for multi-step flows |
 | **Auth & DB** | Supabase | Authentication, Postgres, Row-Level Security |
+| **OAuth** | Google Sign-In | Social login via `@react-native-google-signin` |
 | **Notifications** | expo-notifications | Push reminders with snooze actions |
-| **UI** | React Native + custom components | 20 shared UI components |
+| **Ads** | Google Mobile Ads | Banners, interstitials, app-open ads with UMP consent |
+| **Networking** | NetInfo | Offline detection and connectivity monitoring |
+| **UI** | React Native + custom components | 23 shared UI components |
 | **Theming** | Custom theme system | Light/dark mode with system detection |
 | **Package Manager** | Bun | Fast installs and scripts |
 
@@ -127,37 +156,47 @@ A modern, full-featured medication tracking app built with **Expo** and **React 
 
 ```
 medication-tracker/
-├── app/                      # Screens (Expo Router file-based routing)
-│   ├── _layout.tsx           # Root layout — provider hierarchy
-│   ├── index.tsx             # Welcome / landing screen
-│   ├── (tabs)/               # Tab navigator
-│   │   ├── index.tsx         # Today dashboard
-│   │   ├── medications.tsx   # Medications list
-│   │   ├── reports.tsx       # Reports & analytics
-│   │   └── profile.tsx       # User profile
-│   ├── auth/                 # Authentication screens
+├── app/                          # Screens (Expo Router file-based routing)
+│   ├── _layout.tsx               # Root layout — provider hierarchy
+│   ├── index.tsx                 # Welcome / landing screen
+│   ├── (tabs)/                   # Tab navigator
+│   │   ├── index.tsx             # Today dashboard
+│   │   ├── medications.tsx       # Medications list
+│   │   ├── reports.tsx           # Reports & analytics
+│   │   └── profile.tsx          # User profile & settings menu
+│   ├── auth/                     # Authentication screens
 │   │   ├── login.tsx
 │   │   ├── signup.tsx
 │   │   └── profile-setup.tsx
-│   ├── medication/           # Medication flows
-│   │   ├── add.tsx           # Add new medication
-│   │   ├── [id].tsx          # Medication detail
-│   │   ├── edit.tsx          # Edit medication
-│   │   ├── edit-schedule.tsx # Edit existing schedule
-│   │   ├── select.tsx        # Select medication to schedule
-│   │   ├── schedule.tsx      # Set schedule details
-│   │   ├── reminders.tsx     # Configure reminders
-│   │   ├── review.tsx        # Review before saving
-│   │   └── success.tsx       # Confirmation screen
-│   └── profile/
-│       └── edit.tsx          # Edit user profile
-├── components/ui/            # 20 shared UI components + theme
-├── hooks/                    # Custom hooks (queries, theme, calendar, snooze)
-├── lib/                      # Supabase client, query client, notifications
-├── stores/                   # Zustand stores (medication & schedule drafts)
-├── types/                    # TypeScript types (database Row/Draft/Update)
-├── constants/                # App constants (days, icons, medications, etc.)
-└── utils/                    # Pure utility functions (date, dose, reports, etc.)
+│   ├── medication/               # Medication & scheduling flows
+│   │   ├── add.tsx               # Add new medication
+│   │   ├── [id].tsx              # Medication detail
+│   │   ├── edit.tsx              # Edit medication
+│   │   ├── edit-schedule.tsx     # Edit existing schedule
+│   │   ├── select.tsx            # Select medication to schedule
+│   │   ├── schedule.tsx          # Set schedule details
+│   │   ├── reminders.tsx         # Configure reminders
+│   │   ├── review.tsx            # Review before saving
+│   │   └── success.tsx           # Confirmation screen
+│   ├── profile/
+│   │   └── edit.tsx              # Edit user profile
+│   ├── ad-preferences.tsx        # Ad type toggles
+│   ├── caregiver-sharing.tsx     # Share medication summary
+│   ├── change-password.tsx       # Change password
+│   ├── google-callback.tsx       # Google OAuth deep-link handler
+│   ├── help-support.tsx          # FAQ & contact
+│   ├── notification-settings.tsx # Notification & battery settings
+│   ├── notifications.tsx         # Notification history
+│   ├── privacy-security.tsx      # Data export, account deletion
+│   ├── set-password.tsx          # Set password for OAuth accounts
+│   └── support-developer.tsx     # Ad gallery to support dev
+├── components/ui/                # 23 shared UI components + theme
+├── hooks/                        # Custom hooks (queries, theme, calendar, snooze, ads, network)
+├── lib/                          # Supabase client, query client, notifications, ads
+├── stores/                       # Zustand stores (drafts, ad preferences)
+├── types/                        # TypeScript types (database Row/Draft/Update)
+├── constants/                    # App constants (days, icons, medications, etc.)
+└── utils/                        # Pure utility functions (date, dose, reports, etc.)
 ```
 
 ---
@@ -184,9 +223,10 @@ Four tables with Row-Level Security (RLS) — every query is scoped to the authe
  id              UUID  PK
  medication_id   UUID  FK → medications
  user_id         UUID  FK → auth.users
- frequency       TEXT        -- Daily, Specific Days, etc.
+ frequency       TEXT        -- Daily, Specific Days, Interval
  selected_days   TEXT[]      -- ['Mon', 'Wed', 'Fri']
  times_of_day    TEXT[]      -- ['Morning', 'Evening']
+ interval_days   INTEGER     -- every N days (nullable, for interval frequency)
  dosage_per_dose INTEGER
  push_notifications BOOLEAN
  sms_alerts      BOOLEAN
@@ -213,7 +253,7 @@ Four tables with Row-Level Security (RLS) — every query is scoped to the authe
 ── profiles ────────────────────────────────────────────
  id              UUID  PK  = auth.uid()
  full_name       TEXT
- age             INTEGER
+ date_of_birth   DATE        -- optional
 ```
 
 ---
@@ -227,6 +267,8 @@ Four tables with Row-Level Security (RLS) — every query is scoped to the authe
 - [Expo CLI](https://docs.expo.dev/get-started/installation/)
 - [Expo Go](https://expo.dev/go) app on your device **or** a [development build](https://docs.expo.dev/develop/development-builds/introduction/)
 - A [Supabase](https://supabase.com/) project (free tier works)
+- *(Optional)* A [Google Cloud](https://console.cloud.google.com/) project for Google Sign-In
+- *(Optional)* An [AdMob](https://admob.google.com/) account for ads
 
 ### 1. Clone the repository
 
@@ -256,7 +298,19 @@ EXPO_PUBLIC_SUPABASE_KEY=your-anon-public-key
 
 Run the SQL from the [Database Schema](#️-database-schema) section in the Supabase SQL Editor to create the tables. Enable **Row-Level Security (RLS)** on all four tables with policies that filter by `user_id = auth.uid()`.
 
-### 5. Start the development server
+### 5. Configure Google Sign-In *(optional)*
+
+1. Create an OAuth 2.0 Web Client ID in Google Cloud Console
+2. Add the web client ID to your Supabase project (Authentication → Providers → Google)
+3. Update `webClientId` in `hooks/useGoogleAuth.ts`
+
+### 6. Configure Ads *(optional)*
+
+1. Create an AdMob account and register your app
+2. Update the ad unit IDs in `lib/ads.ts`
+3. Add your AdMob app ID to `app.json` under the `react-native-google-mobile-ads` plugin
+
+### 7. Start the development server
 
 ```bash
 bun run start
@@ -269,7 +323,7 @@ Scan the QR code with Expo Go, or press:
 
 ### Building for device
 
-For push notifications and full native functionality, create a development build:
+For push notifications, Google Sign-In, ads, and full native functionality, create a development build:
 
 ```bash
 bun run prebuild
@@ -282,11 +336,16 @@ bun run android   # or: bun run ios
 
 | File | Purpose |
 |---|---|
-| `hooks/useQueryHooks.ts` | All TanStack Query/mutation hooks (548 lines) |
+| `hooks/useQueryHooks.ts` | All TanStack Query/mutation hooks |
+| `hooks/useGoogleAuth.ts` | Google Sign-In integration hook |
+| `hooks/useNetworkStatus.ts` | Online/offline connectivity monitoring |
 | `stores/draftStores.ts` | Zustand stores for medication & schedule drafts |
+| `stores/adPreferencesStore.ts` | Zustand store for per-screen ad toggles |
 | `lib/queryClient.ts` | Query client singleton (staleTime, gcTime, focus) |
 | `lib/queryKeys.ts` | Centralised query key factory for cache invalidation |
 | `lib/notifications.ts` | Push notification scheduling, snooze actions, low-supply alerts |
+| `lib/ads.ts` | Ad unit IDs and configuration |
+| `lib/interstitialManager.ts` | Interstitial ad preloading and frequency capping |
 | `lib/supabase.ts` | Supabase client singleton |
 | `types/database.ts` | All TypeScript types (Row, Draft, Update) + empty defaults |
 | `contexts/AuthContext.tsx` | Auth state, session management, profile loading |
@@ -301,6 +360,7 @@ bun run android   # or: bun run ios
 |---|---|---|
 | **Server data** (medications, schedules, dose logs) | TanStack Query v5 | `hooks/useQueryHooks.ts` |
 | **Form drafts** (multi-step creation flows) | Zustand v5 | `stores/draftStores.ts` |
+| **Ad preferences** (per-screen ad toggles) | Zustand v5 | `stores/adPreferencesStore.ts` |
 | **Authentication** (session, user, profile) | React Context | `contexts/AuthContext.tsx` |
 | **Theme** (light / dark / system) | React Context | `contexts/ThemeContext.tsx` |
 
@@ -348,6 +408,9 @@ function makeStyles(c: ColorScheme) {
 - [Supabase](https://supabase.com/) — Auth, Postgres, Row-Level Security
 - [TanStack Query](https://tanstack.com/query) — Server state management
 - [Zustand](https://zustand-demo.pmnd.rs/) — Lightweight client state
+- [Google Sign-In](https://github.com/react-native-google-signin/google-signin) — OAuth authentication
+- [Google Mobile Ads](https://docs.page/invertase/react-native-google-mobile-ads) — Ad monetization with UMP consent
+- [NetInfo](https://github.com/react-native-netinfo/react-native-netinfo) — Network connectivity monitoring
 - [expo-notifications](https://docs.expo.dev/versions/latest/sdk/notifications/) — Push notifications
 - [expo-linear-gradient](https://docs.expo.dev/versions/latest/sdk/linear-gradient/) — Gradient UI elements
 - [expo-system-ui](https://docs.expo.dev/versions/latest/sdk/system-ui/) — System UI style (light/dark) support
