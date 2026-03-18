@@ -31,6 +31,7 @@ import { toISO } from '../../utils/date';
 import { buildTodayDoses, type TodayDose } from '../../utils/dose';
 import { computeDayStatusMap } from '../../utils/calendar';
 import { formatTimeLeft } from '../../utils/snooze';
+import * as Notifications from 'expo-notifications';
 
 // ─ Component ───────────────────────────────────────────────────────
 
@@ -43,7 +44,25 @@ export default function TodayDashboard() {
   const calendar = useCalendar();
   const { selectedISO, selectedDayLabel, todayISO, isToday, dateStr } = calendar;
 
+  // ── Notification badge ──
+
+  useEffect(() => {
+    let mounted = true;
+    const check = async () => {
+      const [delivered, scheduled] = await Promise.all([
+        Notifications.getPresentedNotificationsAsync(),
+        Notifications.getAllScheduledNotificationsAsync(),
+      ]);
+      if (mounted) setHasNotifications(delivered.length > 0 || scheduled.length > 0);
+    };
+    check();
+    const sub = Notifications.addNotificationReceivedListener(() => { if (mounted) setHasNotifications(true); });
+    return () => { mounted = false; sub.remove(); };
+  }, []);
+
   // ── Data queries ──
+
+  const [hasNotifications, setHasNotifications] = useState(false);
 
   const { data: medications = [], isLoading: medsLoading, error: medsError, refetch: refetchMeds } = useMedications();
   const { data: schedules = [], isLoading: schLoading, error: schError, refetch: refetchSchedules } = useSchedules();
@@ -298,6 +317,7 @@ export default function TodayDashboard() {
               onPress={() => router.push('/notifications')}
             >
               <Feather name="bell" size={22} color={c.white} />
+              {hasNotifications && <View style={styles.notifDot} />}
             </TouchableOpacity>
           </View>
 
@@ -464,6 +484,17 @@ function makeStyles(c: ColorScheme, bottomInset: number) {
       backgroundColor: 'rgba(255,255,255,0.2)',
       alignItems: 'center',
       justifyContent: 'center',
+    },
+    notifDot: {
+      position: 'absolute',
+      top: 8,
+      right: 8,
+      width: 10,
+      height: 10,
+      borderRadius: 5,
+      backgroundColor: '#EF4444',
+      borderWidth: 1.5,
+      borderColor: 'rgba(255,255,255,0.3)',
     },
     progressSection: {
       flexDirection: 'row',
