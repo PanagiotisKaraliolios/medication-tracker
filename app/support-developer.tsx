@@ -16,11 +16,11 @@ import { useThemeColors } from '../hooks/useThemeColors';
 import { AD_UNIT_IDS, canShowPersonalizedAds } from '../lib/ads';
 
 const AD_SLOTS: { size: BannerAdSize; label: string }[] = [
-  { size: BannerAdSize.ANCHORED_ADAPTIVE_BANNER, label: 'adaptive-1' },
+  { size: BannerAdSize.LARGE_ANCHORED_ADAPTIVE_BANNER , label: 'adaptive-1' },
   { size: BannerAdSize.MEDIUM_RECTANGLE, label: 'rectangle-1' },
   { size: BannerAdSize.LARGE_BANNER, label: 'large-1' },
   { size: BannerAdSize.MEDIUM_RECTANGLE, label: 'rectangle-2' },
-  { size: BannerAdSize.ANCHORED_ADAPTIVE_BANNER, label: 'adaptive-2' },
+  { size: BannerAdSize.LARGE_ANCHORED_ADAPTIVE_BANNER , label: 'adaptive-2' },
   { size: BannerAdSize.LARGE_BANNER, label: 'large-2' },
 ];
 
@@ -38,12 +38,17 @@ export default function SupportDeveloperScreen() {
     setRefreshKey((k) => k + 1);
   }, []);
 
-  const handleAdFailed = useCallback((label: string) => {
+  const handleAdFailed = useCallback((label: string, error: any) => {
+    console.log(`[SupportDev] Ad FAILED: ${label}`, error?.message ?? error);
     setFailedSlots((prev) => new Set(prev).add(label));
   }, []);
 
   const requestOptions = useMemo(
-    () => ({ requestNonPersonalizedAdsOnly: !canShowPersonalizedAds() }),
+    () => {
+      const opts = { requestNonPersonalizedAdsOnly: true };
+      console.log('[SupportDev] requestOptions:', opts);
+      return opts;
+    },
     [],
   );
 
@@ -96,7 +101,8 @@ export default function SupportDeveloperScreen() {
                 unitId={AD_UNIT_IDS.BANNER}
                 size={slot.size}
                 requestOptions={requestOptions}
-                onAdFailedToLoad={() => handleAdFailed(slot.label)}
+                onAdLoaded={() => console.log(`[SupportDev] Ad LOADED: ${slot.label} (${slot.size})`)}
+                onAdFailedToLoad={(error) => handleAdFailed(slot.label, error)}
               />
             </View>
           );

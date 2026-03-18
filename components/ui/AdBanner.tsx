@@ -55,9 +55,9 @@ export function AdBanner({ placement }: Props) {
       <BannerAd
         key={retryKey}
         unitId={AD_UNIT_IDS.BANNER}
-        size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER}
+        size={BannerAdSize.FULL_BANNER}
         requestOptions={{
-          requestNonPersonalizedAdsOnly: !canShowPersonalizedAds(),
+          requestNonPersonalizedAdsOnly: true,
           networkExtras: { collapsible: 'bottom' },
         }}
         onAdLoaded={() => {
