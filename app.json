@@ -50,6 +50,17 @@
           "iosAppId": "ca-app-pub-xxxxxxxx~yyyyyyyy"
         }
       ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "dependencies": [
+              "com.google.ads.mediation:meta:6.20.0.0",
+              "com.google.ads.mediation:unity:4.14.0.0"
+            ]
+          }
+        }
+      ],
       "expo-font"
     ],
     "extra": {

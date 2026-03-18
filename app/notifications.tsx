@@ -14,6 +14,7 @@ import * as Notifications from 'expo-notifications';
 import { EmptyState } from '../components/ui/EmptyState';
 import { AdBanner } from '../components/ui/AdBanner';
 import { LoadingState } from '../components/ui/LoadingState';
+import { deduplicateScheduledNotifications } from '../lib/notifications';
 import { type ColorScheme, gradients, borderRadius, shadows } from '../components/ui/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
 import {
@@ -35,8 +36,12 @@ export default function NotificationsScreen() {
   const [scheduled, setScheduled] = useState<NotificationItem[]>([]);
   const [delivered, setDelivered] = useState<NotificationItem[]>([]);
 
-  const loadNotifications = useCallback(async () => {
+  const loadNotifications = useCallback(async (deduplicate = false) => {
     try {
+      if (deduplicate) {
+        await deduplicateScheduledNotifications();
+      }
+
       const [scheduledNotifs, deliveredNotifs] = await Promise.all([
         Notifications.getAllScheduledNotificationsAsync(),
         Notifications.getPresentedNotificationsAsync(),
@@ -60,7 +65,7 @@ export default function NotificationsScreen() {
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
-    loadNotifications();
+    loadNotifications(true);
   }, [loadNotifications]);
 
   const handleDismiss = useCallback(

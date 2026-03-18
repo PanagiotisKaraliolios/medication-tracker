@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
 } from 'react-native';
@@ -19,6 +18,7 @@ import { type ColorScheme, gradients, borderRadius, shadows } from '../../compon
 import { useThemeColors } from '../../hooks/useThemeColors';
 import { useMedication as useMedicationQuery, useSchedulesByMedication, useDeleteMedication, useDeleteSchedule } from '../../hooks/useQueryHooks';
 import { getIconForForm, TIME_ICON_MAP } from '../../constants/icons';
+import { showInterstitial } from '../../lib/interstitialManager';
 
 export default function MedicationDetailScreen() {
   const router = useRouter();
@@ -55,7 +55,7 @@ export default function MedicationDetailScreen() {
     try {
       await deleteMedicationMut.mutateAsync(med.id);
       setDeleteVisible(false);
-      router.replace('/(tabs)/medications');
+      showInterstitial(() => router.replace('/(tabs)/medications'));
     } catch (err) {
       // mutation error handled by TanStack Query
     }

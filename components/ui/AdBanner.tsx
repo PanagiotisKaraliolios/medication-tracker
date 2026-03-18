@@ -7,6 +7,7 @@ import { useAdPreferences, type AdPreferences } from '../../stores/adPreferences
 
 const MAX_RETRIES = 3;
 const RETRY_DELAYS = [5_000, 15_000, 45_000]; // exponential backoff
+const RECOVERY_DELAY = 120_000; // 2 minutes — final retry after all retries exhausted
 
 type Props = {
   placement?: keyof AdPreferences;
@@ -18,6 +19,7 @@ export function AdBanner({ placement }: Props) {
   const c = useThemeColors();
   const [failed, setFailed] = useState(false);
   const retryCount = useRef(0);
+  const recoveryAttempted = useRef(false);
   const [retryKey, setRetryKey] = useState(0);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -34,6 +36,13 @@ export function AdBanner({ placement }: Props) {
       timerRef.current = setTimeout(() => {
         setRetryKey((k) => k + 1);
       }, delay);
+    } else if (!recoveryAttempted.current) {
+      // One final recovery attempt after a longer delay
+      recoveryAttempted.current = true;
+      timerRef.current = setTimeout(() => {
+        retryCount.current = 0;
+        setRetryKey((k) => k + 1);
+      }, RECOVERY_DELAY);
     } else {
       setFailed(true);
     }

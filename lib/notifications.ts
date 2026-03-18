@@ -135,6 +135,18 @@ export async function requestNotificationPermissions(): Promise<boolean> {
   return status === 'granted';
 }
 
+// ── Serialization lock ───────────────────────────────────────────────
+// Ensures scheduling / cancellation operations run sequentially, avoiding
+// race conditions between mutation hooks and foreground sync.
+
+let _schedulingChain: Promise<void> = Promise.resolve();
+
+function withSchedulingLock<T>(fn: () => Promise<T>): Promise<T> {
+  const next = _schedulingChain.then(fn, fn); // always proceed regardless of prior failure
+  _schedulingChain = next.then(() => {}, () => {}); // swallow result to keep chain as Promise<void>
+  return next;
+}
+
 // ── Snooze notifications ─────────────────────────────────────────────
 
 /**
@@ -158,7 +170,7 @@ export async function scheduleSnoozeNotification(
       body: `Time to take your ${medicationName}!`,
       sound: true,
       categoryIdentifier: SNOOZE_CATEGORY,
-      data: doseData as unknown as Record<string, unknown>,
+      data: { ...doseData, notifType: 'snooze' } as unknown as Record<string, unknown>,
       ...(Platform.OS === 'android' ? { channelId: 'snooze' } : {}),
     },
     trigger: {
@@ -240,10 +252,17 @@ export type ScheduleNotifInput = {
  * - Weekly schedules use WEEKLY triggers (fire on specific weekdays).
  * - Interval schedules use DATE triggers for the next 7 occurrences.
  *
- * Stores notification IDs in AsyncStorage so they can be cancelled later.
+ * Uses OS-level notification query for cancellation to avoid ghost notifications.
  * Skips scheduling if push_notifications is disabled on the schedule.
  */
-export async function scheduleMedicationReminders(
+export function scheduleMedicationReminders(
+  schedule: ScheduleNotifInput,
+  medicationName: string,
+): Promise<void> {
+  return withSchedulingLock(() => _scheduleMedicationReminders(schedule, medicationName));
+}
+
+async function _scheduleMedicationReminders(
   schedule: ScheduleNotifInput,
   medicationName: string,
 ): Promise<void> {
@@ -265,7 +284,8 @@ export async function scheduleMedicationReminders(
       : timeLabel;
 
     const doseKey = `${schedule.id}-${timeLabel}`;
-    const doseData: SnoozeNotificationData = {
+    const doseData = {
+      notifType: 'reminder' as const,
       doseKey,
       medicationId: schedule.medication_id,
       scheduleId: schedule.id,
@@ -373,21 +393,39 @@ export async function scheduleMedicationReminders(
 
 /**
  * Cancel all scheduled medication reminders for a given schedule ID.
- * Removes stored notification IDs from AsyncStorage.
+ * Queries OS-level scheduled notifications to find all matching reminders,
+ * avoiding ghost notifications from race conditions.
  */
 export async function cancelMedicationReminders(scheduleId: string): Promise<void> {
   try {
-    const raw = await AsyncStorage.getItem(`${NOTIF_IDS_PREFIX}${scheduleId}`);
-    if (!raw) return;
-
-    const ids: string[] = JSON.parse(raw);
+    // Query OS for all scheduled notifications and cancel those matching this schedule
+    const allScheduled = await Notifications.getAllScheduledNotificationsAsync();
+    const matching = allScheduled.filter(
+      (n) => n.content.data?.notifType === 'reminder' && n.content.data?.scheduleId === scheduleId,
+    );
     await Promise.all(
-      ids.map((id) =>
-        Notifications.cancelScheduledNotificationAsync(id).catch(() => {}),
+      matching.map((n) =>
+        Notifications.cancelScheduledNotificationAsync(n.identifier).catch(() => {}),
       ),
     );
-    await AsyncStorage.removeItem(`${NOTIF_IDS_PREFIX}${scheduleId}`);
-    console.log(`[Notifications] Cancelled ${ids.length} reminder(s) for schedule ${scheduleId}`);
+
+    // Also cancel any legacy IDs stored in AsyncStorage (housekeeping)
+    const raw = await AsyncStorage.getItem(`${NOTIF_IDS_PREFIX}${scheduleId}`);
+    if (raw) {
+      const legacyIds: string[] = JSON.parse(raw).filter(
+        (id: string) => !matching.some((n) => n.identifier === id),
+      );
+      await Promise.all(
+        legacyIds.map((id) =>
+          Notifications.cancelScheduledNotificationAsync(id).catch(() => {}),
+        ),
+      );
+      await AsyncStorage.removeItem(`${NOTIF_IDS_PREFIX}${scheduleId}`);
+    }
+
+    if (matching.length > 0) {
+      console.log(`[Notifications] Cancelled ${matching.length} reminder(s) for schedule ${scheduleId}`);
+    }
   } catch (err) {
     console.warn('[Notifications] Failed to cancel medication reminders:', err);
   }
@@ -398,15 +436,17 @@ export async function cancelMedicationReminders(scheduleId: string): Promise<voi
  * Call this on app launch to ensure notifications survive app restarts
  * and OS-level notification clearing.
  */
-export async function rescheduleAllMedicationReminders(
+export function rescheduleAllMedicationReminders(
   schedules: ScheduleNotifInput[],
   medicationNames: Record<string, string>,
 ): Promise<void> {
-  for (const schedule of schedules) {
-    const medName = medicationNames[schedule.id] ?? 'your medication';
-    await scheduleMedicationReminders(schedule, medName);
-  }
-  console.log(`[Notifications] Re-registered reminders for ${schedules.length} schedule(s)`);
+  return withSchedulingLock(async () => {
+    for (const schedule of schedules) {
+      const medName = medicationNames[schedule.id] ?? 'your medication';
+      await _scheduleMedicationReminders(schedule, medName);
+    }
+    console.log(`[Notifications] Re-registered reminders for ${schedules.length} schedule(s)`);
+  });
 }
 
 // ── Low-supply daily reminders ───────────────────────────────────────
@@ -418,27 +458,46 @@ const LOW_SUPPLY_NOTIF_PREFIX = 'low_supply_notif_';
  * Schedule a repeating daily notification at 9:00 AM reminding the user
  * that a medication is running low.
  * Safe to call multiple times — cancels existing before re-scheduling.
+ *
+ * @param fireImmediate If true (default), also fires an immediate notification.
+ *   Set to false when re-checking on app foreground to avoid spamming the user.
  */
-export async function scheduleLowSupplyReminder(
+export function scheduleLowSupplyReminder(
   medicationId: string,
   medicationName: string,
   currentSupply: number,
+  fireImmediate = true,
+): Promise<void> {
+  return withSchedulingLock(() =>
+    _scheduleLowSupplyReminder(medicationId, medicationName, currentSupply, fireImmediate),
+  );
+}
+
+async function _scheduleLowSupplyReminder(
+  medicationId: string,
+  medicationName: string,
+  currentSupply: number,
+  fireImmediate: boolean,
 ): Promise<void> {
   // Cancel any existing low-supply notification for this medication first
-  await cancelLowSupplyReminder(medicationId);
+  await _cancelLowSupplyReminder(medicationId);
 
   const channelId = Platform.OS === 'android' ? 'medication-reminders' : undefined;
+  const lowSupplyData = { notifType: 'low-supply' as const, medicationId };
 
   // Fire an immediate notification so the user knows right away
-  await Notifications.scheduleNotificationAsync({
-    content: {
-      title: '⚠️ Low Supply',
-      body: `${medicationName} is running low — only ${currentSupply} remaining. Time to refill!`,
-      sound: true,
-      ...(channelId ? { channelId } : {}),
-    },
-    trigger: null, // immediate
-  });
+  if (fireImmediate) {
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: '⚠️ Low Supply',
+        body: `${medicationName} is running low — only ${currentSupply} remaining. Time to refill!`,
+        sound: true,
+        data: lowSupplyData as unknown as Record<string, unknown>,
+        ...(channelId ? { channelId } : {}),
+      },
+      trigger: null, // immediate
+    });
+  }
 
   // Also schedule a recurring daily 9:00 AM reminder until refilled
   const notifId = await Notifications.scheduleNotificationAsync({
@@ -446,6 +505,7 @@ export async function scheduleLowSupplyReminder(
       title: '⚠️ Low Supply',
       body: `${medicationName} is running low — only ${currentSupply} remaining. Time to refill!`,
       sound: true,
+      data: lowSupplyData as unknown as Record<string, unknown>,
       ...(channelId ? { channelId } : {}),
     },
     trigger: {
@@ -462,15 +522,48 @@ export async function scheduleLowSupplyReminder(
 
 /**
  * Cancel the daily low-supply reminder for a given medication.
+ * Queries OS-level state to catch ghost notifications from race conditions.
  */
-export async function cancelLowSupplyReminder(medicationId: string): Promise<void> {
-  try {
-    const notifId = await AsyncStorage.getItem(`${LOW_SUPPLY_NOTIF_PREFIX}${medicationId}`);
-    if (!notifId) return;
+export function cancelLowSupplyReminder(medicationId: string): Promise<void> {
+  return withSchedulingLock(() => _cancelLowSupplyReminder(medicationId));
+}
 
-    await Notifications.cancelScheduledNotificationAsync(notifId).catch(() => {});
-    await AsyncStorage.removeItem(`${LOW_SUPPLY_NOTIF_PREFIX}${medicationId}`);
-    console.log(`[Notifications] Low-supply reminder cancelled for medication ${medicationId}`);
+async function _cancelLowSupplyReminder(medicationId: string): Promise<void> {
+  try {
+    // Query OS for all scheduled notifications matching this medication's low-supply
+    const allScheduled = await Notifications.getAllScheduledNotificationsAsync();
+    const matching = allScheduled.filter(
+      (n) => n.content.data?.notifType === 'low-supply' && n.content.data?.medicationId === medicationId,
+    );
+    await Promise.all(
+      matching.map((n) =>
+        Notifications.cancelScheduledNotificationAsync(n.identifier).catch(() => {}),
+      ),
+    );
+
+    // Also dismiss any already-presented low-supply notifications for this medication
+    const presented = await Notifications.getPresentedNotificationsAsync();
+    const presentedMatching = presented.filter(
+      (n) => n.request.content.data?.notifType === 'low-supply' && n.request.content.data?.medicationId === medicationId,
+    );
+    await Promise.all(
+      presentedMatching.map((n) =>
+        Notifications.dismissNotificationAsync(n.request.identifier).catch(() => {}),
+      ),
+    );
+
+    // Clean up legacy AsyncStorage entry
+    const notifId = await AsyncStorage.getItem(`${LOW_SUPPLY_NOTIF_PREFIX}${medicationId}`);
+    if (notifId) {
+      if (!matching.some((n) => n.identifier === notifId)) {
+        await Notifications.cancelScheduledNotificationAsync(notifId).catch(() => {});
+      }
+      await AsyncStorage.removeItem(`${LOW_SUPPLY_NOTIF_PREFIX}${medicationId}`);
+    }
+
+    if (matching.length > 0 || presentedMatching.length > 0) {
+      console.log(`[Notifications] Low-supply reminder cancelled for medication ${medicationId} (${matching.length} scheduled, ${presentedMatching.length} presented)`);
+    }
   } catch (err) {
     console.warn('[Notifications] Failed to cancel low-supply reminder:', err);
   }
@@ -488,18 +581,21 @@ export type LowSupplyMedication = {
 /**
  * Check all medications and schedule / cancel low-supply reminders as needed.
  * Call on app launch to ensure reminders reflect current inventory state.
+ * Does NOT fire immediate notifications — only (re-)schedules daily 9 AM reminders.
  */
-export async function recheckAllLowSupplyReminders(
+export function recheckAllLowSupplyReminders(
   medications: LowSupplyMedication[],
 ): Promise<void> {
-  for (const med of medications) {
-    if (med.is_active && med.current_supply <= med.low_supply_threshold) {
-      await scheduleLowSupplyReminder(med.id, med.name, med.current_supply);
-    } else {
-      await cancelLowSupplyReminder(med.id);
+  return withSchedulingLock(async () => {
+    for (const med of medications) {
+      if (med.is_active && med.current_supply <= med.low_supply_threshold) {
+        await _scheduleLowSupplyReminder(med.id, med.name, med.current_supply, false);
+      } else {
+        await _cancelLowSupplyReminder(med.id);
+      }
     }
-  }
-  console.log(`[Notifications] Low-supply check complete for ${medications.length} medication(s)`);
+    console.log(`[Notifications] Low-supply check complete for ${medications.length} medication(s)`);
+  });
 }
 
 // ── Missed-dose catch-up notifications ───────────────────────────────
@@ -585,4 +681,63 @@ export async function fireMissedDoseReminders(
   if (fired > 0) {
     console.log(`[Notifications] Fired ${fired} missed-dose catch-up notification(s)`);
   }
+}
+
+// ── Deduplication (cleanup for existing users) ───────────────────────
+
+/**
+ * Build a string key that uniquely identifies a notification's "slot".
+ * Notifications with the same key are duplicates of each other.
+ */
+function buildDedupKey(n: Notifications.NotificationRequest): string {
+  const t = n.trigger as Record<string, unknown> | null;
+  const title = n.content.title ?? '';
+  const triggerType = t?.type ?? 'unknown';
+
+  if (triggerType === 'daily') {
+    return `daily|${title}|${t?.hour}:${t?.minute}`;
+  }
+  if (triggerType === 'weekly') {
+    return `weekly|${title}|${t?.weekday}|${t?.hour}:${t?.minute}`;
+  }
+  // For date / timeInterval triggers, use the identifier as-is (no dedup)
+  return `unique|${n.identifier}`;
+}
+
+/**
+ * Remove duplicate scheduled notifications.
+ * Groups by trigger type + title + time, keeps the newest (or the one with
+ * `notifType` in its data), and cancels the rest.
+ * Returns the number of duplicates removed.
+ */
+export async function deduplicateScheduledNotifications(): Promise<number> {
+  const all = await Notifications.getAllScheduledNotificationsAsync();
+  const groups = new Map<string, Notifications.NotificationRequest[]>();
+
+  for (const n of all) {
+    const key = buildDedupKey(n);
+    const group = groups.get(key);
+    if (group) group.push(n);
+    else groups.set(key, [n]);
+  }
+
+  let removed = 0;
+  for (const [, group] of groups) {
+    if (group.length <= 1) continue;
+
+    // Prefer the one with notifType tag (from the fix); otherwise keep the first
+    const tagged = group.find((n) => (n.content.data as Record<string, unknown>)?.notifType);
+    const keep = tagged ?? group[0];
+
+    for (const n of group) {
+      if (n.identifier === keep.identifier) continue;
+      await Notifications.cancelScheduledNotificationAsync(n.identifier).catch(() => {});
+      removed++;
+    }
+  }
+
+  if (removed > 0) {
+    console.log(`[Notifications] Deduplicated: removed ${removed} ghost notification(s)`);
+  }
+  return removed;
 }

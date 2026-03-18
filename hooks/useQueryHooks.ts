@@ -194,14 +194,14 @@ export function useAdjustSupply() {
       if (updateErr) throw new Error(updateErr.message);
 
       // Schedule or cancel low-supply reminder
-      if (newSupply <= med.low_supply_threshold) {
-        scheduleLowSupplyReminder(medicationId, med.name, newSupply).catch((err) =>
-          console.warn('[useAdjustSupply] Failed to schedule low-supply reminder:', err),
-        );
-      } else {
-        cancelLowSupplyReminder(medicationId).catch((err) =>
-          console.warn('[useAdjustSupply] Failed to cancel low-supply reminder:', err),
-        );
+      try {
+        if (newSupply <= med.low_supply_threshold) {
+          await scheduleLowSupplyReminder(medicationId, med.name, newSupply);
+        } else {
+          await cancelLowSupplyReminder(medicationId);
+        }
+      } catch (err) {
+        console.warn('[useAdjustSupply] Failed to update low-supply reminder:', err);
       }
     },
     onSuccess: () => {
@@ -331,21 +331,25 @@ export function useCreateSchedule() {
         .eq('id', medicationId)
         .single();
       const medName = med?.name ?? 'your medication';
-      scheduleMedicationReminders(
-        {
-          id: row.id,
-          medication_id: row.medication_id,
-          frequency: row.frequency,
-          selected_days: row.selected_days,
-          times_of_day: row.times_of_day,
-          push_notifications: row.push_notifications,
-          snooze_duration: row.snooze_duration,
-          dosage_per_dose: row.dosage_per_dose,
-          interval_days: row.interval_days,
-          start_date: row.start_date,
-        },
-        medName,
-      ).catch((err) => console.warn('[useCreateSchedule] Failed to schedule reminders:', err));
+      try {
+        await scheduleMedicationReminders(
+          {
+            id: row.id,
+            medication_id: row.medication_id,
+            frequency: row.frequency,
+            selected_days: row.selected_days,
+            times_of_day: row.times_of_day,
+            push_notifications: row.push_notifications,
+            snooze_duration: row.snooze_duration,
+            dosage_per_dose: row.dosage_per_dose,
+            interval_days: row.interval_days,
+            start_date: row.start_date,
+          },
+          medName,
+        );
+      } catch (err) {
+        console.warn('[useCreateSchedule] Failed to schedule reminders:', err);
+      }
 
       return row;
     },
@@ -382,21 +386,25 @@ export function useUpdateSchedule() {
         .eq('id', row.medication_id)
         .single();
       const medName = med?.name ?? 'your medication';
-      scheduleMedicationReminders(
-        {
-          id: row.id,
-          medication_id: row.medication_id,
-          frequency: row.frequency,
-          selected_days: row.selected_days,
-          times_of_day: row.times_of_day,
-          push_notifications: row.push_notifications,
-          snooze_duration: row.snooze_duration,
-          dosage_per_dose: row.dosage_per_dose,
-          interval_days: row.interval_days,
-          start_date: row.start_date,
-        },
-        medName,
-      ).catch((err) => console.warn('[useUpdateSchedule] Failed to reschedule reminders:', err));
+      try {
+        await scheduleMedicationReminders(
+          {
+            id: row.id,
+            medication_id: row.medication_id,
+            frequency: row.frequency,
+            selected_days: row.selected_days,
+            times_of_day: row.times_of_day,
+            push_notifications: row.push_notifications,
+            snooze_duration: row.snooze_duration,
+            dosage_per_dose: row.dosage_per_dose,
+            interval_days: row.interval_days,
+            start_date: row.start_date,
+          },
+          medName,
+        );
+      } catch (err) {
+        console.warn('[useUpdateSchedule] Failed to reschedule reminders:', err);
+      }
 
       return row;
     },
