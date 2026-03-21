@@ -25,12 +25,13 @@ components/ui/ — 20 shared components + theme.ts
 app/           — screens (Expo Router file-based)
 ```
 
-**Database (Supabase):** Four tables, all with RLS policies scoped to `auth.uid()`:
+**Database (Supabase):** Five tables, all with RLS policies scoped to `auth.uid()`:
 | Table | Purpose | Key columns |
 |---|---|---|
-| `medications` | Drug definitions | `id`, `user_id`, `name`, `dosage`, `form`, `icon`, `current_supply`, `low_supply_threshold`, `is_active` |
+| `medications` | Drug definitions | `id`, `user_id`, `name`, `dosage`, `form`, `icon`, `current_supply`, `low_supply_threshold`, `is_prn`, `rxcui`, `generic_name`, `is_active` |
 | `schedules` | When/how to take a medication | `id`, `medication_id` (FK), `user_id`, `frequency`, `selected_days[]`, `times_of_day[]`, `dosage_per_dose`, `push_notifications`, `sms_alerts`, `snooze_duration`, `instructions`, `start_date`, `end_date`, `is_active` |
-| `dose_logs` | Dose tracking records | `id`, `schedule_id` (FK), `medication_id` (FK), `user_id`, `scheduled_date`, `time_label`, `status` (`'taken'`\|`'skipped'`), `logged_at`; unique on `(schedule_id, scheduled_date, time_label)` |
+| `dose_logs` | Dose tracking records | `id`, `schedule_id` (FK, nullable for PRN), `medication_id` (FK), `user_id`, `scheduled_date`, `time_label`, `status` (`'taken'`\|`'skipped'`), `reason`, `logged_at`; unique on `(schedule_id, scheduled_date, time_label)` |
+| `symptoms` | Symptom & side effect logs | `id`, `user_id`, `medication_id` (FK, nullable), `name`, `severity` (`'mild'`\|`'moderate'`\|`'severe'`), `notes`, `logged_at`, `logged_date`, `created_at` |
 | `profiles` | User profile data | `id` (= `auth.uid()`), `full_name`, `age` |
 
 DB columns use `snake_case`. TypeScript draft types use `camelCase`. Row types mirror the DB exactly in `snake_case`.

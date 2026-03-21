@@ -44,6 +44,12 @@ A modern, full-featured medication tracking app built with **Expo** and **React 
 - Add, edit, and archive medications with name, dosage, form, and custom icons
 - Track current supply with visual progress bars and low-supply alerts
 - Support for all common medication forms (tablet, capsule, liquid, injection, etc.)
+- PRN (as-needed) medications — log doses on demand without a fixed schedule
+
+### 💊 Drug Database & Interactions
+- Search the RxNorm drug database with autocomplete
+- Auto-fill medication name and generic name from search results
+- Drug interaction checker — warns about potential interactions between your medications
 
 ### ⏰ Smart Scheduling
 - Flexible frequency options — daily, specific days, or custom interval (every N days)
@@ -72,6 +78,11 @@ A modern, full-featured medication tracking app built with **Expo** and **React 
 - Streak tracking — consecutive days with full adherence
 - Per-medication missed-dose breakdown
 - Visual bar charts with color-coded adherence levels
+
+### 🩺 Symptom & Side Effect Tracking
+- Log symptoms with severity (mild / moderate / severe) and optional notes
+- Link symptoms to specific medications or log them independently
+- Browse symptom history by date
 
 ### 👤 User Profile & Account
 - Secure authentication via Supabase (email/password + Google Sign-In)
@@ -148,7 +159,7 @@ A modern, full-featured medication tracking app built with **Expo** and **React 
 | **Notifications** | expo-notifications | Push reminders with snooze actions |
 | **Ads** | Google Mobile Ads | Banners, interstitials, app-open ads with UMP consent |
 | **Networking** | NetInfo | Offline detection and connectivity monitoring |
-| **UI** | React Native + custom components | 23 shared UI components |
+| **UI** | React Native + custom components | 25 shared UI components |
 | **Theming** | Custom theme system | Light/dark mode with system detection |
 | **Package Manager** | Bun | Fast installs and scripts |
 
@@ -173,6 +184,7 @@ medication-tracker/
 │   │   ├── [id].tsx              # Medication detail
 │   │   ├── edit.tsx              # Edit medication
 │   │   ├── edit-schedule.tsx     # Edit existing schedule
+│   │   ├── log-prn.tsx           # Log a PRN (as-needed) dose
 │   │   ├── select.tsx            # Select medication to schedule
 │   │   ├── schedule.tsx          # Set schedule details
 │   │   ├── reminders.tsx         # Configure reminders
@@ -185,12 +197,14 @@ medication-tracker/
 │   ├── change-password.tsx       # Change password
 │   ├── google-callback.tsx       # Google OAuth deep-link handler
 │   ├── help-support.tsx          # FAQ & contact
+│   ├── log-symptom.tsx           # Log a new symptom
 │   ├── notification-settings.tsx # Notification & battery settings
 │   ├── notifications.tsx         # Notification history
 │   ├── privacy-security.tsx      # Data export, account deletion
 │   ├── set-password.tsx          # Set password for OAuth accounts
-│   └── support-developer.tsx     # Ad gallery to support dev
-├── components/ui/                # 23 shared UI components + theme
+│   ├── support-developer.tsx     # Ad gallery to support dev
+│   └── symptoms.tsx              # Symptom history browser
+├── components/ui/                # 25 shared UI components + theme
 ├── hooks/                        # Custom hooks (queries, theme, calendar, snooze, ads, network)
 ├── lib/                          # Supabase client, query client, notifications, ads
 ├── stores/                       # Zustand stores (drafts, ad preferences)
@@ -203,7 +217,9 @@ medication-tracker/
 
 ## 🗄️ Database Schema
 
-Four tables with Row-Level Security (RLS) — every query is scoped to the authenticated user:
+Seven tables with Row-Level Security (RLS) — every query is scoped to the authenticated user.
+The five core tables are listed below; two legacy tables (`inventory`, `adherence_logs`) also exist but are unused.
+The full schema is defined in [`supabase/migrations/00000000000000_initial.sql`](supabase/migrations/00000000000000_initial.sql).
 
 ```sql
 ── medications ─────────────────────────────────────────
@@ -215,6 +231,9 @@ Four tables with Row-Level Security (RLS) — every query is scoped to the authe
  icon            TEXT
  current_supply  INTEGER
  low_supply_threshold INTEGER
+ is_prn          BOOLEAN     -- true = "as needed" (no fixed schedule)
+ rxcui           TEXT        -- RxNorm concept ID (optional, from drug search)
+ generic_name    TEXT        -- generic drug name (optional, from drug search)
  is_active       BOOLEAN     -- soft delete
  created_at      TIMESTAMPTZ
  updated_at      TIMESTAMPTZ
@@ -240,20 +259,34 @@ Four tables with Row-Level Security (RLS) — every query is scoped to the authe
 
 ── dose_logs ───────────────────────────────────────────
  id              UUID  PK
- schedule_id     UUID  FK → schedules
+ schedule_id     UUID  FK → schedules  (NULL for PRN doses)
  medication_id   UUID  FK → medications
  user_id         UUID  FK → auth.users
  scheduled_date  DATE
  time_label      TEXT        -- 'Morning', '08:30', etc.
  status          TEXT        -- 'taken' | 'skipped'
+ reason          TEXT        -- optional reason (PRN doses)
  logged_at       TIMESTAMPTZ
  created_at      TIMESTAMPTZ
  UNIQUE (schedule_id, scheduled_date, time_label)
 
+── symptoms ────────────────────────────────────────────
+ id              UUID  PK
+ user_id         UUID  FK → auth.users
+ medication_id   UUID  FK → medications  (NULL if unlinked)
+ name            TEXT        -- e.g. 'Headache', 'Nausea'
+ severity        TEXT        -- 'mild' | 'moderate' | 'severe'
+ notes           TEXT
+ logged_at       TIMESTAMPTZ
+ logged_date     DATE
+ created_at      TIMESTAMPTZ
+
 ── profiles ────────────────────────────────────────────
  id              UUID  PK  = auth.uid()
  full_name       TEXT
+ age             INTEGER     -- optional
  date_of_birth   DATE        -- optional
+ updated_at      TIMESTAMPTZ
 ```
 
 ---
@@ -296,7 +329,7 @@ EXPO_PUBLIC_SUPABASE_KEY=your-anon-public-key
 
 ### 4. Set up the database
 
-Run the SQL from the [Database Schema](#️-database-schema) section in the Supabase SQL Editor to create the tables. Enable **Row-Level Security (RLS)** on all four tables with policies that filter by `user_id = auth.uid()`.
+Run [`supabase/migrations/00000000000000_initial.sql`](supabase/migrations/00000000000000_initial.sql) in the Supabase SQL Editor (Dashboard → SQL Editor → New Query). This single migration creates all tables, indexes, and RLS policies.
 
 ### 5. Configure Google Sign-In *(optional)*
 
@@ -339,6 +372,9 @@ bun run android   # or: bun run ios
 | `hooks/useQueryHooks.ts` | All TanStack Query/mutation hooks |
 | `hooks/useGoogleAuth.ts` | Google Sign-In integration hook |
 | `hooks/useNetworkStatus.ts` | Online/offline connectivity monitoring |
+| `hooks/useDrugSearch.ts` | RxNorm drug database search with debounce |
+| `hooks/useAppOpenAd.ts` | App-open ad loading and display |
+| `hooks/useBatteryOptimization.ts` | Android battery optimization exemption prompt |
 | `stores/draftStores.ts` | Zustand stores for medication & schedule drafts |
 | `stores/adPreferencesStore.ts` | Zustand store for per-screen ad toggles |
 | `lib/queryClient.ts` | Query client singleton (staleTime, gcTime, focus) |
@@ -397,6 +433,7 @@ function makeStyles(c: ColorScheme) {
 | `bun run android` | Prebuild + run on Android |
 | `bun run ios` | Prebuild + run on iOS |
 | `bun run web` | Start for web |
+| `bun run typecheck` | Run TypeScript type checking |
 
 ---
 
@@ -415,6 +452,7 @@ function makeStyles(c: ColorScheme) {
 - [expo-linear-gradient](https://docs.expo.dev/versions/latest/sdk/linear-gradient/) — Gradient UI elements
 - [expo-system-ui](https://docs.expo.dev/versions/latest/sdk/system-ui/) — System UI style (light/dark) support
 - [react-native-toast-message](https://github.com/calintamas/react-native-toast-message) — Toast notifications
+- [react-native-autocomplete-dropdown](https://github.com/onmotion/react-native-autocomplete-dropdown) — Drug search autocomplete
 
 ---
 
