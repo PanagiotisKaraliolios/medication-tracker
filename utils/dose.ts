@@ -6,7 +6,7 @@ import type { MedicationRow, ScheduleRow, DoseLogRow } from '../types/database';
 export type TodayDose = {
   key: string;
   medicationId: string;
-  scheduleId: string;
+  scheduleId: string | null;
   name: string;
   dosage: string;
   form: string;

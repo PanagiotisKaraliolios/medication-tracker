@@ -26,7 +26,9 @@ export function buildReport(
     doseLogs.map((l) => [`${l.scheduled_date}|${l.schedule_id}|${l.time_label}`, l.status]),
   );
   const medMap = new Map(medications.map((m) => [m.id, m]));
-  const medIds = new Set(medications.map((m) => m.id));
+  // Exclude PRN medications from adherence calculations
+  const scheduledMeds = medications.filter((m) => !m.is_prn);
+  const medIds = new Set(scheduledMeds.map((m) => m.id));
 
   const todayISO = toISO(new Date());
   const now = new Date();
@@ -132,5 +134,13 @@ export function buildReport(
   missed.sort((a, b) => b.dateLabel.localeCompare(a.dateLabel));
   const recentMissed = missed.slice(0, 10);
 
-  return { adherence, totalDoses, takenDoses, missedDoses: Math.max(0, missedDoses), skippedDoses, chartBars, recentMissed };
+  // PRN usage stats
+  const prnMeds = medications.filter((m) => m.is_prn);
+  const prnLogs = doseLogs.filter((l) => !l.schedule_id);
+  const prnUsage = prnMeds.map((m) => {
+    const logs = prnLogs.filter((l) => l.medication_id === m.id && l.status === 'taken');
+    return { name: `${m.name} ${m.dosage}`, count: logs.length };
+  }).filter((p) => p.count > 0);
+
+  return { adherence, totalDoses, takenDoses, missedDoses: Math.max(0, missedDoses), skippedDoses, chartBars, recentMissed, prnUsage };
 }

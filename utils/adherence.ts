@@ -17,7 +17,9 @@ export function computeAdherence(
   const logMap = new Map(
     doseLogs.map((l) => [`${l.scheduled_date}|${l.schedule_id}|${l.time_label}`, l.status]),
   );
-  const medIds = new Set(medications.map((m) => m.id));
+  // Exclude PRN medications from adherence calculations
+  const scheduledMeds = medications.filter((m) => !m.is_prn);
+  const medIds = new Set(scheduledMeds.map((m) => m.id));
 
   const todayISO = toISO(new Date());
   const now = new Date();
@@ -77,7 +79,9 @@ export function computeStreak(
   const logMap = new Map(
     doseLogs.map((l) => [`${l.scheduled_date}|${l.schedule_id}|${l.time_label}`, l.status]),
   );
-  const medIds = new Set(medications.map((m) => m.id));
+  // Exclude PRN medications from streak calculations
+  const scheduledMeds = medications.filter((m) => !m.is_prn);
+  const medIds = new Set(scheduledMeds.map((m) => m.id));
 
   let streak = 0;
   const d = new Date(todayISO + 'T00:00:00');
