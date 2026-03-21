@@ -8,6 +8,9 @@ export type MedicationDraft = {
   icon: string;
   currentSupply: number;
   lowSupplyThreshold: number;
+  isPrn: boolean;
+  rxcui: string | null;
+  genericName: string | null;
 };
 
 export const emptyMedicationDraft: MedicationDraft = {
@@ -17,6 +20,9 @@ export const emptyMedicationDraft: MedicationDraft = {
   icon: 'tablet',
   currentSupply: 30,
   lowSupplyThreshold: 10,
+  isPrn: false,
+  rxcui: null,
+  genericName: null,
 };
 
 /** Row shape returned from Supabase medications table */
@@ -29,6 +35,9 @@ export type MedicationRow = {
   icon: string;
   current_supply: number;
   low_supply_threshold: number;
+  is_prn: boolean;
+  rxcui: string | null;
+  generic_name: string | null;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -42,6 +51,9 @@ export type MedicationUpdate = {
   icon?: string;
   current_supply?: number;
   low_supply_threshold?: number;
+  is_prn?: boolean;
+  rxcui?: string | null;
+  generic_name?: string | null;
 };
 
 // ─── Schedule types ──────────────────────────────────────────────────
@@ -116,12 +128,43 @@ export type ScheduleUpdate = {
 /** Row shape returned from Supabase dose_logs table */
 export type DoseLogRow = {
   id: string;
-  schedule_id: string;
+  schedule_id: string | null;
   medication_id: string;
   user_id: string;
   scheduled_date: string;
   time_label: string;
   status: 'taken' | 'skipped';
+  reason: string | null;
   logged_at: string;
   created_at: string;
+};
+
+// ─── Symptom types ───────────────────────────────────────────────────
+
+/** Row shape returned from Supabase symptoms table */
+export type SymptomRow = {
+  id: string;
+  user_id: string;
+  medication_id: string | null;
+  name: string;
+  severity: 'mild' | 'moderate' | 'severe';
+  notes: string | null;
+  logged_at: string | null;
+  logged_date: string;
+  created_at: string;
+};
+
+/** Draft for logging a new symptom (camelCase for forms) */
+export type SymptomDraft = {
+  name: string;
+  severity: 'mild' | 'moderate' | 'severe';
+  medicationId: string | null;
+  notes: string;
+};
+
+export const emptySymptomDraft: SymptomDraft = {
+  name: '',
+  severity: 'moderate',
+  medicationId: null,
+  notes: '',
 };

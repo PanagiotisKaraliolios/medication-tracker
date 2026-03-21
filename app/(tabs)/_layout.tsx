@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import { Animated, Pressable, StyleSheet, View } from 'react-native';
 import { Tabs } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { type ColorScheme, borderRadius, shadows } from '../../components/ui/theme';
@@ -74,6 +75,12 @@ function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
 
   return (
     <View style={[styles.barOuter, { paddingBottom: Math.max(insets.bottom, 8) }]}>
+      <LinearGradient
+        colors={[`${c.background}00`, c.background, c.background]}
+        locations={[0, 0.4, 1]}
+        style={styles.barGradient}
+        pointerEvents="none"
+      />
       <View style={styles.barInner}>
         {state.routes.map((route, index) => {
           const { options } = descriptors[route.key];
@@ -151,6 +158,13 @@ function makeStyles(c: ColorScheme) {
       right: 0,
       alignItems: 'center',
       paddingHorizontal: 12,
+    },
+    barGradient: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
     },
     barInner: {
       flexDirection: 'row',

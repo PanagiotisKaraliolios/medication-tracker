@@ -14,9 +14,11 @@ import { Button } from '../../components/ui/Button';
 import { AlertDialog } from '../../components/ui/AlertDialog';
 import { AdBanner } from '../../components/ui/AdBanner';
 import { InventoryProgressBar } from '../../components/ui/InventoryProgressBar';
+import { InteractionWarning } from '../../components/ui/InteractionWarning';
 import { type ColorScheme, gradients, borderRadius, shadows } from '../../components/ui/theme';
 import { useThemeColors } from '../../hooks/useThemeColors';
-import { useMedication as useMedicationQuery, useSchedulesByMedication, useDeleteMedication, useDeleteSchedule } from '../../hooks/useQueryHooks';
+import { useMedication as useMedicationQuery, useSchedulesByMedication, useDeleteMedication, useDeleteSchedule, usePrnLogs, useSymptomsByMedication, useMedications } from '../../hooks/useQueryHooks';
+import { useDrugInteractions } from '../../hooks/useDrugSearch';
 import { getIconForForm, TIME_ICON_MAP } from '../../constants/icons';
 import { showInterstitial } from '../../lib/interstitialManager';
 
@@ -30,6 +32,24 @@ export default function MedicationDetailScreen() {
   const schedule = schedules.length > 0 ? schedules[0] : null;
   const deleteMedicationMut = useDeleteMedication();
   const deleteScheduleMut = useDeleteSchedule();
+  const { data: prnLogs = [] } = usePrnLogs(med?.is_prn ? id : undefined);
+  const { data: medSymptoms = [] } = useSymptomsByMedication(id);
+  const { data: allMeds = [] } = useMedications();
+
+  // Drug interaction checking
+  const drugNames = useMemo(() => {
+    return allMeds.map(m => m.generic_name || m.name).filter(Boolean);
+  }, [allMeds]);
+  const { data: interactions = [] } = useDrugInteractions(drugNames);
+
+  // Filter interactions relevant to this medication
+  const relevantInteractions = useMemo(() => {
+    if (!med) return [];
+    const thisName = (med.generic_name || med.name).toLowerCase();
+    return interactions.filter(i =>
+      i.drug1.toLowerCase() === thisName || i.drug2.toLowerCase() === thisName
+    );
+  }, [interactions, med]);
 
   const [deleteVisible, setDeleteVisible] = useState(false);
   const [clearScheduleVisible, setClearScheduleVisible] = useState(false);
@@ -104,8 +124,20 @@ export default function MedicationDetailScreen() {
                 </Text>
               </View>
             )}
+            {med.is_prn && (
+              <View style={styles.frequencyBadge}>
+                <Text style={styles.frequencyText}>As Needed (PRN)</Text>
+              </View>
+            )}
           </View>
         </View>
+
+        {/* Drug Interactions */}
+        {relevantInteractions.length > 0 && (
+          <View style={styles.section}>
+            <InteractionWarning interactions={relevantInteractions} />
+          </View>
+        )}
 
         {/* Inventory */}
         <View style={styles.section}>
@@ -182,8 +214,77 @@ export default function MedicationDetailScreen() {
           </View>
         ) : null}
 
+        {/* PRN Section */}
+        {med.is_prn && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>PRN Dosing</Text>
+            <Button
+              variant="primary"
+              onPress={() => router.push(`/medication/log-prn?medicationId=${med.id}`)}
+            >
+              Log Dose
+            </Button>
+            {prnLogs.length > 0 && (
+              <View style={[styles.card, { marginTop: 12 }]}>
+                <Text style={{ fontSize: 14, fontWeight: '600', color: c.gray900, marginBottom: 8 }}>
+                  Recent Doses ({prnLogs.length})
+                </Text>
+                {prnLogs.slice(0, 5).map((log, i) => (
+                  <View key={log.id}>
+                    {i > 0 && <View style={styles.divider} />}
+                    <View style={styles.scheduleRow}>
+                      <View style={styles.scheduleIcon}>
+                        <Feather name="check-circle" size={18} color={c.teal} />
+                      </View>
+                      <View style={styles.scheduleInfo}>
+                        <Text style={styles.scheduleLabel}>
+                          {new Date(log.logged_at).toLocaleDateString()}
+                        </Text>
+                        <Text style={styles.scheduleTime}>
+                          {log.time_label}{log.reason ? ` · ${log.reason}` : ''}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
+        )}
+
+        {/* Symptoms / Side Effects */}
+        {medSymptoms.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Recent Side Effects</Text>
+            <View style={styles.card}>
+              {medSymptoms.slice(0, 5).map((s, i) => (
+                <View key={s.id}>
+                  {i > 0 && <View style={styles.divider} />}
+                  <View style={styles.scheduleRow}>
+                    <View style={[styles.scheduleIcon, {
+                      backgroundColor: s.severity === 'severe' ? c.errorLight : c.warningLight,
+                    }]}>
+                      <Feather
+                        name={s.severity === 'severe' ? 'alert-octagon' : 'alert-triangle'}
+                        size={18}
+                        color={s.severity === 'severe' ? c.error : c.warning}
+                      />
+                    </View>
+                    <View style={styles.scheduleInfo}>
+                      <Text style={styles.scheduleLabel}>{s.name}</Text>
+                      <Text style={styles.scheduleTime}>
+                        {s.severity} · {s.logged_at ? new Date(s.logged_at).toLocaleDateString() : s.logged_date}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
+
         {/* No Schedule hint */}
-        {!schedule && (
+        {!schedule && !med.is_prn && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Schedule</Text>
             <View style={styles.card}>

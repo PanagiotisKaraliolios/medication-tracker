@@ -2,8 +2,10 @@ import { create } from 'zustand';
 import {
   type MedicationDraft,
   type ScheduleDraft,
+  type SymptomDraft,
   emptyMedicationDraft,
   emptyScheduleDraft,
+  emptySymptomDraft,
 } from '../types/database';
 
 // ─── Medication-draft store ─────────────────────────────────────────
@@ -39,4 +41,19 @@ export const useScheduleDraft = create<ScheduleDraftStore>((set) => ({
   setSchedulingMedId: (id) => set({ schedulingMedId: id }),
   resetScheduleDraft: () =>
     set({ scheduleDraft: { ...emptyScheduleDraft }, schedulingMedId: null }),
+}));
+
+// ─── Symptom-draft store ────────────────────────────────────────────
+
+type SymptomDraftStore = {
+  symptomDraft: SymptomDraft;
+  updateSymptomDraft: (partial: Partial<SymptomDraft>) => void;
+  resetSymptomDraft: () => void;
+};
+
+export const useSymptomDraft = create<SymptomDraftStore>((set) => ({
+  symptomDraft: { ...emptySymptomDraft },
+  updateSymptomDraft: (partial) =>
+    set((s) => ({ symptomDraft: { ...s.symptomDraft, ...partial } })),
+  resetSymptomDraft: () => set({ symptomDraft: { ...emptySymptomDraft } }),
 }));

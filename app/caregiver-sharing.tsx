@@ -12,14 +12,14 @@ import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../contexts/AuthContext';
-import { useMedications, useSchedules, useDoseLogsByRange } from '../hooks/useQueryHooks';
+import { useMedications, useSchedules, useDoseLogsByRange, useSymptomsByRange } from '../hooks/useQueryHooks';
 import { computeAdherence, computeStreak } from '../utils/adherence';
 import { toISO } from '../utils/date';
 import { capitalize } from '../utils/string';
 import { type ColorScheme, gradients, borderRadius, shadows } from '../components/ui/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
 import Toast from 'react-native-toast-message';
-import type { MedicationRow, ScheduleRow, DoseLogRow } from '../types/database';
+import type { MedicationRow, ScheduleRow, DoseLogRow, SymptomRow } from '../types/database';
 
 const PERIOD_OPTIONS = [
   { label: 'Last 7 days', days: 7 },
@@ -32,6 +32,7 @@ function buildSummaryText(
   medications: MedicationRow[],
   schedules: ScheduleRow[],
   logs: DoseLogRow[],
+  symptoms: SymptomRow[],
   periodDays: number,
   startISO: string,
   endISO: string,
@@ -85,6 +86,23 @@ function buildSummaryText(
     lines.push('No active medications.');
   }
 
+  if (symptoms.length > 0) {
+    lines.push('');
+    lines.push(`── Symptoms / Side Effects (${symptoms.length}) ──`);
+    const symptomCounts = new Map<string, { count: number; severity: string }>();
+    for (const s of symptoms) {
+      const existing = symptomCounts.get(s.name);
+      if (existing) {
+        existing.count++;
+      } else {
+        symptomCounts.set(s.name, { count: 1, severity: s.severity });
+      }
+    }
+    for (const [name, { count, severity }] of symptomCounts) {
+      lines.push(`• ${name} — ${capitalize(severity)} (${count}×)`);
+    }
+  }
+
   lines.push('');
   lines.push('— Sent from MediTrack');
 
@@ -123,6 +141,7 @@ export default function CaregiverSharingScreen() {
   const { data: medications = [] } = useMedications();
   const { data: schedules = [] } = useSchedules();
   const { data: logs = [] } = useDoseLogsByRange(startISO, todayISO);
+  const { data: symptoms = [] } = useSymptomsByRange(startISO, todayISO);
 
   const adherence = useMemo(
     () => computeAdherence(startISO, todayISO, medications, schedules, logs),
@@ -141,6 +160,7 @@ export default function CaregiverSharingScreen() {
         medications,
         schedules,
         logs,
+        symptoms,
         periodDays,
         startISO,
         todayISO,

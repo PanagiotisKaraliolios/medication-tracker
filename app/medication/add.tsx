@@ -7,17 +7,21 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  Switch,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { AlertDialog } from '../../components/ui/AlertDialog';
+import { DrugSearchInput } from '../../components/ui/DrugSearchInput';
+import { InteractionWarning } from '../../components/ui/InteractionWarning';
 import { type ColorScheme, borderRadius, shadows } from '../../components/ui/theme';
 import { useThemeColors } from '../../hooks/useThemeColors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useMedicationDraft, useScheduleDraft } from '../../stores/draftStores';
-import { useCreateMedication } from '../../hooks/useQueryHooks';
+import { useCreateMedication, useMedications } from '../../hooks/useQueryHooks';
+import { useDrugSearch, useDrugInteractions } from '../../hooks/useDrugSearch';
 import Toast from 'react-native-toast-message';
 import { MEDICATION_TYPES } from '../../constants/medications';
 
@@ -33,9 +37,24 @@ export default function AddMedicationScreen() {
   const [showSchedulePrompt, setShowSchedulePrompt] = useState(false);
   const createdMedIdRef = useRef<string | null>(null);
 
+  // Drug search
+  const { query: drugQuery, updateQuery: setDrugQuery, clearSearch, results: drugResults, isLoading: drugSearchLoading } = useDrugSearch();
+  const { data: existingMeds = [] } = useMedications();
+
+  // Build list of drug names for interaction checking
+  const allDrugNames = useMemo(() => {
+    const names = existingMeds.map(m => m.generic_name || m.name);
+    if (draft.genericName) names.push(draft.genericName);
+    else if (draft.name.trim()) names.push(draft.name.trim());
+    return [...new Set(names)];
+  }, [existingMeds, draft.genericName, draft.name]);
+
+  const { data: interactions = [] } = useDrugInteractions(allDrugNames);
+
   // Reset draft when opening screen
   useEffect(() => {
     resetDraft();
+    clearSearch();
   }, []);
 
   const isFormValid = draft.name.trim().length > 0 && draft.dosage.trim().length > 0;
@@ -44,7 +63,12 @@ export default function AddMedicationScreen() {
     try {
       const created = await createMedication.mutateAsync();
       createdMedIdRef.current = created.id;
-      setShowSchedulePrompt(true);
+      if (draft.isPrn) {
+        Toast.show({ type: 'success', text1: 'PRN medication added' });
+        router.back();
+      } else {
+        setShowSchedulePrompt(true);
+      }
     } catch (err: any) {
       Toast.show({ type: 'error', text1: 'Save failed', text2: err.message });
     }
@@ -73,15 +97,39 @@ export default function AddMedicationScreen() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Name */}
-        <View style={styles.fieldGroup}>
+        {/* Name — Drug Search */}
+        <View style={[styles.fieldGroup, { zIndex: 10 }]}>
           <Text style={styles.fieldLabel}>Medication Name</Text>
-          <Input
-            placeholder="e.g., Amoxicillin"
-            value={draft.name}
-            onChangeText={(v) => updateDraft({ name: v })}
+          <DrugSearchInput
+            query={draft.rxcui ? draft.name : drugQuery}
+            onChangeQuery={(text) => {
+              setDrugQuery(text);
+              updateDraft({ name: text, rxcui: null, genericName: null });
+            }}
+            results={drugResults}
+            isLoading={drugSearchLoading}
+            selectedRxcui={draft.rxcui}
+            onClear={() => {
+              clearSearch();
+              updateDraft({ name: '', rxcui: null, genericName: null });
+            }}
+            onSelect={(result) => {
+              updateDraft({
+                name: result.name,
+                rxcui: result.rxcui,
+                genericName: result.synonym || result.name,
+              });
+              clearSearch();
+            }}
           />
         </View>
+
+        {/* Drug Interaction Warning */}
+        {interactions.length > 0 && (
+          <View style={styles.fieldGroup}>
+            <InteractionWarning interactions={interactions} />
+          </View>
+        )}
 
         {/* Dosage */}
         <View style={styles.fieldGroup}>
@@ -117,6 +165,22 @@ export default function AddMedicationScreen() {
                 </TouchableOpacity>
               );
             })}
+          </View>
+        </View>
+
+        {/* PRN (As Needed) Toggle */}
+        <View style={styles.fieldGroup}>
+          <View style={styles.toggleRow}>
+            <View style={styles.toggleInfo}>
+              <Text style={styles.fieldLabel}>Take as Needed (PRN)</Text>
+              <Text style={styles.fieldHint}>No fixed schedule — log doses when you take them</Text>
+            </View>
+            <Switch
+              value={draft.isPrn}
+              onValueChange={(v) => updateDraft({ isPrn: v })}
+              trackColor={{ false: c.gray200, true: c.tealLight }}
+              thumbColor={draft.isPrn ? c.teal : c.gray400}
+            />
           </View>
         </View>
 
@@ -241,6 +305,19 @@ function makeStyles(c: ColorScheme, bottomInset: number) {
     },
     iconLabelSelected: {
       color: c.white,
+    },
+    toggleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      backgroundColor: c.card,
+      borderRadius: borderRadius.lg,
+      padding: 16,
+      ...shadows.sm,
+    },
+    toggleInfo: {
+      flex: 1,
+      marginRight: 12,
     },
     stepper: {
       flexDirection: 'row',

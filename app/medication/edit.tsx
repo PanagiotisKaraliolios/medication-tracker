@@ -8,6 +8,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  Switch,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -39,6 +40,7 @@ export default function EditMedicationScreen() {
   const [form, setForm] = useState('tablet');
   const [currentSupply, setCurrentSupply] = useState(30);
   const [lowSupplyThreshold, setLowSupplyThreshold] = useState(10);
+  const [isPrn, setIsPrn] = useState(false);
   const [initialized, setInitialized] = useState(false);
 
   // Populate local form state when data loads
@@ -49,6 +51,7 @@ export default function EditMedicationScreen() {
       setForm(original.form ?? 'tablet');
       setCurrentSupply(original.current_supply ?? 30);
       setLowSupplyThreshold(original.low_supply_threshold ?? 10);
+      setIsPrn(original.is_prn ?? false);
       setInitialized(true);
     }
   }, [original, initialized]);
@@ -66,6 +69,7 @@ export default function EditMedicationScreen() {
       icon: form,
       current_supply: currentSupply,
       low_supply_threshold: lowSupplyThreshold,
+      is_prn: isPrn,
     };
 
     try {
@@ -164,6 +168,22 @@ export default function EditMedicationScreen() {
           </View>
         </View>
 
+        {/* PRN Toggle */}
+        <View style={styles.fieldGroup}>
+          <View style={styles.toggleRow}>
+            <View style={styles.toggleInfo}>
+              <Text style={styles.fieldLabel}>Take as Needed (PRN)</Text>
+              <Text style={styles.fieldHint}>No fixed schedule — log doses when you take them</Text>
+            </View>
+            <Switch
+              value={isPrn}
+              onValueChange={setIsPrn}
+              trackColor={{ false: c.gray200, true: c.tealLight }}
+              thumbColor={isPrn ? c.teal : c.gray400}
+            />
+          </View>
+        </View>
+
         {/* ── Inventory ── */}
         <Text style={styles.groupTitle}>Inventory</Text>
 
@@ -253,6 +273,19 @@ function makeStyles(c: ColorScheme, bottomInset: number) {
     },
     iconLabelSelected: {
       color: c.white,
+    },
+    toggleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      backgroundColor: c.card,
+      borderRadius: borderRadius.lg,
+      padding: 16,
+      ...shadows.sm,
+    },
+    toggleInfo: {
+      flex: 1,
+      marginRight: 12,
     },
 
     footer: {

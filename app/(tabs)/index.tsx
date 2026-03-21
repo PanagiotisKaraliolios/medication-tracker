@@ -1,6 +1,6 @@
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, RefreshControl, Pressable, Animated } from 'react-native';
 import { router } from 'expo-router';
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useQueryClient } from '@tanstack/react-query';
@@ -12,7 +12,7 @@ import { LoadingState } from '../../components/ui/LoadingState';
 import { ErrorState } from '../../components/ui/ErrorState';
 import { CalendarSection } from '../../components/ui/CalendarSection';
 import { AdBanner } from '../../components/ui/AdBanner';
-import { type ColorScheme, gradients, shadows } from '../../components/ui/theme';
+import { type ColorScheme, gradients, borderRadius, shadows } from '../../components/ui/theme';
 import { useThemeColors } from '../../hooks/useThemeColors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCalendar } from '../../hooks/useCalendar';
@@ -25,7 +25,11 @@ import {
   useLogDose,
   useDeleteDoseLog,
   useAdjustSupply,
+  useSymptomsByDate,
+  useDeleteSymptom,
+  useDeleteSymptomsByDate,
 } from '../../hooks/useQueryHooks';
+import Toast from 'react-native-toast-message';
 import { queryKeys } from '../../lib/queryKeys';
 import { toISO } from '../../utils/date';
 import { buildTodayDoses, type TodayDose } from '../../utils/dose';
@@ -68,6 +72,13 @@ export default function TodayDashboard() {
   const { data: schedules = [], isLoading: schLoading, error: schError, refetch: refetchSchedules } = useSchedules();
   const { data: doseLogs = [], isLoading: logsLoading, error: logsError, refetch: refetchLogs } = useDoseLogsByDate(selectedISO);
 
+  // Symptoms for today
+  const { data: todaySymptoms = [], isLoading: symptomsLoading, error: symptomsError, refetch: refetchSymptoms } = useSymptomsByDate(selectedISO);
+  const deleteSymptom = useDeleteSymptom();
+  const deleteSymptomsByDate = useDeleteSymptomsByDate();
+  const [showClearSymptomsDialog, setShowClearSymptomsDialog] = useState(false);
+  const [prnDeleteId, setPrnDeleteId] = useState<string | null>(null);
+
   // Day status range (covers both week strip and expanded month)
   const { rangeStartISO, rangeEndISO } = useMemo(() => {
     const today = new Date();
@@ -107,12 +118,23 @@ export default function TodayDashboard() {
   const error = medsError ?? schError ?? logsError;
   const hasMedications = medications.length > 0;
 
+  // PRN doses taken today
+  const prnLogsToday = useMemo(() => {
+    const prnLogs = doseLogs.filter((l) => l.schedule_id === null);
+    return prnLogs.map((log) => {
+      const med = medications.find((m) => m.id === log.medication_id);
+      return { ...log, medName: med?.name ?? 'Unknown', medDosage: med?.dosage ?? '', medForm: med?.form ?? '' };
+    });
+  }, [doseLogs, medications]);
+
   const computedDoses = useMemo(
     () => buildTodayDoses(medications, schedules, doseLogs, selectedDayLabel, selectedISO),
     [medications, schedules, doseLogs, selectedDayLabel, selectedISO],
   );
 
   const [doses, setDoses] = useState<TodayDose[]>([]);
+  const [fabOpen, setFabOpen] = useState(false);
+  const fabAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     setDoses(computedDoses);
@@ -291,6 +313,22 @@ export default function TodayDashboard() {
     },
   ];
 
+  const toggleFab = useCallback(() => {
+    const toValue = fabOpen ? 0 : 1;
+    setFabOpen(!fabOpen);
+    Animated.spring(fabAnim, { toValue, useNativeDriver: true, friction: 6 }).start();
+  }, [fabOpen, fabAnim]);
+
+  const handleFabAction = useCallback((route: string) => {
+    setFabOpen(false);
+    Animated.timing(fabAnim, { toValue: 0, duration: 150, useNativeDriver: true }).start();
+    router.push(route as any);
+  }, [fabAnim]);
+
+  const fabRotation = fabAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '45deg'] });
+  const fabActionsOpacity = fabAnim;
+  const fabActionsTranslate = fabAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] });
+
   return (
     <View style={styles.container}>
       <ScrollView
@@ -311,14 +349,23 @@ export default function TodayDashboard() {
               <Text style={styles.headerTitle}>{isToday ? 'Today' : dateStr}</Text>
               <Text style={styles.headerDate}>{isToday ? dateStr : 'Viewing another day'}</Text>
             </View>
-            <TouchableOpacity
-              style={styles.notifButton}
-              activeOpacity={0.7}
-              onPress={() => router.push('/notifications')}
-            >
-              <Feather name="bell" size={22} color={c.white} />
-              {hasNotifications && <View style={styles.notifDot} />}
-            </TouchableOpacity>
+            <View style={styles.headerButtons}>
+              <TouchableOpacity
+                style={styles.notifButton}
+                activeOpacity={0.7}
+                onPress={() => router.push('/notifications')}
+              >
+                <Feather name="bell" size={22} color={c.white} />
+                {hasNotifications && <View style={styles.notifDot} />}
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.notifButton}
+                activeOpacity={0.7}
+                onPress={() => router.push('/symptoms')}
+              >
+                <Feather name="activity" size={22} color={c.white} />
+              </TouchableOpacity>
+            </View>
           </View>
 
           <View style={styles.progressSection}>
@@ -406,7 +453,92 @@ export default function TodayDashboard() {
                 ),
             )}
 
-          <View style={{ height: 80 }} />
+
+          {/* As Needed (PRN) — taken today */}
+          {!loading && !error && prnLogsToday.length > 0 && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>As Needed</Text>
+              {prnLogsToday.map((log) => (
+                <View key={log.id} style={styles.prnLogCard}>
+                  <View style={styles.prnLogInfo}>
+                    <Text style={styles.prnLogName}>{log.medName}</Text>
+                    <Text style={styles.prnLogDetail}>
+                      {log.medDosage} · {log.medForm}{log.reason ? ` · ${log.reason}` : ''}
+                    </Text>
+                  </View>
+                  <Text style={styles.prnLogTime}>{log.time_label}</Text>
+                  <TouchableOpacity
+                    style={styles.prnDeleteBtn}
+                    activeOpacity={0.7}
+                    onPress={() => setPrnDeleteId(log.id)}
+                  >
+                    <Feather name="trash-2" size={16} color={c.error} />
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </View>
+          )}
+
+          {/* Symptoms Today */}
+          {!symptomsLoading && symptomsError && (
+            <View style={styles.section}>
+              <ErrorState message="Couldn't load symptoms" onRetry={refetchSymptoms} />
+            </View>
+          )}
+
+          {!symptomsLoading && !symptomsError && todaySymptoms.length === 0 && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Symptoms Today</Text>
+              <Text style={{ color: c.gray500, fontSize: 14, marginTop: 4 }}>No symptoms logged</Text>
+            </View>
+          )}
+
+          {!symptomsLoading && !symptomsError && todaySymptoms.length > 0 && (
+            <View style={styles.section}>
+              <View style={styles.sectionHeaderRow}>
+                <Text style={styles.sectionTitle}>Symptoms Today</Text>
+                <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
+                  {todaySymptoms.length > 1 && (
+                    <TouchableOpacity onPress={() => setShowClearSymptomsDialog(true)} activeOpacity={0.7}>
+                      <Text style={[styles.seeAllText, { color: c.error }]}>Clear All</Text>
+                    </TouchableOpacity>
+                  )}
+                  <TouchableOpacity onPress={() => router.push('/symptoms')} activeOpacity={0.7}>
+                    <Text style={styles.seeAllText}>See All</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+              <View style={styles.symptomChips}>
+                {todaySymptoms.slice(0, 5).map((s) => (
+                  <TouchableOpacity
+                    key={s.id}
+                    style={[styles.symptomChip, s.severity === 'severe' && styles.symptomChipSevere]}
+                    activeOpacity={0.7}
+                    onLongPress={async () => {
+                      try {
+                        await deleteSymptom.mutateAsync(s.id);
+                        Toast.show({ type: 'success', text1: 'Symptom removed' });
+                      } catch (err: any) {
+                        Toast.show({ type: 'error', text1: 'Failed to delete', text2: err.message });
+                      }
+                    }}
+                  >
+                    <Text style={[styles.symptomChipText, s.severity === 'severe' && styles.symptomChipTextSevere]}>
+                      {s.name}
+                    </Text>
+                    <Feather name="x" size={12} color={s.severity === 'severe' ? c.error : c.warning} />
+                  </TouchableOpacity>
+                ))}
+                {todaySymptoms.length > 5 && (
+                  <View style={styles.symptomChip}>
+                    <Text style={styles.symptomChipText}>+{todaySymptoms.length - 5} more</Text>
+                  </View>
+                )}
+              </View>
+            </View>
+          )}
+
+          <View style={{ height: 160 }} />
         </View>
       </ScrollView>
 
@@ -429,11 +561,88 @@ export default function TodayDashboard() {
         onConfirm={snooze.handleSnoozeConfirm}
       />
 
-      {/* Floating Action Button */}
+      {/* Delete PRN Dose Dialog */}
+      <AlertDialog
+        visible={!!prnDeleteId}
+        onClose={() => setPrnDeleteId(null)}
+        title="Delete PRN Dose"
+        message="Remove this dose log? This action cannot be undone."
+        variant="destructive"
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        onConfirm={async () => {
+          if (!prnDeleteId) return;
+          try {
+            await deleteDoseLogMut.mutateAsync(prnDeleteId);
+            setPrnDeleteId(null);
+            Toast.show({ type: 'success', text1: 'PRN dose removed' });
+          } catch (err: any) {
+            Toast.show({ type: 'error', text1: 'Failed to delete', text2: err.message });
+          }
+        }}
+      />
+
+      {/* Clear All Symptoms Dialog */}
+      <AlertDialog
+        visible={showClearSymptomsDialog}
+        onClose={() => setShowClearSymptomsDialog(false)}
+        title="Clear All Symptoms"
+        message={`Remove all ${todaySymptoms.length} symptom${todaySymptoms.length === 1 ? '' : 's'} logged for this day?`}
+        variant="destructive"
+        confirmLabel="Clear All"
+        cancelLabel="Cancel"
+        onConfirm={async () => {
+          try {
+            await deleteSymptomsByDate.mutateAsync(selectedISO);
+            setShowClearSymptomsDialog(false);
+            Toast.show({ type: 'success', text1: 'All symptoms cleared' });
+          } catch (err: any) {
+            Toast.show({ type: 'error', text1: 'Failed to clear', text2: err.message });
+          }
+        }}
+      />
+
+      {/* FAB Speed Dial */}
+      {fabOpen && (
+        <Pressable style={styles.fabBackdrop} onPress={toggleFab} />
+      )}
+
+      <Animated.View
+        style={[styles.fabActions, { opacity: fabActionsOpacity, transform: [{ translateY: fabActionsTranslate }] }]}
+        pointerEvents={fabOpen ? 'auto' : 'none'}
+      >
+        <TouchableOpacity style={styles.fabActionRow} activeOpacity={0.8} onPress={() => handleFabAction(`/log-symptom?date=${selectedISO}`)}>
+          <View style={styles.fabActionLabel}>
+            <Text style={styles.fabActionLabelText}>Log Symptom</Text>
+          </View>
+          <View style={[styles.fabActionIcon, { backgroundColor: c.warning }]}>
+            <Feather name="activity" size={20} color={c.white} />
+          </View>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.fabActionRow} activeOpacity={0.8} onPress={() => handleFabAction('/medication/log-prn')}>
+          <View style={styles.fabActionLabel}>
+            <Text style={styles.fabActionLabelText}>Log PRN Dose</Text>
+          </View>
+          <View style={[styles.fabActionIcon, { backgroundColor: c.blue }]}>
+            <Feather name="zap" size={20} color={c.white} />
+          </View>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.fabActionRow} activeOpacity={0.8} onPress={() => handleFabAction('/medication/select')}>
+          <View style={styles.fabActionLabel}>
+            <Text style={styles.fabActionLabelText}>Schedule Medication</Text>
+          </View>
+          <View style={[styles.fabActionIcon, { backgroundColor: c.teal }]}>
+            <Feather name="calendar" size={20} color={c.white} />
+          </View>
+        </TouchableOpacity>
+      </Animated.View>
+
       <TouchableOpacity
         style={styles.fabWrapper}
         activeOpacity={0.85}
-        onPress={() => router.push('/medication/select')}
+        onPress={toggleFab}
       >
         <LinearGradient
           colors={[...gradients.primary]}
@@ -441,7 +650,9 @@ export default function TodayDashboard() {
           end={{ x: 1, y: 1 }}
           style={styles.fab}
         >
-          <Feather name="plus" size={28} color={c.white} />
+          <Animated.View style={{ transform: [{ rotate: fabRotation }] }}>
+            <Feather name="plus" size={28} color={c.white} />
+          </Animated.View>
         </LinearGradient>
       </TouchableOpacity>
     </View>
@@ -476,6 +687,9 @@ function makeStyles(c: ColorScheme, bottomInset: number) {
       fontSize: 15,
       color: 'rgba(255,255,255,0.8)',
       marginTop: 4,
+    },
+    headerButtons: {
+      gap: 8,
     },
     notifButton: {
       width: 44,
@@ -532,10 +746,118 @@ function makeStyles(c: ColorScheme, bottomInset: number) {
       color: c.gray900,
       marginBottom: 16,
     },
+    sectionHeaderRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 16,
+    },
+    seeAllText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: c.teal,
+    },
+
+    prnLogCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: c.card,
+      borderRadius: borderRadius.lg,
+      padding: 14,
+      marginBottom: 8,
+      ...shadows.sm,
+    },
+    prnLogInfo: {
+      flex: 1,
+    },
+    prnLogName: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: c.gray900,
+    },
+    prnLogDetail: {
+      fontSize: 13,
+      color: c.gray500,
+      marginTop: 2,
+    },
+    prnLogTime: {
+      fontSize: 13,
+      color: c.gray400,
+      marginLeft: 12,
+    },
+    prnDeleteBtn: {
+      marginLeft: 8,
+      padding: 6,
+    },
+
+    symptomChips: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 8,
+    },
+    symptomChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: borderRadius.round,
+      backgroundColor: c.warningLight,
+    },
+    symptomChipSevere: {
+      backgroundColor: c.errorLight,
+    },
+    symptomChipText: {
+      fontSize: 13,
+      fontWeight: '500',
+      color: c.warning,
+    },
+    symptomChipTextSevere: {
+      color: c.error,
+    },
+    fabBackdrop: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: 'rgba(0,0,0,0.3)',
+      zIndex: 90,
+    },
+    fabActions: {
+      position: 'absolute',
+      bottom: Math.max(90, bottomInset + 74) + 72,
+      right: 24,
+      alignItems: 'flex-end',
+      gap: 12,
+      zIndex: 100,
+    },
+    fabActionRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+    },
+    fabActionLabel: {
+      backgroundColor: c.card,
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+      borderRadius: borderRadius.lg,
+      ...shadows.sm,
+    },
+    fabActionLabelText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: c.gray900,
+    },
+    fabActionIcon: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      alignItems: 'center' as const,
+      justifyContent: 'center' as const,
+      ...shadows.md,
+    },
     fabWrapper: {
       position: 'absolute',
       bottom: Math.max(90, bottomInset + 74),
       right: 24,
+      zIndex: 100,
     },
     fab: {
       width: 64,

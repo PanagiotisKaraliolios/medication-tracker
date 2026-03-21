@@ -10,6 +10,8 @@ import { supabase } from '../lib/supabase';
 import type { MedicationRow, ScheduleRow } from '../types/database';
 import { useEffect, useRef, useCallback } from 'react';
 import { AppState, ActivityIndicator, View } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { AutocompleteDropdownContextProvider } from 'react-native-autocomplete-dropdown';
 import { useBatteryOptimization } from '../hooks/useBatteryOptimization';
 import { BatteryOptimizationModal } from '../components/ui/BatteryOptimizationModal';
 import { OfflineBanner } from '../components/ui/OfflineBanner';
@@ -197,6 +199,7 @@ function RootLayoutNav() {
         <Stack.Screen name="medication/[id]" options={{ headerShown: true, title: 'Medication Details' }} />
         <Stack.Screen name="medication/edit" options={{ headerShown: true, title: 'Edit Medication' }} />
         <Stack.Screen name="medication/edit-schedule" options={{ headerShown: true, title: 'Edit Schedule' }} />
+        <Stack.Screen name="medication/log-prn" options={{ headerShown: true, title: 'Log PRN Dose' }} />
         <Stack.Screen name="profile/edit" options={{ headerShown: false }} />
         <Stack.Screen name="notification-settings" options={{ headerShown: false }} />
         <Stack.Screen name="notifications" options={{ headerShown: false }} />
@@ -204,6 +207,7 @@ function RootLayoutNav() {
         <Stack.Screen name="set-password" options={{ headerShown: false }} />
         <Stack.Screen name="change-password" options={{ headerShown: false }} />
         <Stack.Screen name="ad-preferences" options={{ headerShown: false }} />
+        <Stack.Screen name="log-symptom" options={{ headerShown: true, title: 'Log Symptom' }} />
         <Stack.Screen name="support-developer" options={{ headerShown: false }} />
       </Stack>
 
@@ -264,11 +268,15 @@ function buildToastConfig(scheme: 'light' | 'dark') {
   };
 }
 
+const rootStyle = { flex: 1 } as const;
+
 export default function RootLayout() {
   return (
-    <ThemePreferenceProvider>
-      <RootLayoutInner />
-    </ThemePreferenceProvider>
+    <GestureHandlerRootView style={rootStyle}>
+      <ThemePreferenceProvider>
+        <RootLayoutInner />
+      </ThemePreferenceProvider>
+    </GestureHandlerRootView>
   );
 }
 
@@ -278,7 +286,9 @@ function RootLayoutInner() {
     <PersistQueryClientProvider client={queryClient} persistOptions={{ persister: queryPersister }}>
       <ThemeProvider value={resolvedScheme === 'dark' ? DarkNavTheme : LightNavTheme}>
         <AuthProvider>
-          <RootLayoutNav />
+          <AutocompleteDropdownContextProvider>
+            <RootLayoutNav />
+          </AutocompleteDropdownContextProvider>
           <Toast config={buildToastConfig(resolvedScheme)} />
         </AuthProvider>
       </ThemeProvider>

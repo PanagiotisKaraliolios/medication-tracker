@@ -8,15 +8,36 @@ import { EmptyState } from '../../components/ui/EmptyState';
 import { LoadingState } from '../../components/ui/LoadingState';
 import { ErrorState } from '../../components/ui/ErrorState';
 import { AdBanner } from '../../components/ui/AdBanner';
+import { InteractionWarning } from '../../components/ui/InteractionWarning';
 import { type ColorScheme, gradients, borderRadius, shadows } from '../../components/ui/theme';
 import { useThemeColors } from '../../hooks/useThemeColors';
 import { useMedications } from '../../hooks/useQueryHooks';
+import { useDrugInteractions } from '../../hooks/useDrugSearch';
 import type { MedicationRow } from '../../types/database';
 
 export default function MedicationsScreen() {
   const c = useThemeColors();
   const styles = useMemo(() => makeStyles(c), [c]);
   const { data: medications = [], isLoading, error, refetch } = useMedications();
+
+  // Drug interaction checking
+  const drugNames = useMemo(
+    () => medications.map(m => m.generic_name || m.name).filter(Boolean),
+    [medications],
+  );
+  const { data: interactions = [] } = useDrugInteractions(drugNames);
+
+  const interactionsByMed = useMemo(() => {
+    const map = new Map<string, typeof interactions>();
+    for (const med of medications) {
+      const name = (med.generic_name || med.name).toLowerCase();
+      const relevant = interactions.filter(
+        i => i.drug1.toLowerCase() === name || i.drug2.toLowerCase() === name,
+      );
+      if (relevant.length > 0) map.set(med.id, relevant);
+    }
+    return map;
+  }, [medications, interactions]);
 
   const [refreshing, setRefreshing] = useState(false);
   const onRefresh = useCallback(async () => {
@@ -116,6 +137,12 @@ export default function MedicationsScreen() {
                     <Text style={styles.medName}>{med.name}</Text>
                     <Text style={styles.medDosage}>{med.dosage} · {med.form}</Text>
                   </View>
+                  {med.is_prn && (
+                    <View style={styles.prnBadge}>
+                      <Feather name="zap" size={12} color={c.teal} />
+                      <Text style={styles.prnBadgeText}>PRN</Text>
+                    </View>
+                  )}
                   {isLow && (
                     <View style={styles.lowBadge}>
                       <Feather name="alert-triangle" size={14} color={c.warning} />
@@ -125,6 +152,12 @@ export default function MedicationsScreen() {
                 </View>
 
                 <InventoryProgressBar current={med.current_supply} threshold={med.low_supply_threshold ?? 10} />
+
+                {interactionsByMed.has(med.id) && (
+                  <View style={{ marginTop: 8 }}>
+                    <InteractionWarning interactions={interactionsByMed.get(med.id)!} compact />
+                  </View>
+                )}
 
                 <View style={styles.cardBottom}>
                   <View style={styles.nextDose}>
@@ -213,6 +246,21 @@ function makeStyles(c: ColorScheme) {
       fontSize: 12,
       fontWeight: '600',
       color: c.warning,
+    },
+    prnBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      backgroundColor: c.tealLight,
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderRadius: borderRadius.round,
+      marginRight: 6,
+    },
+    prnBadgeText: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: c.teal,
     },
     cardBottom: {
       flexDirection: 'row',

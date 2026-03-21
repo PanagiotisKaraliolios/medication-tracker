@@ -10,11 +10,12 @@ import { SegmentedControl } from '../../components/ui/SegmentedControl';
 import { AdBanner } from '../../components/ui/AdBanner';
 import { type ColorScheme, gradients, borderRadius, shadows } from '../../components/ui/theme';
 import { useThemeColors } from '../../hooks/useThemeColors';
-import { useMedications, useSchedules, useDoseLogsByRange } from '../../hooks/useQueryHooks';
+import { useMedications, useSchedules, useDoseLogsByRange, useSymptomsByRange } from '../../hooks/useQueryHooks';
 import { queryKeys } from '../../lib/queryKeys';
 import { PERIOD_DAYS, PERIOD_OPTIONS } from '../../constants/reports';
 import { toISO } from '../../utils/date';
 import { buildReport } from '../../utils/report';
+import { buildSymptomSummary } from '../../utils/symptom';
 
 // ─── Component ───────────────────────────────────────────────────────
 
@@ -40,6 +41,7 @@ export default function ReportsScreen() {
   const { data: medications = [], isLoading: medsLoading, error: medsError, refetch: refetchMeds } = useMedications();
   const { data: schedules = [], isLoading: schLoading, error: schError, refetch: refetchSchedules } = useSchedules();
   const { data: doseLogs = [], isLoading: logsLoading, error: logsError, refetch: refetchLogs } = useDoseLogsByRange(startISO, endISO);
+  const { data: symptoms = [] } = useSymptomsByRange(startISO, endISO);
 
   const loading = medsLoading || schLoading || logsLoading;
   const error = medsError ?? schError ?? logsError;
@@ -56,6 +58,11 @@ export default function ReportsScreen() {
   const { adherence, totalDoses, takenDoses, missedDoses, skippedDoses, chartBars, recentMissed } = useMemo(
     () => buildReport(startISO, endISO, medications, schedules, doseLogs, days),
     [startISO, endISO, medications, schedules, doseLogs, days],
+  );
+
+  const symptomSummary = useMemo(
+    () => buildSymptomSummary(symptoms),
+    [symptoms],
   );
 
   // ── Header (always shown) ──
@@ -186,6 +193,55 @@ export default function ReportsScreen() {
                   </View>
                 </View>
               ))}
+            </View>
+          )}
+
+          {/* Symptom Summary */}
+          {symptomSummary.totalCount > 0 && (
+            <View style={styles.missedCard}>
+              <Text style={styles.missedTitle}>Symptoms Reported</Text>
+              <View style={styles.symptomStatsRow}>
+                <View style={styles.symptomStatItem}>
+                  <Text style={styles.symptomStatValue}>{symptomSummary.totalCount}</Text>
+                  <Text style={styles.statLabel}>Total</Text>
+                </View>
+                {symptomSummary.severityBreakdown.severe > 0 && (
+                  <View style={styles.symptomStatItem}>
+                    <Text style={[styles.symptomStatValue, { color: c.error }]}>{symptomSummary.severityBreakdown.severe}</Text>
+                    <Text style={styles.statLabel}>Severe</Text>
+                  </View>
+                )}
+                {symptomSummary.severityBreakdown.moderate > 0 && (
+                  <View style={styles.symptomStatItem}>
+                    <Text style={[styles.symptomStatValue, { color: c.warning }]}>{symptomSummary.severityBreakdown.moderate}</Text>
+                    <Text style={styles.statLabel}>Moderate</Text>
+                  </View>
+                )}
+                {symptomSummary.severityBreakdown.mild > 0 && (
+                  <View style={styles.symptomStatItem}>
+                    <Text style={[styles.symptomStatValue, { color: c.teal }]}>{symptomSummary.severityBreakdown.mild}</Text>
+                    <Text style={styles.statLabel}>Mild</Text>
+                  </View>
+                )}
+              </View>
+              <View style={styles.symptomChipsRow}>
+                {symptomSummary.uniqueSymptoms.map((name) => {
+                  const count = symptomSummary.symptomCounts.get(name) ?? 0;
+                  const isMostFrequent = name === symptomSummary.mostFrequent;
+                  return (
+                    <View key={name} style={[styles.symptomReportChip, isMostFrequent && styles.symptomReportChipHighlight]}>
+                      <Text style={[styles.symptomReportChipText, isMostFrequent && styles.symptomReportChipTextHighlight]}>
+                        {name}
+                      </Text>
+                      {count > 1 && (
+                        <View style={[styles.symptomCountBadge, isMostFrequent && styles.symptomCountBadgeHighlight]}>
+                          <Text style={[styles.symptomCountText, isMostFrequent && styles.symptomCountTextHighlight]}>{count}</Text>
+                        </View>
+                      )}
+                    </View>
+                  );
+                })}
+              </View>
             </View>
           )}
 
@@ -341,6 +397,66 @@ function makeStyles(c: ColorScheme) {
       fontSize: 13,
       color: c.gray500,
       marginTop: 2,
+    },
+    symptomStatsRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-around',
+      marginBottom: 16,
+    },
+    symptomStatItem: {
+      alignItems: 'center',
+      gap: 4,
+    },
+    symptomStatValue: {
+      fontSize: 22,
+      fontWeight: '700',
+      color: c.gray900,
+    },
+    symptomChipsRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 8,
+    },
+    symptomReportChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingHorizontal: 12,
+      paddingVertical: 7,
+      borderRadius: borderRadius.round,
+      backgroundColor: c.gray100,
+    },
+    symptomReportChipHighlight: {
+      backgroundColor: c.warningLight,
+    },
+    symptomReportChipText: {
+      fontSize: 13,
+      color: c.gray600,
+      fontWeight: '500',
+    },
+    symptomReportChipTextHighlight: {
+      color: c.warning,
+      fontWeight: '600',
+    },
+    symptomCountBadge: {
+      backgroundColor: c.gray200,
+      borderRadius: 10,
+      minWidth: 20,
+      height: 20,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 5,
+    },
+    symptomCountBadgeHighlight: {
+      backgroundColor: c.warning,
+    },
+    symptomCountText: {
+      fontSize: 11,
+      fontWeight: '700',
+      color: c.gray500,
+    },
+    symptomCountTextHighlight: {
+      color: '#fff',
     },
   });
 }

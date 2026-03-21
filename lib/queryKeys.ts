@@ -18,6 +18,19 @@ export const queryKeys = {
     all: ['doseLogs'] as const,
     byDate: (date: string) => ['doseLogs', 'byDate', date] as const,
     byRange: (start: string, end: string) => ['doseLogs', 'byRange', start, end] as const,
+    prnByMedication: (medicationId: string) => ['doseLogs', 'prn', medicationId] as const,
+  },
+  symptoms: {
+    all: ['symptoms'] as const,
+    byDate: (date: string) => ['symptoms', 'byDate', date] as const,
+    byRange: (start: string, end: string) => ['symptoms', 'byRange', start, end] as const,
+    byMedication: (medicationId: string) => ['symptoms', 'byMedication', medicationId] as const,
+  },
+  drugSearch: {
+    byQuery: (query: string) => ['drugSearch', query] as const,
+  },
+  drugInteractions: {
+    byRxcuis: (rxcuis: string[]) => ['drugInteractions', ...rxcuis.sort()] as const,
   },
   profile: {
     current: ['profile'] as const,

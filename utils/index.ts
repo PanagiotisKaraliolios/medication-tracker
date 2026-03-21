@@ -6,3 +6,4 @@ export { computeAdherence, computeStreak } from './adherence';
 export { parseSnoozeDuration, formatTimeLeft } from './snooze';
 export { describeTrigger, getNotificationIcon, buildScheduledItems, buildDeliveredItems, type NotificationItem } from './notificationHelpers';
 export { capitalize } from './string';
+export { buildSymptomSummary, groupSymptomsByDate, type SymptomSummary } from './symptom';

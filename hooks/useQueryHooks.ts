@@ -15,8 +15,10 @@ import type {
   ScheduleUpdate,
   ScheduleDraft,
   DoseLogRow,
+  SymptomRow,
 } from '../types/database';
 import { useMedicationDraft } from '../stores/draftStores';
+import { toISO } from '../utils/date';
 
 // ─────────────────────────────────────────────────────────────────────
 //  MEDICATION QUERIES
@@ -88,6 +90,9 @@ export function useCreateMedication() {
           icon: draft.icon,
           current_supply: draft.currentSupply,
           low_supply_threshold: draft.lowSupplyThreshold,
+          is_prn: draft.isPrn,
+          rxcui: draft.rxcui,
+          generic_name: draft.genericName,
         })
         .select()
         .single();
@@ -489,7 +494,7 @@ export function useDoseLogsByRange(startDate: string | undefined, endDate: strin
 //  DOSE-LOG MUTATIONS
 // ─────────────────────────────────────────────────────────────────────
 
-/** Log or update a dose (upsert on schedule+date+time). */
+/** Log or update a dose (upsert on schedule+date+time for scheduled; insert for PRN). */
 export function useLogDose() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -501,15 +506,39 @@ export function useLogDose() {
       date,
       timeLabel,
       status,
+      reason,
     }: {
-      scheduleId: string;
+      scheduleId: string | null;
       medicationId: string;
       date: string;
       timeLabel: string;
       status: 'taken' | 'skipped';
+      reason?: string | null;
     }): Promise<DoseLogRow> => {
       if (!user?.id) throw new Error('Not authenticated');
 
+      // PRN doses: insert (no upsert — multiple logs allowed per day)
+      if (!scheduleId) {
+        const { data, error } = await supabase
+          .from('dose_logs')
+          .insert({
+            schedule_id: null,
+            medication_id: medicationId,
+            user_id: user.id,
+            scheduled_date: date,
+            time_label: timeLabel,
+            status,
+            reason: reason ?? null,
+            logged_at: new Date().toISOString(),
+          })
+          .select()
+          .single();
+
+        if (error) throw new Error(error.message);
+        return data as DoseLogRow;
+      }
+
+      // Scheduled doses: upsert on unique constraint
       const { data, error } = await supabase
         .from('dose_logs')
         .upsert(
@@ -520,6 +549,7 @@ export function useLogDose() {
             scheduled_date: date,
             time_label: timeLabel,
             status,
+            reason: null,
             logged_at: new Date().toISOString(),
           },
           { onConflict: 'schedule_id,scheduled_date,time_label' },
@@ -555,6 +585,206 @@ export function useDeleteDoseLog() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.doseLogs.all });
+    },
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────
+//  PRN DOSE-LOG QUERIES
+// ─────────────────────────────────────────────────────────────────────
+
+/** Fetch PRN dose logs for a specific medication (most recent first). */
+export function usePrnLogs(
+  medicationId: string | undefined,
+  startDate?: string,
+  endDate?: string,
+) {
+  const { user } = useAuth();
+
+  return useQuery({
+    queryKey: queryKeys.doseLogs.prnByMedication(medicationId ?? ''),
+    queryFn: async (): Promise<DoseLogRow[]> => {
+      let query = supabase
+        .from('dose_logs')
+        .select('*')
+        .eq('user_id', user!.id)
+        .eq('medication_id', medicationId!)
+        .is('schedule_id', null)
+        .order('logged_at', { ascending: false });
+
+      if (startDate) query = query.gte('scheduled_date', startDate);
+      if (endDate) query = query.lte('scheduled_date', endDate);
+
+      const { data, error } = await query;
+      if (error) throw new Error(error.message);
+      return (data ?? []) as DoseLogRow[];
+    },
+    enabled: !!user?.id && !!medicationId,
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────
+//  SYMPTOM QUERIES
+// ─────────────────────────────────────────────────────────────────────
+
+/** Fetch symptoms for a specific date. */
+export function useSymptomsByDate(date: string | undefined) {
+  const { user } = useAuth();
+
+  return useQuery({
+    queryKey: queryKeys.symptoms.byDate(date ?? ''),
+    queryFn: async (): Promise<SymptomRow[]> => {
+      const { data, error } = await supabase
+        .from('symptoms')
+        .select('*')
+        .eq('user_id', user!.id)
+        .eq('logged_date', date!)
+        .order('logged_at', { ascending: false });
+
+      if (error) throw new Error(error.message);
+      return (data ?? []) as SymptomRow[];
+    },
+    enabled: !!user?.id && !!date,
+  });
+}
+
+/** Fetch symptoms for a date range. */
+export function useSymptomsByRange(startDate: string | undefined, endDate: string | undefined) {
+  const { user } = useAuth();
+
+  return useQuery({
+    queryKey: queryKeys.symptoms.byRange(startDate ?? '', endDate ?? ''),
+    queryFn: async (): Promise<SymptomRow[]> => {
+      const { data, error } = await supabase
+        .from('symptoms')
+        .select('*')
+        .eq('user_id', user!.id)
+        .gte('logged_date', startDate!)
+        .lte('logged_date', endDate!)
+        .order('logged_at', { ascending: false });
+
+      if (error) throw new Error(error.message);
+      return (data ?? []) as SymptomRow[];
+    },
+    enabled: !!user?.id && !!startDate && !!endDate,
+  });
+}
+
+/** Fetch symptoms linked to a specific medication. */
+export function useSymptomsByMedication(medicationId: string | undefined) {
+  const { user } = useAuth();
+
+  return useQuery({
+    queryKey: queryKeys.symptoms.byMedication(medicationId ?? ''),
+    queryFn: async (): Promise<SymptomRow[]> => {
+      const { data, error } = await supabase
+        .from('symptoms')
+        .select('*')
+        .eq('user_id', user!.id)
+        .eq('medication_id', medicationId!)
+        .order('logged_at', { ascending: false });
+
+      if (error) throw new Error(error.message);
+      return (data ?? []) as SymptomRow[];
+    },
+    enabled: !!user?.id && !!medicationId,
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────
+//  SYMPTOM MUTATIONS
+// ─────────────────────────────────────────────────────────────────────
+
+/** Log a new symptom. */
+export function useLogSymptom() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      name,
+      severity,
+      medicationId,
+      notes,
+      loggedAt,
+      loggedDate: explicitDate,
+    }: {
+      name: string;
+      severity: 'mild' | 'moderate' | 'severe';
+      medicationId: string | null;
+      notes: string | null;
+      loggedAt?: string;
+      loggedDate?: string;
+    }): Promise<SymptomRow> => {
+      if (!user?.id) throw new Error('Not authenticated');
+
+      const loggedDate = explicitDate ?? (loggedAt ? loggedAt.slice(0, 10) : toISO(new Date()));
+
+      const { data, error } = await supabase
+        .from('symptoms')
+        .insert({
+          user_id: user.id,
+          medication_id: medicationId,
+          name,
+          severity,
+          notes,
+          logged_at: loggedAt ?? null,
+          logged_date: loggedDate,
+        })
+        .select()
+        .single();
+
+      if (error) throw new Error(error.message);
+      return data as SymptomRow;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.symptoms.all });
+    },
+  });
+}
+
+/** Delete a symptom log. */
+export function useDeleteSymptom() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string): Promise<void> => {
+      if (!user?.id) throw new Error('Not authenticated');
+
+      const { error } = await supabase
+        .from('symptoms')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', user.id);
+
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.symptoms.all });
+    },
+  });
+}
+
+/** Delete all symptom logs for a specific date. */
+export function useDeleteSymptomsByDate() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (date: string): Promise<void> => {
+      if (!user?.id) throw new Error('Not authenticated');
+
+      const { error } = await supabase
+        .from('symptoms')
+        .delete()
+        .eq('user_id', user.id)
+        .eq('logged_date', date);
+
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.symptoms.all });
     },
   });
 }
