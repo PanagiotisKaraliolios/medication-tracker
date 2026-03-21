@@ -180,3 +180,13 @@ export const shadows = {
     elevation: 8,
   },
 } as const;
+
+export const breakpoints = {
+  tablet: 768,
+} as const;
+
+export const tablet = {
+  contentMaxWidth: 960,
+  sideRailWidth: 80,
+  masterListWidth: 380,
+} as const;
