@@ -5,14 +5,23 @@ import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
-import { type ColorScheme, borderRadius, shadows } from '../../components/ui/theme';
+import { type ColorScheme, borderRadius, shadows, tablet as tabletLayout } from '../../components/ui/theme';
 import { useThemeColors } from '../../hooks/useThemeColors';
+import { useResponsive } from '../../hooks/useResponsive';
 
 const TAB_ICONS: Record<string, keyof typeof Feather.glyphMap> = {
   index: 'home',
   medications: 'package',
   reports: 'bar-chart-2',
   profile: 'user',
+};
+
+/* Short labels for the narrow side rail */
+const RAIL_LABELS: Record<string, string> = {
+  index: 'Today',
+  medications: 'Meds',
+  reports: 'Reports',
+  profile: 'Profile',
 };
 
 function AnimatedTabIcon({
@@ -68,7 +77,100 @@ function AnimatedTabIcon({
   );
 }
 
-function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
+/* ── Shared tab item renderer ── */
+function renderTabItems(
+  state: BottomTabBarProps['state'],
+  descriptors: BottomTabBarProps['descriptors'],
+  navigation: BottomTabBarProps['navigation'],
+  c: ColorScheme,
+  isTablet: boolean,
+) {
+  return state.routes.map((route, index) => {
+    const { options } = descriptors[route.key];
+    const label = isTablet
+      ? (RAIL_LABELS[route.name] ?? options.title ?? route.name)
+      : ((options.title ?? route.name) as string);
+    const isFocused = state.index === index;
+    const iconName = TAB_ICONS[route.name] ?? 'circle';
+    const color = isFocused ? c.teal : c.gray400;
+
+    const onPress = () => {
+      const event = navigation.emit({
+        type: 'tabPress',
+        target: route.key,
+        canPreventDefault: true,
+      });
+      if (!isFocused && !event.defaultPrevented) {
+        navigation.navigate(route.name, route.params);
+      }
+    };
+
+    const onLongPress = () => {
+      navigation.emit({ type: 'tabLongPress', target: route.key });
+    };
+
+    return (
+      <Pressable
+        key={route.key}
+        accessibilityRole="button"
+        accessibilityState={isFocused ? { selected: true } : undefined}
+        accessibilityLabel={options.tabBarAccessibilityLabel}
+        onPress={onPress}
+        onLongPress={onLongPress}
+        style={isTablet ? railStyles(c).railTab : undefined}
+      >
+        {isFocused && (
+          <View
+            style={
+              isTablet
+                ? railStyles(c).railPill
+                : {
+                    ...StyleSheet.absoluteFill,
+                    backgroundColor: `${c.teal}15`,
+                    borderRadius: borderRadius.xl,
+                    marginHorizontal: 4,
+                  }
+            }
+          />
+        )}
+        <AnimatedTabIcon name={iconName} color={color} focused={isFocused} />
+        <Animated.Text
+          style={[
+            { fontSize: 11, fontWeight: '600', marginTop: 4, color },
+          ]}
+          numberOfLines={1}
+        >
+          {label}
+        </Animated.Text>
+      </Pressable>
+    );
+  });
+}
+
+/* ── Tablet side rail ── */
+function SideRail({ state, descriptors, navigation }: BottomTabBarProps) {
+  const c = useThemeColors();
+  const insets = useSafeAreaInsets();
+  const rs = useMemo(() => railStyles(c), [c]);
+
+  return (
+    <View
+      style={[
+        rs.rail,
+        {
+          paddingTop: Math.max(insets.top, 16) + 8,
+          paddingBottom: Math.max(insets.bottom, 16),
+          paddingLeft: Math.max(insets.left, 0),
+        },
+      ]}
+    >
+      {renderTabItems(state, descriptors, navigation, c, true)}
+    </View>
+  );
+}
+
+/* ── Phone bottom bar ── */
+function BottomBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const c = useThemeColors();
   const insets = useSafeAreaInsets();
   const styles = useMemo(() => makeStyles(c), [c]);
@@ -132,23 +234,29 @@ function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
 
 export default function TabLayout() {
   const c = useThemeColors();
+  const { isTablet } = useResponsive();
 
   return (
-    <Tabs
-      tabBar={(props) => <CustomTabBar {...props} />}
-      screenOptions={{
-        headerShown: false,
-        animation: 'fade',
-      }}
-    >
-      <Tabs.Screen name="index" options={{ title: 'Today' }} />
-      <Tabs.Screen name="medications" options={{ title: 'Medications' }} />
-      <Tabs.Screen name="reports" options={{ title: 'Reports' }} />
-      <Tabs.Screen name="profile" options={{ title: 'Profile' }} />
-    </Tabs>
+    <View style={{ flex: 1 }}>
+      <Tabs
+        tabBar={(props) =>
+          isTablet ? <SideRail {...props} /> : <BottomBar {...props} />
+        }
+        screenOptions={{
+          headerShown: false,
+          animation: 'fade',
+        }}
+      >
+        <Tabs.Screen name="index" options={{ title: 'Today' }} />
+        <Tabs.Screen name="medications" options={{ title: 'Medications' }} />
+        <Tabs.Screen name="reports" options={{ title: 'Reports' }} />
+        <Tabs.Screen name="profile" options={{ title: 'Profile' }} />
+      </Tabs>
+    </View>
   );
 }
 
+/* ── Phone bottom bar styles ── */
 function makeStyles(c: ColorScheme) {
   return StyleSheet.create({
     barOuter: {
@@ -193,6 +301,39 @@ function makeStyles(c: ColorScheme) {
       fontSize: 11,
       fontWeight: '600',
       marginTop: 4,
+    },
+  });
+}
+
+/* ── Tablet side rail styles ── */
+function railStyles(c: ColorScheme) {
+  return StyleSheet.create({
+    rail: {
+      position: 'absolute',
+      left: 0,
+      top: 0,
+      bottom: 0,
+      width: tabletLayout.sideRailWidth,
+      backgroundColor: c.card,
+      borderRightWidth: 1,
+      borderRightColor: c.gray200,
+      alignItems: 'center',
+      gap: 8,
+      zIndex: 10,
+    },
+    railTab: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 12,
+      paddingHorizontal: 8,
+      width: 64,
+      position: 'relative',
+    },
+    railPill: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: `${c.teal}15`,
+      borderRadius: borderRadius.lg,
+      margin: 4,
     },
   });
 }
