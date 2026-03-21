@@ -37,7 +37,7 @@ export const SNOOZE_ACTION_SNOOZE_AGAIN = 'snooze-again';
 export type SnoozeNotificationData = {
   doseKey: string;
   medicationId: string;
-  scheduleId: string;
+  scheduleId: string | null;
   medicationName: string;
   snoozeDuration: string; // e.g. '5 min'
   timeLabel: string;

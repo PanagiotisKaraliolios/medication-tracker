@@ -193,7 +193,7 @@ export default function TodayDashboard() {
   // ── Snooze adapters ──
 
   const logDoseAdapter = useCallback(
-    async (scheduleId: string, medicationId: string, date: string, timeLabel: string, status: 'taken' | 'skipped') => {
+    async (scheduleId: string | null, medicationId: string, date: string, timeLabel: string, status: 'taken' | 'skipped') => {
       try {
         const data = await logDoseMut.mutateAsync({ scheduleId, medicationId, date, timeLabel, status });
         return { data, error: null };

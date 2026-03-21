@@ -18,7 +18,7 @@ import type { TodayDose } from '../utils/dose';
 interface UseSnoozeParams {
   selectedISO: string;
   loadDoses: () => void;
-  logDose: (scheduleId: string, medicationId: string, date: string, timeLabel: string, status: 'taken' | 'skipped') => Promise<{ data: any; error: string | null }>;
+  logDose: (scheduleId: string | null, medicationId: string, date: string, timeLabel: string, status: 'taken' | 'skipped') => Promise<{ data: any; error: string | null }>;
   adjustSupply: (medicationId: string, delta: number) => void;
   handleStatusChange: (dose: TodayDose, status: 'taken' | 'skipped') => Promise<void>;
 }
