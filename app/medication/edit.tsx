@@ -15,10 +15,14 @@ import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { Stepper } from '../../components/ui/Stepper';
-import { type ColorScheme, borderRadius, shadows } from '../../components/ui/theme';
+import { DrugSearchInput } from '../../components/ui/DrugSearchInput';
+import { InteractionWarning } from '../../components/ui/InteractionWarning';
+import { type ColorScheme, borderRadius, tablet as tabletLayout } from '../../components/ui/theme';
 import { useThemeColors } from '../../hooks/useThemeColors';
+import { useResponsive } from '../../hooks/useResponsive';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useMedication as useMedicationQuery, useUpdateMedication } from '../../hooks/useQueryHooks';
+import { useMedication as useMedicationQuery, useUpdateMedication, useMedications } from '../../hooks/useQueryHooks';
+import { useDrugSearch, useDrugInteractions } from '../../hooks/useDrugSearch';
 import { scheduleLowSupplyReminder, cancelLowSupplyReminder } from '../../lib/notifications';
 import Toast from 'react-native-toast-message';
 import { MEDICATION_TYPES } from '../../constants/medications';
@@ -30,7 +34,8 @@ export default function EditMedicationScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const c = useThemeColors();
   const insets = useSafeAreaInsets();
-  const styles = useMemo(() => makeStyles(c, insets.bottom), [c, insets.bottom]);
+  const { isTablet } = useResponsive();
+  const styles = useMemo(() => makeStyles(c, insets.bottom, isTablet), [c, insets.bottom, isTablet]);
   const { data: original, isLoading: loading, error: queryError } = useMedicationQuery(id);
   const updateMedicationMut = useUpdateMedication();
 
@@ -41,7 +46,24 @@ export default function EditMedicationScreen() {
   const [currentSupply, setCurrentSupply] = useState(30);
   const [lowSupplyThreshold, setLowSupplyThreshold] = useState(10);
   const [isPrn, setIsPrn] = useState(false);
+  const [rxcui, setRxcui] = useState<string | null>(null);
+  const [genericName, setGenericName] = useState<string | null>(null);
   const [initialized, setInitialized] = useState(false);
+
+  // Drug search
+  const { query: drugQuery, updateQuery: setDrugQuery, clearSearch, results: drugResults, isLoading: drugSearchLoading } = useDrugSearch();
+  const { data: existingMeds = [] } = useMedications();
+
+  const allDrugNames = useMemo(() => {
+    const names = existingMeds
+      .filter(m => m.id !== id) // exclude the medication being edited
+      .map(m => m.generic_name || m.name);
+    if (genericName) names.push(genericName);
+    else if (name.trim()) names.push(name.trim());
+    return [...new Set(names)];
+  }, [existingMeds, id, genericName, name]);
+
+  const { data: interactions = [] } = useDrugInteractions(allDrugNames);
 
   // Populate local form state when data loads
   useEffect(() => {
@@ -52,6 +74,8 @@ export default function EditMedicationScreen() {
       setCurrentSupply(original.current_supply ?? 30);
       setLowSupplyThreshold(original.low_supply_threshold ?? 10);
       setIsPrn(original.is_prn ?? false);
+      setRxcui(original.rxcui ?? null);
+      setGenericName(original.generic_name ?? null);
       setInitialized(true);
     }
   }, [original, initialized]);
@@ -70,6 +94,8 @@ export default function EditMedicationScreen() {
       current_supply: currentSupply,
       low_supply_threshold: lowSupplyThreshold,
       is_prn: isPrn,
+      rxcui: rxcui,
+      generic_name: genericName,
     };
 
     try {
@@ -121,15 +147,41 @@ export default function EditMedicationScreen() {
         {/* ── Medication Details ── */}
         <Text style={styles.groupTitle}>Medication Details</Text>
 
-        {/* Name */}
-        <View style={styles.fieldGroup}>
+        {/* Name — Drug Search */}
+        <View style={[styles.fieldGroup, { zIndex: 10 }]}>
           <Text style={styles.fieldLabel}>Medication Name</Text>
-          <Input
-            placeholder="e.g., Amoxicillin"
-            value={name}
-            onChangeText={setName}
+          <DrugSearchInput
+            query={rxcui ? name : drugQuery}
+            onChangeQuery={(text) => {
+              setDrugQuery(text);
+              setName(text);
+              setRxcui(null);
+              setGenericName(null);
+            }}
+            results={drugResults}
+            isLoading={drugSearchLoading}
+            selectedRxcui={rxcui}
+            onClear={() => {
+              clearSearch();
+              setName('');
+              setRxcui(null);
+              setGenericName(null);
+            }}
+            onSelect={(result) => {
+              setName(result.name);
+              setRxcui(result.rxcui);
+              setGenericName(result.synonym || result.name);
+              clearSearch();
+            }}
           />
         </View>
+
+        {/* Drug Interaction Warning */}
+        {interactions.length > 0 && (
+          <View style={styles.fieldGroup}>
+            <InteractionWarning interactions={interactions} />
+          </View>
+        )}
 
         {/* Dosage */}
         <View style={styles.fieldGroup}>
@@ -212,7 +264,7 @@ export default function EditMedicationScreen() {
   );
 }
 
-function makeStyles(c: ColorScheme, bottomInset: number) {
+function makeStyles(c: ColorScheme, bottomInset: number, isTablet: boolean) {
   return StyleSheet.create({
     container: {
       flex: 1,
@@ -222,6 +274,7 @@ function makeStyles(c: ColorScheme, bottomInset: number) {
       paddingHorizontal: 24,
       paddingTop: 16,
       paddingBottom: 120,
+      ...(isTablet && { alignSelf: 'center' as const, width: '100%', maxWidth: tabletLayout.contentMaxWidth }),
     },
     groupTitle: {
       fontSize: 18,
@@ -251,16 +304,17 @@ function makeStyles(c: ColorScheme, bottomInset: number) {
       gap: 12,
     },
     iconOption: {
-      width: '22%',
-      aspectRatio: 1,
+      flexBasis: '22%',
+      flexGrow: 1,
+      maxWidth: '24%',
+      paddingVertical: 16,
       borderRadius: borderRadius.lg,
       backgroundColor: c.card,
       alignItems: 'center',
       justifyContent: 'center',
       borderWidth: 2,
-      borderColor: 'transparent',
+      borderColor: c.gray200,
       gap: 4,
-      ...shadows.sm,
     },
     iconOptionSelected: {
       backgroundColor: c.teal,
@@ -281,7 +335,8 @@ function makeStyles(c: ColorScheme, bottomInset: number) {
       backgroundColor: c.card,
       borderRadius: borderRadius.lg,
       padding: 16,
-      ...shadows.sm,
+      borderWidth: 1,
+      borderColor: c.gray200,
     },
     toggleInfo: {
       flex: 1,
