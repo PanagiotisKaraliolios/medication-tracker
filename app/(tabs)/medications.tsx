@@ -9,16 +9,20 @@ import { LoadingState } from '../../components/ui/LoadingState';
 import { ErrorState } from '../../components/ui/ErrorState';
 import { AdBanner } from '../../components/ui/AdBanner';
 import { InteractionWarning } from '../../components/ui/InteractionWarning';
-import { type ColorScheme, gradients, borderRadius, shadows } from '../../components/ui/theme';
+import { MedicationDetailPanel } from '../../components/MedicationDetailPanel';
+import { type ColorScheme, gradients, borderRadius, shadows, tablet as tabletLayout } from '../../components/ui/theme';
 import { useThemeColors } from '../../hooks/useThemeColors';
+import { useResponsive } from '../../hooks/useResponsive';
 import { useMedications } from '../../hooks/useQueryHooks';
 import { useDrugInteractions } from '../../hooks/useDrugSearch';
 import type { MedicationRow } from '../../types/database';
 
 export default function MedicationsScreen() {
   const c = useThemeColors();
-  const styles = useMemo(() => makeStyles(c), [c]);
+  const { isTablet } = useResponsive();
+  const styles = useMemo(() => makeStyles(c, isTablet), [c, isTablet]);
   const { data: medications = [], isLoading, error, refetch } = useMedications();
+  const [selectedMedId, setSelectedMedId] = useState<string | null>(null);
 
   // Drug interaction checking
   const drugNames = useMemo(
@@ -103,100 +107,154 @@ export default function MedicationsScreen() {
     );
   }
 
-  return (
-    <View style={styles.container}>
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[c.teal]} tintColor={c.teal} />
-        }
+  const listContent = (
+    <ScrollView
+      showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[c.teal]} tintColor={c.teal} />
+      }
+    >
+      {/* Header */}
+      <LinearGradient
+        colors={[...gradients.primary]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.header}
       >
-        {/* Header */}
-        <LinearGradient
-          colors={[...gradients.primary]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.header}
-        >
-          <Text style={styles.headerTitle}>Medications</Text>
-          <Text style={styles.headerSub}>{medications.length} active medications</Text>
-        </LinearGradient>
+        <Text style={styles.headerTitle}>Medications</Text>
+        <Text style={styles.headerSub}>{medications.length} active medications</Text>
+      </LinearGradient>
 
-        <View style={styles.content}>
-          {medications.map((med) => {
-            const isLow = med.current_supply <= (med.low_supply_threshold ?? 10);
-            return (
-              <TouchableOpacity
-                key={med.id}
-                style={styles.card}
-                activeOpacity={0.7}
-                onPress={() => router.push(`/medication/${med.id}`)}
-              >
-                <View style={styles.cardTop}>
-                  <View style={styles.cardInfo}>
-                    <Text style={styles.medName}>{med.name}</Text>
-                    <Text style={styles.medDosage}>{med.dosage} · {med.form}</Text>
-                  </View>
-                  {med.is_prn && (
-                    <View style={styles.prnBadge}>
-                      <Feather name="zap" size={12} color={c.teal} />
-                      <Text style={styles.prnBadgeText}>PRN</Text>
-                    </View>
-                  )}
-                  {isLow && (
-                    <View style={styles.lowBadge}>
-                      <Feather name="alert-triangle" size={14} color={c.warning} />
-                      <Text style={styles.lowBadgeText}>Low</Text>
-                    </View>
-                  )}
+      <View style={styles.content}>
+        {medications.map((med) => {
+          const isLow = med.current_supply <= (med.low_supply_threshold ?? 10);
+          const isSelected = isTablet && selectedMedId === med.id;
+          return (
+            <TouchableOpacity
+              key={med.id}
+              style={[styles.card, isSelected && styles.cardSelected]}
+              activeOpacity={0.7}
+              onPress={() => {
+                if (isTablet) {
+                  setSelectedMedId(med.id);
+                } else {
+                  router.push(`/medication/${med.id}`);
+                }
+              }}
+            >
+              <View style={styles.cardTop}>
+                <View style={styles.cardInfo}>
+                  <Text style={styles.medName}>{med.name}</Text>
+                  <Text style={styles.medDosage}>{med.dosage} · {med.form}</Text>
                 </View>
-
-                <InventoryProgressBar current={med.current_supply} threshold={med.low_supply_threshold ?? 10} />
-
-                {interactionsByMed.has(med.id) && (
-                  <View style={{ marginTop: 8 }}>
-                    <InteractionWarning interactions={interactionsByMed.get(med.id)!} compact />
+                {med.is_prn && (
+                  <View style={styles.prnBadge}>
+                    <Feather name="zap" size={12} color={c.teal} />
+                    <Text style={styles.prnBadgeText}>PRN</Text>
                   </View>
                 )}
-
-                <View style={styles.cardBottom}>
-                  <View style={styles.nextDose}>
-                    <Feather name="clock" size={14} color={c.gray500} />
-                    <Text style={styles.nextDoseText}>{med.form}</Text>
+                {isLow && (
+                  <View style={styles.lowBadge}>
+                    <Feather name="alert-triangle" size={14} color={c.warning} />
+                    <Text style={styles.lowBadgeText}>Low</Text>
                   </View>
-                  <Feather name="chevron-right" size={20} color={c.gray400} />
+                )}
+              </View>
+
+              <InventoryProgressBar current={med.current_supply} threshold={med.low_supply_threshold ?? 10} />
+
+              {interactionsByMed.has(med.id) && (
+                <View style={{ marginTop: 8 }}>
+                  <InteractionWarning interactions={interactionsByMed.get(med.id)!} compact />
                 </View>
-              </TouchableOpacity>
-            );
-          })}
+              )}
 
-          <View style={{ height: 100 }} />
+              <View style={styles.cardBottom}>
+                <View style={styles.nextDose}>
+                  <Feather name="clock" size={14} color={c.gray500} />
+                  <Text style={styles.nextDoseText}>{med.form}</Text>
+                </View>
+                <Feather name="chevron-right" size={20} color={c.gray400} />
+              </View>
+            </TouchableOpacity>
+          );
+        })}
+
+        <View style={{ height: 100 }} />
+      </View>
+    </ScrollView>
+  );
+
+  if (isTablet) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.masterDetail}>
+          <View style={styles.masterPane}>
+            {listContent}
+          </View>
+          <View style={styles.detailPane}>
+            {selectedMedId ? (
+              <MedicationDetailPanel
+                medicationId={selectedMedId}
+                onDeleted={() => setSelectedMedId(null)}
+              />
+            ) : (
+              <EmptyState
+                variant="medications"
+                title="Select a Medication"
+                message="Choose a medication from the list to view its details."
+              />
+            )}
+          </View>
         </View>
-      </ScrollView>
+        <AdBanner placement="medicationsBanner" />
+      </View>
+    );
+  }
 
+  return (
+    <View style={styles.container}>
+      {listContent}
       <AdBanner placement="medicationsBanner" />
     </View>
   );
 }
 
-function makeStyles(c: ColorScheme) {
+function makeStyles(c: ColorScheme, isTablet: boolean) {
   return StyleSheet.create({
     container: {
       flex: 1,
       backgroundColor: c.background,
+      ...(isTablet && { paddingLeft: tabletLayout.sideRailWidth }),
+    },
+    masterDetail: {
+      flex: 1,
+      flexDirection: 'row',
+    },
+    masterPane: {
+      width: tabletLayout.masterListWidth,
+      borderRightWidth: 1,
+      borderRightColor: c.gray200,
+    },
+    detailPane: {
+      flex: 1,
+    },
+    cardSelected: {
+      borderWidth: 2,
+      borderColor: c.teal,
     },
     header: {
-      paddingTop: 60,
-      paddingHorizontal: 24,
-      paddingBottom: 32,
+      paddingTop: isTablet ? 24 : 60,
+      paddingHorizontal: isTablet ? 16 : 24,
+      paddingBottom: isTablet ? 20 : 32,
       borderBottomLeftRadius: 24,
       borderBottomRightRadius: 24,
     },
     headerTitle: {
-      fontSize: 28,
+      fontSize: isTablet ? 22 : 28,
       fontWeight: '700',
       color: c.white,
-      marginBottom: 16,
+      marginBottom: isTablet ? 8 : 16,
     },
     headerSub: {
       fontSize: 15,
@@ -204,15 +262,15 @@ function makeStyles(c: ColorScheme) {
       marginTop: 4,
     },
     content: {
-      paddingHorizontal: 24,
-      paddingTop: 24,
+      paddingHorizontal: isTablet ? 12 : 24,
+      paddingTop: isTablet ? 12 : 24,
     },
     card: {
       backgroundColor: c.card,
       borderRadius: borderRadius.xl,
       padding: 20,
       marginBottom: 16,
-      ...shadows.md,
+      ...(isTablet ? { borderWidth: 1, borderColor: c.gray200 } : shadows.sm),
     },
     cardTop: {
       flexDirection: 'row',

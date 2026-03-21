@@ -16,8 +16,9 @@ import { Button } from '../../components/ui/Button';
 import { AlertDialog } from '../../components/ui/AlertDialog';
 import { DrugSearchInput } from '../../components/ui/DrugSearchInput';
 import { InteractionWarning } from '../../components/ui/InteractionWarning';
-import { type ColorScheme, borderRadius, shadows } from '../../components/ui/theme';
+import { type ColorScheme, borderRadius, tablet as tabletLayout } from '../../components/ui/theme';
 import { useThemeColors } from '../../hooks/useThemeColors';
+import { useResponsive } from '../../hooks/useResponsive';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useMedicationDraft, useScheduleDraft } from '../../stores/draftStores';
 import { useCreateMedication, useMedications } from '../../hooks/useQueryHooks';
@@ -29,7 +30,8 @@ export default function AddMedicationScreen() {
   const router = useRouter();
   const c = useThemeColors();
   const insets = useSafeAreaInsets();
-  const styles = useMemo(() => makeStyles(c, insets.bottom), [c, insets.bottom]);
+  const { isTablet } = useResponsive();
+  const styles = useMemo(() => makeStyles(c, insets.bottom, isTablet), [c, insets.bottom, isTablet]);
   const { draft, updateDraft, resetDraft } = useMedicationDraft();
   const createMedication = useCreateMedication();
   const { resetScheduleDraft, setSchedulingMedId } = useScheduleDraft();
@@ -251,7 +253,7 @@ export default function AddMedicationScreen() {
   );
 }
 
-function makeStyles(c: ColorScheme, bottomInset: number) {
+function makeStyles(c: ColorScheme, bottomInset: number, isTablet: boolean) {
   return StyleSheet.create({
     container: {
       flex: 1,
@@ -261,6 +263,7 @@ function makeStyles(c: ColorScheme, bottomInset: number) {
       paddingHorizontal: 24,
       paddingTop: 16,
       paddingBottom: 120,
+      ...(isTablet && { alignSelf: 'center' as const, width: '100%', maxWidth: tabletLayout.contentMaxWidth }),
     },
     fieldGroup: {
       marginBottom: 24,
@@ -283,16 +286,17 @@ function makeStyles(c: ColorScheme, bottomInset: number) {
       gap: 12,
     },
     iconOption: {
-      width: '22%',
-      aspectRatio: 1,
+      flexBasis: '22%',
+      flexGrow: 1,
+      maxWidth: '24%',
+      paddingVertical: 16,
       borderRadius: borderRadius.lg,
       backgroundColor: c.card,
       alignItems: 'center',
       justifyContent: 'center',
       borderWidth: 2,
-      borderColor: 'transparent',
+      borderColor: c.gray200,
       gap: 4,
-      ...shadows.sm,
     },
     iconOptionSelected: {
       backgroundColor: c.teal,
@@ -313,7 +317,8 @@ function makeStyles(c: ColorScheme, bottomInset: number) {
       backgroundColor: c.card,
       borderRadius: borderRadius.lg,
       padding: 16,
-      ...shadows.sm,
+      borderWidth: 1,
+      borderColor: c.gray200,
     },
     toggleInfo: {
       flex: 1,
@@ -327,7 +332,8 @@ function makeStyles(c: ColorScheme, bottomInset: number) {
       borderRadius: borderRadius.lg,
       padding: 16,
       gap: 24,
-      ...shadows.sm,
+      borderWidth: 1,
+      borderColor: c.gray200,
     },
     stepperButton: {
       width: 44,

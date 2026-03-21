@@ -8,8 +8,9 @@ import { useThemePreference, type ThemePreference } from '../../contexts/ThemeCo
 import { useMedications, useSchedules, useDoseLogsByRange } from '../../hooks/useQueryHooks';
 import { AlertDialog } from '../../components/ui/AlertDialog';
 import { AdBanner } from '../../components/ui/AdBanner';
-import { type ColorScheme, gradients, borderRadius, shadows } from '../../components/ui/theme';
+import { type ColorScheme, gradients, borderRadius, shadows, tablet as tabletLayout } from '../../components/ui/theme';
 import { useThemeColors } from '../../hooks/useThemeColors';
+import { useResponsive } from '../../hooks/useResponsive';
 import Toast from 'react-native-toast-message';
 import { toISO } from '../../utils/date';
 import { computeAdherence, computeStreak } from '../../utils/adherence';
@@ -38,7 +39,8 @@ const themeOptions: { value: ThemePreference; label: string; icon: keyof typeof 
 
 export default function ProfileScreen() {
   const c = useThemeColors();
-  const styles = useMemo(() => makeStyles(c), [c]);
+  const { isTablet } = useResponsive();
+  const styles = useMemo(() => makeStyles(c, isTablet), [c, isTablet]);
   const { user, profileName, signOut } = useAuth();
   const { preference, setPreference } = useThemePreference();
   const router = useRouter();
@@ -175,13 +177,13 @@ export default function ProfileScreen() {
           </View>
 
           {/* Menu items */}
-          <View style={styles.menuCard}>
+          <View style={styles.menuContainer}>
             {menuItems.map((item, i) => (
               <TouchableOpacity
                 key={item.label}
                 style={[
                   styles.menuItem,
-                  i < menuItems.length - 1 && styles.menuItemBorder,
+                  !isTablet && i < menuItems.length - 1 && styles.menuItemBorder,
                 ]}
                 activeOpacity={0.7}
                 onPress={
@@ -247,24 +249,27 @@ export default function ProfileScreen() {
   );
 }
 
-function makeStyles(c: ColorScheme) {
+function makeStyles(c: ColorScheme, isTablet: boolean) {
+  const profileMaxWidth = 600;
   return StyleSheet.create({
     container: {
       flex: 1,
       backgroundColor: c.background,
+      ...(isTablet && { paddingLeft: tabletLayout.sideRailWidth }),
     },
     header: {
-      paddingTop: 60,
+      paddingTop: isTablet ? 24 : 60,
       paddingHorizontal: 24,
       paddingBottom: 32,
       borderBottomLeftRadius: 24,
       borderBottomRightRadius: 24,
       alignItems: 'center',
+      ...(isTablet && { maxWidth: profileMaxWidth, alignSelf: 'center' as const, width: '100%' as const }),
     },
     avatar: {
-      width: 80,
-      height: 80,
-      borderRadius: 40,
+      width: isTablet ? 100 : 80,
+      height: isTablet ? 100 : 80,
+      borderRadius: isTablet ? 50 : 40,
       backgroundColor: c.white,
       alignItems: 'center',
       justifyContent: 'center',
@@ -310,6 +315,7 @@ function makeStyles(c: ColorScheme) {
     content: {
       paddingHorizontal: 24,
       paddingTop: 24,
+      ...(isTablet && { maxWidth: profileMaxWidth, alignSelf: 'center' as const, width: '100%' as const }),
     },
     themeCard: {
       backgroundColor: c.card,
@@ -355,17 +361,17 @@ function makeStyles(c: ColorScheme) {
     themeOptionTextActive: {
       color: c.white,
     },
-    menuCard: {
-      backgroundColor: c.card,
-      borderRadius: borderRadius.xl,
-      ...shadows.sm,
-      marginBottom: 24,
+    menuContainer: {
+      ...(isTablet
+        ? { flexDirection: 'row' as const, flexWrap: 'wrap' as const, gap: 12, marginBottom: 24 }
+        : { backgroundColor: c.card, borderRadius: borderRadius.xl, ...shadows.sm, marginBottom: 24 }),
     },
     menuItem: {
       flexDirection: 'row',
       alignItems: 'center',
       padding: 16,
       gap: 12,
+      ...(isTablet && { backgroundColor: c.card, borderRadius: borderRadius.xl, ...shadows.sm, width: '48%' as any }),
     },
     menuItemBorder: {
       borderBottomWidth: 1,

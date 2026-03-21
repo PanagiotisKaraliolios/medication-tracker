@@ -8,8 +8,9 @@ import { LoadingState } from '../../components/ui/LoadingState';
 import { ErrorState } from '../../components/ui/ErrorState';
 import { SegmentedControl } from '../../components/ui/SegmentedControl';
 import { AdBanner } from '../../components/ui/AdBanner';
-import { type ColorScheme, gradients, borderRadius, shadows } from '../../components/ui/theme';
+import { type ColorScheme, gradients, borderRadius, shadows, tablet as tabletLayout } from '../../components/ui/theme';
 import { useThemeColors } from '../../hooks/useThemeColors';
+import { useResponsive } from '../../hooks/useResponsive';
 import { useMedications, useSchedules, useDoseLogsByRange, useSymptomsByRange } from '../../hooks/useQueryHooks';
 import { queryKeys } from '../../lib/queryKeys';
 import { PERIOD_DAYS, PERIOD_OPTIONS } from '../../constants/reports';
@@ -21,7 +22,8 @@ import { buildSymptomSummary } from '../../utils/symptom';
 
 export default function ReportsScreen() {
   const c = useThemeColors();
-  const styles = useMemo(() => makeStyles(c), [c]);
+  const { isTablet } = useResponsive();
+  const styles = useMemo(() => makeStyles(c, isTablet), [c, isTablet]);
   const queryClient = useQueryClient();
 
   const [period, setPeriod] = useState('30 Days');
@@ -180,9 +182,11 @@ export default function ReportsScreen() {
             </View>
           </View>
 
+          {/* Bottom sections: side-by-side on tablet */}
+          <View style={styles.bottomSections}>
           {/* Recently Missed */}
           {recentMissed.length > 0 && (
-            <View style={styles.missedCard}>
+            <View style={[styles.missedCard, isTablet && styles.bottomSectionItem]}>
               <Text style={styles.missedTitle}>Recently Missed</Text>
               {recentMissed.map((item, i) => (
                 <View key={i} style={[styles.missedRow, i === recentMissed.length - 1 && { borderBottomWidth: 0 }]}>
@@ -198,7 +202,7 @@ export default function ReportsScreen() {
 
           {/* Symptom Summary */}
           {symptomSummary.totalCount > 0 && (
-            <View style={styles.missedCard}>
+            <View style={[styles.missedCard, isTablet && styles.bottomSectionItem]}>
               <Text style={styles.missedTitle}>Symptoms Reported</Text>
               <View style={styles.symptomStatsRow}>
                 <View style={styles.symptomStatItem}>
@@ -245,6 +249,7 @@ export default function ReportsScreen() {
             </View>
           )}
 
+          </View>
           <View style={{ height: 80 }} />
         </View>
       </ScrollView>
@@ -253,18 +258,20 @@ export default function ReportsScreen() {
   );
 }
 
-function makeStyles(c: ColorScheme) {
+function makeStyles(c: ColorScheme, isTablet: boolean) {
   return StyleSheet.create({
     container: {
       flex: 1,
       backgroundColor: c.background,
+      ...(isTablet && { paddingLeft: tabletLayout.sideRailWidth }),
     },
     header: {
-      paddingTop: 60,
+      paddingTop: isTablet ? 24 : 60,
       paddingHorizontal: 24,
       paddingBottom: 32,
       borderBottomLeftRadius: 24,
       borderBottomRightRadius: 24,
+      ...(isTablet && { maxWidth: tabletLayout.contentMaxWidth, alignSelf: 'center' as const, width: '100%' as const }),
     },
     headerTitle: {
       fontSize: 28,
@@ -289,6 +296,13 @@ function makeStyles(c: ColorScheme) {
       paddingHorizontal: 24,
       paddingTop: 24,
       gap: 20,
+      ...(isTablet && { maxWidth: tabletLayout.contentMaxWidth, alignSelf: 'center' as const, width: '100%' as const }),
+    },
+    bottomSections: {
+      ...(isTablet ? { flexDirection: 'row' as const, gap: 16 } : { gap: 20 }),
+    },
+    bottomSectionItem: {
+      flex: 1,
     },
     statsGrid: {
       flexDirection: 'row',
@@ -297,7 +311,7 @@ function makeStyles(c: ColorScheme) {
     },
     statCard: {
       flex: 1,
-      minWidth: '40%',
+      minWidth: isTablet ? ('20%' as any) : ('40%' as any),
       backgroundColor: c.card,
       borderRadius: borderRadius.xl,
       padding: 16,
@@ -330,7 +344,7 @@ function makeStyles(c: ColorScheme) {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'flex-end',
-      height: 140,
+      height: isTablet ? 200 : 140,
     },
     barContainer: {
       flex: 1,
@@ -343,8 +357,8 @@ function makeStyles(c: ColorScheme) {
       color: c.gray500,
     },
     barTrack: {
-      width: 24,
-      height: 100,
+      width: isTablet ? 48 : 24,
+      height: isTablet ? 160 : 100,
       backgroundColor: c.gray100,
       borderRadius: 12,
       overflow: 'hidden',

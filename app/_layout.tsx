@@ -9,7 +9,10 @@ import { registerNotificationHandler, rescheduleAllMedicationReminders, recheckA
 import { supabase } from '../lib/supabase';
 import type { MedicationRow, ScheduleRow } from '../types/database';
 import { useEffect, useRef, useCallback } from 'react';
-import { AppState, ActivityIndicator, View } from 'react-native';
+import { AppState, ActivityIndicator, View, Platform } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
+import * as ScreenOrientation from 'expo-screen-orientation';
+import { useResponsive } from '../hooks/useResponsive';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { AutocompleteDropdownContextProvider } from 'react-native-autocomplete-dropdown';
 import { useBatteryOptimization } from '../hooks/useBatteryOptimization';
@@ -64,6 +67,16 @@ function RootLayoutNav() {
 
   // Show App Open ad when returning from background (authenticated users only)
   useAppOpenAd();
+
+  // Lock phones to portrait; allow tablets to rotate freely
+  const { isTablet } = useResponsive();
+  useEffect(() => {
+    ScreenOrientation.lockAsync(
+      isTablet
+        ? ScreenOrientation.OrientationLock.DEFAULT
+        : ScreenOrientation.OrientationLock.PORTRAIT_UP,
+    );
+  }, [isTablet]);
 
   // Load persisted ad preferences
   useEffect(() => {
@@ -183,6 +196,7 @@ function RootLayoutNav() {
 
   return (
     <>
+      <StatusBar style={resolvedScheme === 'dark' ? 'light' : 'dark'} />
       <OfflineBanner />
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="index" />
