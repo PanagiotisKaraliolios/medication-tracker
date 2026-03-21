@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback } from 'react';
+import React, { useMemo, useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -15,8 +15,10 @@ import { Input } from '../../components/ui/Input';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { LoadingState } from '../../components/ui/LoadingState';
 import { TimePickerModal } from '../../components/ui/TimePickerModal';
-import { type ColorScheme, borderRadius, shadows } from '../../components/ui/theme';
+import { AutocompleteDropdown, type AutocompleteDropdownItem, type IAutocompleteDropdownRef } from 'react-native-autocomplete-dropdown';
+import { type ColorScheme, borderRadius, shadows, tablet as tabletLayout } from '../../components/ui/theme';
 import { useThemeColors } from '../../hooks/useThemeColors';
+import { useResponsive } from '../../hooks/useResponsive';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useMedications, useMedication as useMedicationQuery, useLogDose, useAdjustSupply } from '../../hooks/useQueryHooks';
 import { PRN_REASONS } from '../../constants/symptoms';
@@ -29,13 +31,21 @@ export default function LogPrnScreen() {
   const { medicationId: paramMedId } = useLocalSearchParams<{ medicationId?: string }>();
   const c = useThemeColors();
   const insets = useSafeAreaInsets();
-  const styles = useMemo(() => makeStyles(c, insets.bottom), [c, insets.bottom]);
+  const { isTablet } = useResponsive();
+  const styles = useMemo(() => makeStyles(c, insets.bottom, isTablet), [c, insets.bottom, isTablet]);
 
   const [selectedMedId, setSelectedMedId] = useState<string | undefined>(paramMedId);
   const medicationId = selectedMedId;
 
   const { data: allMeds = [], isLoading: medsLoading } = useMedications();
   const prnMeds = useMemo(() => allMeds.filter((m) => m.is_prn), [allMeds]);
+
+  // AutocompleteDropdown data set — show all PRN meds, filter locally
+  const dropdownDataSet = useMemo<AutocompleteDropdownItem[]>(
+    () => prnMeds.map((m) => ({ id: m.id, title: m.name })),
+    [prnMeds],
+  );
+  const dropdownRef = useRef<IAutocompleteDropdownRef | null>(null);
 
   const { data: med } = useMedicationQuery(medicationId);
   const logDoseMut = useLogDose();
@@ -77,6 +87,31 @@ export default function LogPrnScreen() {
     }
   }, [medicationId, med, reason, dosesCount, todayISO, customTime, logDoseMut, adjustSupplyMut, router]);
 
+  const handleDropdownSelect = useCallback(
+    (item: AutocompleteDropdownItem | null) => {
+      if (item) setSelectedMedId(item.id);
+    },
+    [],
+  );
+
+  const renderDropdownItem = useCallback(
+    (item: AutocompleteDropdownItem) => {
+      const m = prnMeds.find((med) => med.id === item.id);
+      return (
+        <View style={styles.dropdownRow}>
+          <View style={styles.pickerIcon}>
+            <MaterialCommunityIcons name={getIconForForm(m?.form)} size={20} color={c.teal} />
+          </View>
+          <View style={styles.pickerInfo}>
+            <Text style={styles.pickerName}>{m?.name ?? item.title}</Text>
+            {m && <Text style={styles.pickerDosage}>{m.dosage} · {m.form}</Text>}
+          </View>
+        </View>
+      );
+    },
+    [prnMeds, styles, c.teal],
+  );
+
   return (
     <KeyboardAvoidingView
       style={styles.container}
@@ -90,29 +125,50 @@ export default function LogPrnScreen() {
       >
         {/* Medication picker */}
         {!medicationId && (
-          <View style={styles.fieldGroup}>
+          <View style={[styles.fieldGroup, { zIndex: 10 }]}>
             <Text style={styles.fieldLabel}>Select Medication</Text>
+
             {medsLoading && <LoadingState />}
             {!medsLoading && prnMeds.length === 0 && (
               <EmptyState variant="medications" />
             )}
-            {prnMeds.map((m) => (
-              <TouchableOpacity
-                key={m.id}
-                style={styles.pickerCard}
-                activeOpacity={0.7}
-                onPress={() => setSelectedMedId(m.id)}
-              >
-                <View style={styles.pickerIcon}>
-                  <MaterialCommunityIcons name={getIconForForm(m.form)} size={22} color={c.teal} />
-                </View>
-                <View style={styles.pickerInfo}>
-                  <Text style={styles.pickerName}>{m.name}</Text>
-                  <Text style={styles.pickerDosage}>{m.dosage} · {m.form}</Text>
-                </View>
-                <Feather name="chevron-right" size={20} color={c.gray400} />
-              </TouchableOpacity>
-            ))}
+            {!medsLoading && prnMeds.length > 0 && (
+              <AutocompleteDropdown
+                controller={(ref) => { dropdownRef.current = ref; }}
+                dataSet={dropdownDataSet}
+                onSelectItem={handleDropdownSelect}
+                renderItem={renderDropdownItem}
+                initialValue={undefined}
+                useFilter
+                showClear
+                showChevron={false}
+                clearOnFocus={false}
+                closeOnSubmit
+                suggestionsListMaxHeight={280}
+                direction="down"
+                textInputProps={{
+                  placeholder: 'Search PRN medications…',
+                  placeholderTextColor: c.gray400,
+                  style: styles.dropdownInput,
+                }}
+                inputContainerStyle={styles.dropdownInputContainer}
+                suggestionsListContainerStyle={styles.dropdownList}
+                containerStyle={styles.dropdownContainer}
+                LeftComponent={
+                  <View style={styles.dropdownLeftIcon}>
+                    <Feather name="search" size={18} color={c.gray400} />
+                  </View>
+                }
+                ClearIconComponent={<Feather name="x-circle" size={18} color={c.gray400} />}
+                ItemSeparatorComponent={null}
+                EmptyResultComponent={
+                  <View style={styles.noResults}>
+                    <Feather name="search" size={28} color={c.gray300} />
+                    <Text style={styles.noResultsText}>No PRN medications match</Text>
+                  </View>
+                }
+              />
+            )}
           </View>
         )}
 
@@ -235,7 +291,7 @@ export default function LogPrnScreen() {
   );
 }
 
-function makeStyles(c: ColorScheme, bottomInset: number) {
+function makeStyles(c: ColorScheme, bottomInset: number, isTablet: boolean) {
   return StyleSheet.create({
     container: {
       flex: 1,
@@ -245,13 +301,58 @@ function makeStyles(c: ColorScheme, bottomInset: number) {
       paddingHorizontal: 24,
       paddingTop: 16,
       paddingBottom: 120,
+      ...(isTablet && { alignSelf: 'center' as const, width: '100%', maxWidth: tabletLayout.contentMaxWidth }),
+    },
+    noResults: {
+      alignItems: 'center',
+      paddingVertical: 24,
+      gap: 8,
+    },
+    noResultsText: {
+      fontSize: 15,
+      color: c.gray500,
+      textAlign: 'center',
+    },
+    dropdownContainer: {
+      flexGrow: 1,
+      flexShrink: 1,
+    },
+    dropdownInputContainer: {
+      backgroundColor: c.card,
+      borderRadius: borderRadius.lg,
+      borderWidth: 1,
+      borderColor: c.gray200,
+      paddingHorizontal: 4,
+    },
+    dropdownInput: {
+      fontSize: 15,
+      color: c.gray900,
+      paddingLeft: 0,
+    },
+    dropdownLeftIcon: {
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginLeft: 12,
+    },
+    dropdownList: {
+      backgroundColor: c.card,
+      borderRadius: borderRadius.lg,
+      borderWidth: 1,
+      borderColor: c.gray200,
+      marginTop: 4,
+    },
+    dropdownRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 14,
+      paddingVertical: 12,
     },
     medCard: {
       backgroundColor: c.card,
       borderRadius: borderRadius.lg,
       padding: 16,
       marginBottom: 24,
-      ...shadows.sm,
+      ...(isTablet ? { borderWidth: 1, borderColor: c.gray200 } : shadows.sm),
     },
     medCardHeader: {
       flexDirection: 'row',
@@ -285,7 +386,7 @@ function makeStyles(c: ColorScheme, bottomInset: number) {
       borderRadius: borderRadius.lg,
       padding: 16,
       gap: 24,
-      ...shadows.sm,
+      ...(isTablet ? { borderWidth: 1, borderColor: c.gray200 } : shadows.sm),
     },
     stepperButton: {
       width: 44,
@@ -327,19 +428,10 @@ function makeStyles(c: ColorScheme, bottomInset: number) {
       color: c.teal,
       fontWeight: '600',
     },
-    pickerCard: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      backgroundColor: c.card,
-      borderRadius: borderRadius.lg,
-      padding: 14,
-      marginBottom: 8,
-      ...shadows.sm,
-    },
     pickerIcon: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
+      width: 36,
+      height: 36,
+      borderRadius: 18,
       backgroundColor: c.tealLight,
       alignItems: 'center',
       justifyContent: 'center',
