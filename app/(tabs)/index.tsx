@@ -12,8 +12,9 @@ import { LoadingState } from '../../components/ui/LoadingState';
 import { ErrorState } from '../../components/ui/ErrorState';
 import { CalendarSection } from '../../components/ui/CalendarSection';
 import { AdBanner } from '../../components/ui/AdBanner';
-import { type ColorScheme, gradients, borderRadius, shadows } from '../../components/ui/theme';
+import { type ColorScheme, gradients, borderRadius, shadows, tablet as tabletLayout } from '../../components/ui/theme';
 import { useThemeColors } from '../../hooks/useThemeColors';
+import { useResponsive } from '../../hooks/useResponsive';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCalendar } from '../../hooks/useCalendar';
 import { useSnooze } from '../../hooks/useSnooze';
@@ -42,7 +43,8 @@ import * as Notifications from 'expo-notifications';
 export default function TodayDashboard() {
   const c = useThemeColors();
   const insets = useSafeAreaInsets();
-  const styles = useMemo(() => makeStyles(c, insets.bottom), [c, insets.bottom]);
+  const { isTablet, isLandscape } = useResponsive();
+  const styles = useMemo(() => makeStyles(c, insets.bottom, isTablet), [c, insets.bottom, isTablet]);
   const queryClient = useQueryClient();
 
   const calendar = useCalendar();
@@ -132,13 +134,17 @@ export default function TodayDashboard() {
     [medications, schedules, doseLogs, selectedDayLabel, selectedISO],
   );
 
-  const [doses, setDoses] = useState<TodayDose[]>([]);
+  const [overrides, setOverrides] = useState<Record<string, Partial<TodayDose>>>({});
   const [fabOpen, setFabOpen] = useState(false);
   const fabAnim = useRef(new Animated.Value(0)).current;
 
-  useEffect(() => {
-    setDoses(computedDoses);
-  }, [computedDoses]);
+  const doses = useMemo(() => {
+    if (Object.keys(overrides).length === 0) return computedDoses;
+    return computedDoses.map((d) => {
+      const ov = overrides[d.key];
+      return ov ? { ...d, ...ov } : d;
+    });
+  }, [computedDoses, overrides]);
 
   const dayStatusMap = useMemo(
     () => computeDayStatusMap(rangeStartISO, rangeEndISO, medications, schedules, rangeLogs),
@@ -149,7 +155,7 @@ export default function TodayDashboard() {
 
   const handleStatusChange = useCallback(
     async (dose: TodayDose, newStatus: 'taken' | 'skipped') => {
-      setDoses((prev) => prev.map((d) => (d.key === dose.key ? { ...d, status: newStatus } : d)));
+      setOverrides((prev) => ({ ...prev, [dose.key]: { status: newStatus } }));
 
       try {
         const data = await logDoseMut.mutateAsync({
@@ -160,13 +166,16 @@ export default function TodayDashboard() {
           status: newStatus,
         });
 
-        setDoses((prev) => prev.map((d) => (d.key === dose.key ? { ...d, doseLogId: data.id } : d)));
+        setOverrides((prev) => ({ ...prev, [dose.key]: { status: newStatus, doseLogId: data.id } }));
 
         if (newStatus === 'taken') {
           adjustSupplyMut.mutate({ medicationId: dose.medicationId, delta: -dose.dosagePerDose });
         }
       } catch {
-        setDoses((prev) => prev.map((d) => (d.key === dose.key ? { ...d, status: 'pending', doseLogId: null } : d)));
+        setOverrides((prev) => {
+          const { [dose.key]: _, ...rest } = prev;
+          return rest;
+        });
       }
     },
     [logDoseMut, adjustSupplyMut, selectedISO],
@@ -175,19 +184,22 @@ export default function TodayDashboard() {
   const handleUndo = useCallback(
     async (dose: TodayDose) => {
       if (!dose.doseLogId) return;
-      const prevStatus = dose.status;
-      setDoses((prev) => prev.map((d) => (d.key === dose.key ? { ...d, status: 'pending', doseLogId: null } : d)));
+      const prevOverride = overrides[dose.key];
+      setOverrides((prev) => ({ ...prev, [dose.key]: { status: 'pending', doseLogId: null } }));
 
       try {
         await deleteDoseLogMut.mutateAsync(dose.doseLogId);
-        if (prevStatus === 'taken') {
+        if (dose.status === 'taken') {
           adjustSupplyMut.mutate({ medicationId: dose.medicationId, delta: dose.dosagePerDose });
         }
       } catch {
-        setDoses((prev) => prev.map((d) => (d.key === dose.key ? { ...d, status: prevStatus, doseLogId: dose.doseLogId } : d)));
+        setOverrides((prev) => ({
+          ...prev,
+          [dose.key]: prevOverride ?? {},
+        }));
       }
     },
-    [deleteDoseLogMut, adjustSupplyMut],
+    [deleteDoseLogMut, adjustSupplyMut, overrides],
   );
 
   // ── Snooze adapters ──
@@ -314,9 +326,13 @@ export default function TodayDashboard() {
   ];
 
   const toggleFab = useCallback(() => {
-    const toValue = fabOpen ? 0 : 1;
-    setFabOpen(!fabOpen);
-    Animated.spring(fabAnim, { toValue, useNativeDriver: true, friction: 6 }).start();
+    const opening = !fabOpen;
+    setFabOpen(opening);
+    if (opening) {
+      Animated.spring(fabAnim, { toValue: 1, delay: 150, useNativeDriver: true, friction: 6 }).start();
+    } else {
+      Animated.timing(fabAnim, { toValue: 0, duration: 50, useNativeDriver: true }).start();
+    }
   }, [fabOpen, fabAnim]);
 
   const handleFabAction = useCallback((route: string) => {
@@ -369,7 +385,7 @@ export default function TodayDashboard() {
           </View>
 
           <View style={styles.progressSection}>
-            <ProgressRing percentage={completionPct} size={120} strokeWidth={12} />
+            <ProgressRing percentage={completionPct} size={isTablet ? 140 : 120} strokeWidth={isTablet ? 14 : 12} />
             <View style={styles.progressInfo}>
               <Text style={styles.progressLabel}>Daily Progress</Text>
               <Text style={styles.progressCount}>
@@ -438,19 +454,22 @@ export default function TodayDashboard() {
 
           {/* Dose sections */}
           {!loading &&
-            !error &&
-            doseSections.map(
-              (section) =>
-                section.data.length > 0 && (
-                  <View key={section.key} style={styles.section}>
-                    <Text style={styles.sectionTitle}>{section.title}</Text>
-                    {section.data.map((dose) => (
-                      <View key={dose.key} style={section.key !== 'next' ? { marginBottom: 12 } : undefined}>
-                        {section.renderCard(dose)}
+            !error && (
+              <View style={isTablet && isLandscape ? styles.doseGrid : undefined}>
+                {doseSections.map(
+                  (section) =>
+                    section.data.length > 0 && (
+                      <View key={section.key} style={[styles.section, isTablet && isLandscape && styles.doseGridItem]}>
+                        <Text style={styles.sectionTitle}>{section.title}</Text>
+                        {section.data.map((dose) => (
+                          <View key={dose.key} style={section.key !== 'next' ? { marginBottom: 12 } : undefined}>
+                            {section.renderCard(dose)}
+                          </View>
+                        ))}
                       </View>
-                    ))}
-                  </View>
-                ),
+                    ),
+                )}
+              </View>
             )}
 
 
@@ -603,9 +622,12 @@ export default function TodayDashboard() {
       />
 
       {/* FAB Speed Dial */}
-      {fabOpen && (
-        <Pressable style={styles.fabBackdrop} onPress={toggleFab} />
-      )}
+      <Animated.View
+        style={[styles.fabBackdrop, { opacity: fabAnim }]}
+        pointerEvents={fabOpen ? 'auto' : 'none'}
+      >
+        <Pressable style={StyleSheet.absoluteFillObject} onPress={toggleFab} />
+      </Animated.View>
 
       <Animated.View
         style={[styles.fabActions, { opacity: fabActionsOpacity, transform: [{ translateY: fabActionsTranslate }] }]}
@@ -626,6 +648,15 @@ export default function TodayDashboard() {
           </View>
           <View style={[styles.fabActionIcon, { backgroundColor: c.blue }]}>
             <Feather name="zap" size={20} color={c.white} />
+          </View>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.fabActionRow} activeOpacity={0.8} onPress={() => handleFabAction('/medication/add')}>
+          <View style={styles.fabActionLabel}>
+            <Text style={styles.fabActionLabelText}>Add Medication</Text>
+          </View>
+          <View style={[styles.fabActionIcon, { backgroundColor: c.teal }]}>
+            <Feather name="plus-circle" size={20} color={c.white} />
           </View>
         </TouchableOpacity>
 
@@ -659,18 +690,20 @@ export default function TodayDashboard() {
   );
 }
 
-function makeStyles(c: ColorScheme, bottomInset: number) {
+function makeStyles(c: ColorScheme, bottomInset: number, isTablet: boolean) {
   return StyleSheet.create({
     container: {
       flex: 1,
       backgroundColor: c.background,
+      ...(isTablet && { paddingLeft: tabletLayout.sideRailWidth }),
     },
     header: {
-      paddingTop: 60,
+      paddingTop: isTablet ? 24 : 60,
       paddingHorizontal: 24,
       paddingBottom: 32,
       borderBottomLeftRadius: 24,
       borderBottomRightRadius: 24,
+      ...(isTablet && { maxWidth: tabletLayout.contentMaxWidth, alignSelf: 'center' as const, width: '100%' as const }),
     },
     headerTop: {
       flexDirection: 'row',
@@ -736,6 +769,15 @@ function makeStyles(c: ColorScheme, bottomInset: number) {
     content: {
       paddingHorizontal: 24,
       paddingTop: 24,
+      ...(isTablet && { maxWidth: tabletLayout.contentMaxWidth, alignSelf: 'center' as const, width: '100%' as const }),
+    },
+    doseGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 16,
+    },
+    doseGridItem: {
+      width: '48%' as any,
     },
     section: {
       marginBottom: 24,
@@ -822,7 +864,7 @@ function makeStyles(c: ColorScheme, bottomInset: number) {
     },
     fabActions: {
       position: 'absolute',
-      bottom: Math.max(90, bottomInset + 74) + 72,
+      bottom: isTablet ? 100 : Math.max(90, bottomInset + 74) + 72,
       right: 24,
       alignItems: 'flex-end',
       gap: 12,
@@ -855,7 +897,7 @@ function makeStyles(c: ColorScheme, bottomInset: number) {
     },
     fabWrapper: {
       position: 'absolute',
-      bottom: Math.max(90, bottomInset + 74),
+      bottom: isTablet ? 24 : Math.max(90, bottomInset + 74),
       right: 24,
       zIndex: 100,
     },
