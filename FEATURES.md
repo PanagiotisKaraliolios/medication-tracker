@@ -33,6 +33,10 @@ Track planned, in-progress, and completed features. Grouped by priority tier.
 - [x] Notification management screen (scheduled + delivered)
 - [x] Password management (change/set for OAuth users)
 - [x] Google account disconnect
+- [x] Tablet/iPad layout (side rail nav, responsive screens, master-detail medications)
+- [x] Drug search & interaction check in Edit Medication
+- [x] PRN medication autocomplete dropdown
+- [x] FAB "Add Medication" quick action
 
 ---
 
@@ -45,7 +49,7 @@ Track planned, in-progress, and completed features. Grouped by priority tier.
 | ✅ | **Symptom & Side Effect Tracking** | Let users log symptoms/side effects alongside their medication routine. Track severity (mild/moderate/severe), optional medication association, and notes. Show symptom trends in reports. |
 | 🔲 | **PDF Report Export** | Generate and share medication adherence reports as PDF documents. Include adherence stats, charts, medication list, and missed doses. Useful for doctor visits. |
 | 🔲 | **Multi-Language Support (i18n)** | Internationalize the app. Priority languages: Spanish, French, German, Portuguese, Chinese, Japanese. Use `expo-localization` + `i18next`. |
-| 🔲 | **Tablet/iPad Layout** | Responsive layouts for larger screens. Side-by-side medication list + detail view, wider report charts, optimized calendar views. |
+| ✅ | **Tablet/iPad Layout** | Responsive layouts for larger screens. Side-by-side medication list + detail view, wider report charts, optimized calendar views. |
 
 ---
 

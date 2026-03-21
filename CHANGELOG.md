@@ -1,5 +1,26 @@
 # Changelog
 
+## [1.4.0] - 2026-03-21
+
+### Added
+- **Tablet/iPad layout** — responsive side rail navigation, content max-width constraints, master-detail split on Medications tab, dose grid in landscape, orientation lock (portrait on phone, free rotation on tablet)
+- **Drug search in Edit Medication** — DrugSearchInput autocomplete and drug interaction warnings, matching the Add Medication flow
+- **PRN autocomplete dropdown** — replaced plain medication list with searchable autocomplete dropdown for faster PRN dose logging
+- **FAB "Add Medication" action** — new speed dial entry to jump directly to the Add Medication screen
+- **useResponsive hook** — centralised tablet/landscape detection for all screens
+- **MedicationDetailPanel component** — extracted from medication detail screen for reuse in tablet master-detail split
+
+### Fixed
+- **FAB close animation artifacts** — backdrop now fades with action items instead of disappearing instantly; close uses timing animation to prevent spring overshoot
+- **Optimistic dose updates** — refactored from full-array copy to overrides map for cleaner state management
+
+### Changed
+- Card styles use border-based styling instead of shadows for consistency across platforms
+- Status bar style now adapts to current theme (light/dark)
+- `app.json` orientation changed from `portrait` to `default`
+
+---
+
 ## [1.3.0] - 2026-03-13
 
 ### Added
