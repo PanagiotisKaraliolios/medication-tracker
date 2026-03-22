@@ -1,10 +1,11 @@
-import React, { createContext, useState, useEffect, useContext } from 'react';
+import React, { createContext, useState, useEffect, useContext, useRef } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
 import { supabase } from '../lib/supabase';
 import { queryClient } from '../lib/queryClient';
 import { PROFILE_CACHE_KEY } from '../constants/storage';
+import { AlertDialog } from '../components/ui/AlertDialog';
 
 type AuthContextType = {
   session: Session | null;
@@ -35,6 +36,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [hasProfile, setHasProfile] = useState<boolean | null>(null);
   const [profileName, setProfileName] = useState<string | null>(null);
   const [profileDateOfBirth, setProfileDateOfBirth] = useState<string | null>(null);
+  const isUserSignOut = useRef(false);
+  const [sessionExpired, setSessionExpired] = useState(false);
 
   const checkProfile = async (userId?: string) => {
     const uid = userId || user?.id;
@@ -79,7 +82,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      if (error && error.message?.includes('Refresh Token')) {
+        setSessionExpired(true);
+        supabase.auth.signOut();
+        setLoading(false);
+        return;
+      }
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
@@ -90,7 +99,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     });
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT' && !isUserSignOut.current) {
+        setSessionExpired(true);
+      }
+      isUserSignOut.current = false;
+
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
@@ -110,6 +124,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signOut = async () => {
     setLoading(true);
+    isUserSignOut.current = true;
     queryClient.clear();
     await AsyncStorage.removeItem(PROFILE_CACHE_KEY);
     await Notifications.cancelAllScheduledNotificationsAsync();
@@ -119,6 +134,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   return (
     <AuthContext.Provider value={{ session, user, loading, hasProfile, profileName, profileDateOfBirth, checkProfile, signOut }}>
       {children}
+      <AlertDialog
+        visible={sessionExpired}
+        onClose={() => setSessionExpired(false)}
+        title="Session Expired"
+        message="Your session has expired. Please log in again."
+        variant="warning"
+        icon="log-in"
+        cancelLabel="OK"
+      />
     </AuthContext.Provider>
   );
 };
