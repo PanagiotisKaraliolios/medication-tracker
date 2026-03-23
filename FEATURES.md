@@ -90,7 +90,7 @@ Track planned, in-progress, and completed features. Grouped by priority tier.
 | 🔲 | **Custom Reminder Sounds** | Let users choose notification sounds per medication or schedule. Include calming/medical-themed sound options. |
 | 🔲 | **Medication Cost Tracking** | Track medication costs, insurance copays, and out-of-pocket expenses. Monthly/yearly cost summaries and cost-saving suggestions. |
 | 🔲 | **Community / Support Groups** | Anonymous community forums for medication-specific support groups. Share tips, experiences, and encouragement with other users. |
-| 🔲 | **Widget Support** | Home screen widgets for iOS and Android showing next dose, daily progress ring, or quick-log buttons without opening the app. |
+| ✅ | **Widget Support** | Home screen widget for iOS and Android showing next upcoming dose (name, dosage, time) without opening the app. |
 | 🔲 | **Medication Tapering Schedules** | Support gradual dose reduction schedules for medications being discontinued. Auto-adjust dosage over configured time periods. |
 
 ---

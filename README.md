@@ -3,11 +3,12 @@
 A modern, full-featured medication tracking app built with **Expo** and **React Native**. Track medications, set smart reminders, monitor adherence, and stay on top of your health — all from your phone.
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Expo-55.0.4-000020?logo=expo&logoColor=white" alt="Expo SDK 55" />
+  <img src="https://img.shields.io/badge/Expo-55.0.8-000020?logo=expo&logoColor=white" alt="Expo SDK 55" />
   <img src="https://img.shields.io/badge/React_Native-0.83.2-61DAFB?logo=react&logoColor=black" alt="React Native" />
   <img src="https://img.shields.io/badge/TypeScript-5.9.3-3178C6?logo=typescript&logoColor=white" alt="TypeScript" />
   <img src="https://img.shields.io/badge/Supabase-Auth_+_Postgres-3FCF8E?logo=supabase&logoColor=white" alt="Supabase" />
   <img src="https://img.shields.io/badge/TanStack_Query-v5-FF4154?logo=reactquery&logoColor=white" alt="TanStack Query" />
+  <img src="https://img.shields.io/badge/Biome-2.x-60A5FA?logo=biome&logoColor=white" alt="Biome" />
 </p>
 
 ---
@@ -102,6 +103,15 @@ A modern, full-featured medication tracking app built with **Expo** and **React 
 - Direct email link to support
 - Privacy policy link
 
+### 🧩 Android Home Screen Widget
+- "Next Dose" widget shows your upcoming medication at a glance
+- Tap to open the app directly
+- Auto-updates via a background task handler
+
+### 🔄 Over-the-Air Updates
+- Automatic OTA updates via `expo-updates`
+- Error boundary with crash recovery — tap to reload the app after a JS error
+
 ### 📡 Offline Support
 - Network status monitoring with visual offline indicator
 - Graceful handling when connectivity is lost
@@ -149,18 +159,22 @@ A modern, full-featured medication tracking app built with **Expo** and **React 
 
 | Layer | Technology | Purpose |
 |---|---|---|
-| **Framework** | Expo SDK 55.0.4, React Native 0.83.2 | Cross-platform mobile |
-| **Routing** | Expo Router 55.0.3 | File-based navigation |
+| **Framework** | Expo SDK 55.0.8, React Native 0.83.2 | Cross-platform mobile |
+| **Routing** | Expo Router 55.0.7 | File-based navigation |
 | **Language** | TypeScript 5.9.3 (strict) | Type safety |
 | **Server State** | TanStack Query v5 | Data fetching, caching, mutations |
 | **Client State** | Zustand v5 | Form draft state for multi-step flows |
 | **Auth & DB** | Supabase | Authentication, Postgres, Row-Level Security |
 | **OAuth** | Google Sign-In | Social login via `@react-native-google-signin` |
 | **Notifications** | expo-notifications | Push reminders with snooze actions |
+| **OTA Updates** | expo-updates | Over-the-air JS bundle updates |
 | **Ads** | Google Mobile Ads | Banners, interstitials, app-open ads with UMP consent |
 | **Networking** | NetInfo | Offline detection and connectivity monitoring |
-| **UI** | React Native + custom components | 25 shared UI components |
+| **Widgets** | react-native-android-widget | Android home screen widget |
+| **UI** | React Native + custom components | 27 shared UI components |
 | **Theming** | Custom theme system | Light/dark mode with system detection |
+| **Linter/Formatter** | Biome 2 | Fast, unified linting and formatting |
+| **Git Hooks** | Husky + commitlint | Pre-commit checks and conventional commits |
 | **Package Manager** | Bun | Fast installs and scripts |
 
 ### Project Structure
@@ -204,13 +218,20 @@ medication-tracker/
 │   ├── set-password.tsx          # Set password for OAuth accounts
 │   ├── support-developer.tsx     # Ad gallery to support dev
 │   └── symptoms.tsx              # Symptom history browser
-├── components/ui/                # 25 shared UI components + theme
+├── components/ui/                # 27 shared UI components + theme
 ├── hooks/                        # Custom hooks (queries, theme, calendar, snooze, ads, network)
 ├── lib/                          # Supabase client, query client, notifications, ads
 ├── stores/                       # Zustand stores (drafts, ad preferences)
 ├── types/                        # TypeScript types (database Row/Draft/Update)
 ├── constants/                    # App constants (days, icons, medications, etc.)
-└── utils/                        # Pure utility functions (date, dose, reports, etc.)
+├── utils/                        # Pure utility functions (date, dose, reports, etc.)
+├── widgets/                      # Android home screen widget (Next Dose)
+├── modules/                      # Native module bridges (widget-bridge)
+├── docs/                         # Architecture & system documentation
+├── biome.json                    # Biome linter/formatter configuration
+├── .editorconfig                 # Editor formatting consistency
+├── .commitlintrc.json            # Conventional commit rules
+└── .husky/                       # Git hooks (pre-commit, commit-msg)
 ```
 
 ---
@@ -383,10 +404,13 @@ bun run android   # or: bun run ios
 | `lib/ads.ts` | Ad unit IDs and configuration |
 | `lib/interstitialManager.ts` | Interstitial ad preloading and frequency capping |
 | `lib/supabase.ts` | Supabase client singleton |
+| `lib/widgetBridge.tsx` | Bridge for Android home screen widget data |
 | `types/database.ts` | All TypeScript types (Row, Draft, Update) + empty defaults |
 | `contexts/AuthContext.tsx` | Auth state, session management, profile loading |
 | `contexts/ThemeContext.tsx` | Theme preference with AsyncStorage persistence |
 | `components/ui/theme.ts` | Color schemes, gradients, shadows, border radii |
+| `components/ui/ErrorBoundary.tsx` | App-wide error boundary with crash recovery |
+| `docs/architecture.md` | Detailed architecture documentation |
 
 ---
 
@@ -434,6 +458,10 @@ function makeStyles(c: ColorScheme) {
 | `bun run ios` | Prebuild + run on iOS |
 | `bun run web` | Start for web |
 | `bun run typecheck` | Run TypeScript type checking |
+| `bun run lint` | Lint all files with Biome |
+| `bun run lint:fix` | Lint and auto-fix with Biome |
+| `bun run format` | Format all files with Biome |
+| `bun run check` | Lint + format + organize imports (Biome) |
 
 ---
 
@@ -449,10 +477,39 @@ function makeStyles(c: ColorScheme) {
 - [Google Mobile Ads](https://docs.page/invertase/react-native-google-mobile-ads) — Ad monetization with UMP consent
 - [NetInfo](https://github.com/react-native-netinfo/react-native-netinfo) — Network connectivity monitoring
 - [expo-notifications](https://docs.expo.dev/versions/latest/sdk/notifications/) — Push notifications
+- [expo-updates](https://docs.expo.dev/versions/latest/sdk/updates/) — Over-the-air updates
 - [expo-linear-gradient](https://docs.expo.dev/versions/latest/sdk/linear-gradient/) — Gradient UI elements
 - [expo-system-ui](https://docs.expo.dev/versions/latest/sdk/system-ui/) — System UI style (light/dark) support
+- [react-native-android-widget](https://github.com/nicoryo03/react-native-android-widget) — Android home screen widgets
 - [react-native-toast-message](https://github.com/calintamas/react-native-toast-message) — Toast notifications
 - [react-native-autocomplete-dropdown](https://github.com/onmotion/react-native-autocomplete-dropdown) — Drug search autocomplete
+- [Biome](https://biomejs.dev/) — Linting and formatting
+- [Husky](https://typicode.github.io/husky/) — Git hooks
+- [commitlint](https://commitlint.js.org/) — Conventional commit enforcement
+
+---
+
+## 🔧 Code Quality & Tooling
+
+| Tool | Purpose | Config |
+|---|---|---|
+| **Biome** | Linting + formatting (replaces ESLint + Prettier) | `biome.json` |
+| **Husky** | Git hooks — runs lint & tests on pre-commit | `.husky/pre-commit` |
+| **commitlint** | Enforces [Conventional Commits](https://www.conventionalcommits.org/) | `.commitlintrc.json` |
+| **EditorConfig** | Consistent formatting across editors | `.editorconfig` |
+| **TypeScript** | Strict mode type checking | `tsconfig.json` |
+
+### Commit Convention
+
+All commits follow the [Conventional Commits](https://www.conventionalcommits.org/) spec, enforced by `commitlint` + Husky:
+
+```
+feat(auth): add Google Sign-In
+fix(schedule): correct interval calculation
+docs: update README
+```
+
+Allowed types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`.
 
 ---
 
