@@ -30,7 +30,7 @@ Prioritized action items for production readiness. Updated to reflect current pr
 | # | Action | Status | Notes |
 |---|--------|--------|-------|
 | 4 | **Linting & formatting (Biome + Husky)** | ✅ | Biome configured (`biome.json`), Husky pre-commit hooks + commitlint set up. Formatting applied project-wide. |
-| 5 | **Lint warnings cleanup** | 🔨 | Biome reports ~45 warnings: `noExplicitAny` (~16), `noNonNullAssertion` (~15), `noArrayIndexKey` (~7), `useExhaustiveDependencies` (~4), `noUnusedVariables` (~3). Currently fixing. |
+| 5 | **Lint warnings cleanup** | ✅ | All 13 Biome lint warnings fixed: 4 `noNonNullAssertion` (→ optional chaining), 9 `noExplicitAny` (→ `NotifMockCall` type). Zero warnings remain. |
 | 6 | **Crash reporting (Sentry)** | 🔲 | No crash reporting. Blind to production errors. Critical for a health app — missed doses from crashes have real consequences. Use `@sentry/react-native` with Expo plugin. |
 | 7 | **Error boundaries** | ✅ | `ErrorBoundaryWrapper` in `components/ui/ErrorBoundary.tsx`, wrapping the app in `_layout.tsx`. Provides crash recovery UI. |
 
