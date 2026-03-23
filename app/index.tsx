@@ -1,8 +1,8 @@
-import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useMemo } from 'react';
+import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Button } from '../components/ui/Button';
-import { type ColorScheme, borderRadius } from '../components/ui/theme';
+import type { ColorScheme } from '../components/ui/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
 
 export default function WelcomeScreen() {
@@ -14,10 +14,7 @@ export default function WelcomeScreen() {
     <View style={styles.container}>
       <View style={styles.content}>
         {/* App icon */}
-        <Image
-          source={require('../assets/icon.png')}
-          style={styles.iconImage}
-        />
+        <Image source={require('../assets/icon.png')} style={styles.iconImage} />
 
         <Text style={styles.title}>Never Miss{'\n'}a Dose</Text>
         <Text style={styles.subtitle}>

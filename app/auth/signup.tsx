@@ -1,14 +1,22 @@
-import { View, Text, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
-import { useRouter } from 'expo-router';
-import { useState, useMemo } from 'react';
 import { Feather } from '@expo/vector-icons';
-import { supabase } from '../../lib/supabase';
+import { useRouter } from 'expo-router';
+import { useMemo, useState } from 'react';
+import {
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import Toast from 'react-native-toast-message';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
-import { type ColorScheme, borderRadius } from '../../components/ui/theme';
-import { useThemeColors } from '../../hooks/useThemeColors';
+import { borderRadius, type ColorScheme } from '../../components/ui/theme';
 import { useGoogleAuth } from '../../hooks/useGoogleAuth';
-import Toast from 'react-native-toast-message';
+import { useThemeColors } from '../../hooks/useThemeColors';
+import { supabase } from '../../lib/supabase';
 
 export default function SignupScreen() {
   const c = useThemeColors();
@@ -28,7 +36,11 @@ export default function SignupScreen() {
       return;
     }
     if (password.length < 8) {
-      Toast.show({ type: 'error', text1: 'Error', text2: 'Password must be at least 8 characters' });
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Password must be at least 8 characters',
+      });
       return;
     }
     if (password !== confirmPassword) {
@@ -47,13 +59,21 @@ export default function SignupScreen() {
 
     // Supabase returns an empty identities array when the email is already registered
     if (data?.user?.identities?.length === 0) {
-      Toast.show({ type: 'error', text1: 'Account exists', text2: 'An account with this email already exists. Please log in.' });
+      Toast.show({
+        type: 'error',
+        text1: 'Account exists',
+        text2: 'An account with this email already exists. Please log in.',
+      });
       return;
     }
 
     // If email confirmation is required, no session is created
     if (!data.session) {
-      Toast.show({ type: 'info', text1: 'Check your email', text2: 'We sent you a confirmation link to verify your account.' });
+      Toast.show({
+        type: 'info',
+        text1: 'Check your email',
+        text2: 'We sent you a confirmation link to verify your account.',
+      });
       return;
     }
 
@@ -113,8 +133,15 @@ export default function SignupScreen() {
           <Input
             icon={<Feather name="lock" size={20} color={c.gray400} />}
             rightIcon={
-              <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)} activeOpacity={0.7}>
-                <Feather name={showConfirmPassword ? 'eye-off' : 'eye'} size={20} color={c.gray400} />
+              <TouchableOpacity
+                onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                activeOpacity={0.7}
+              >
+                <Feather
+                  name={showConfirmPassword ? 'eye-off' : 'eye'}
+                  size={20}
+                  color={c.gray400}
+                />
               </TouchableOpacity>
             }
             placeholder="Confirm password"

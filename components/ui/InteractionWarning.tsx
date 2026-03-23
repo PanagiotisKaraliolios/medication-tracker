@@ -1,9 +1,9 @@
-import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { type ColorScheme, borderRadius } from './theme';
+import { useMemo, useState } from 'react';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useThemeColors } from '../../hooks/useThemeColors';
 import type { InteractionResult } from '../../types/drug';
+import { borderRadius, type ColorScheme } from './theme';
 
 interface InteractionWarningProps {
   interactions: InteractionResult[];
@@ -23,7 +23,7 @@ export function InteractionWarning({ interactions, compact = false }: Interactio
 
   if (interactions.length === 0) return null;
 
-  const highCount = interactions.filter(i => i.severity === 'high').length;
+  const highCount = interactions.filter((i) => i.severity === 'high').length;
   const sorted = [...interactions].sort((a, b) => {
     const order = { high: 0, moderate: 1, low: 2 };
     return order[a.severity] - order[b.severity];
@@ -54,20 +54,19 @@ export function InteractionWarning({ interactions, compact = false }: Interactio
         <Text style={[styles.title, { color: severityColor }]}>
           {interactions.length} Drug Interaction{interactions.length !== 1 ? 's' : ''} Found
         </Text>
-        <Feather
-          name={expanded ? 'chevron-up' : 'chevron-down'}
-          size={18}
-          color={severityColor}
-        />
+        <Feather name={expanded ? 'chevron-up' : 'chevron-down'} size={18} color={severityColor} />
       </TouchableOpacity>
 
       {expanded && (
         <View style={styles.details}>
-          {sorted.map((interaction, idx) => {
+          {sorted.map((interaction) => {
             const config = SEVERITY_CONFIG[interaction.severity];
             const itemColor = interaction.severity === 'high' ? c.error : c.warning;
             return (
-              <View key={idx} style={styles.interactionItem}>
+              <View
+                key={`${interaction.drug1}-${interaction.drug2}`}
+                style={styles.interactionItem}
+              >
                 <View style={styles.interactionHeader}>
                   <Feather name={config.icon} size={14} color={itemColor} />
                   <Text style={[styles.interactionDrugs, { color: c.gray900 }]}>

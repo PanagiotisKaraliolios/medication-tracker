@@ -1,15 +1,15 @@
-import React, { useState, useMemo } from 'react';
+import { Feather } from '@expo/vector-icons';
+import { useMemo, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
   Modal,
+  StyleSheet,
+  Text,
   TouchableOpacity,
   TouchableWithoutFeedback,
+  View,
 } from 'react-native';
-import { Feather } from '@expo/vector-icons';
-import { type ColorScheme, borderRadius, shadows } from './theme';
 import { useThemeColors } from '../../hooks/useThemeColors';
+import { borderRadius, type ColorScheme, shadows } from './theme';
 
 interface TimePickerModalProps {
   visible: boolean;
@@ -53,12 +53,7 @@ export function TimePickerModal({ visible, onClose, onConfirm }: TimePickerModal
   };
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="fade"
-      onRequestClose={onClose}
-    >
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <TouchableWithoutFeedback onPress={onClose}>
         <View style={styles.backdrop}>
           <TouchableWithoutFeedback>
@@ -97,9 +92,7 @@ export function TimePickerModal({ visible, onClose, onConfirm }: TimePickerModal
                   >
                     <Feather name="chevron-up" size={24} color={c.gray500} />
                   </TouchableOpacity>
-                  <Text style={styles.value}>
-                    {minute.toString().padStart(2, '0')}
-                  </Text>
+                  <Text style={styles.value}>{minute.toString().padStart(2, '0')}</Text>
                   <TouchableOpacity
                     style={styles.arrowBtn}
                     onPress={() => cycleMinute(-1)}
@@ -113,36 +106,20 @@ export function TimePickerModal({ visible, onClose, onConfirm }: TimePickerModal
                 {/* AM / PM */}
                 <View style={styles.periodColumn}>
                   <TouchableOpacity
-                    style={[
-                      styles.periodBtn,
-                      period === 'AM' && styles.periodBtnActive,
-                    ]}
+                    style={[styles.periodBtn, period === 'AM' && styles.periodBtnActive]}
                     onPress={() => setPeriod('AM')}
                     activeOpacity={0.7}
                   >
-                    <Text
-                      style={[
-                        styles.periodText,
-                        period === 'AM' && styles.periodTextActive,
-                      ]}
-                    >
+                    <Text style={[styles.periodText, period === 'AM' && styles.periodTextActive]}>
                       AM
                     </Text>
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={[
-                      styles.periodBtn,
-                      period === 'PM' && styles.periodBtnActive,
-                    ]}
+                    style={[styles.periodBtn, period === 'PM' && styles.periodBtnActive]}
                     onPress={() => setPeriod('PM')}
                     activeOpacity={0.7}
                   >
-                    <Text
-                      style={[
-                        styles.periodText,
-                        period === 'PM' && styles.periodTextActive,
-                      ]}
-                    >
+                    <Text style={[styles.periodText, period === 'PM' && styles.periodTextActive]}>
                       PM
                     </Text>
                   </TouchableOpacity>
@@ -156,11 +133,7 @@ export function TimePickerModal({ visible, onClose, onConfirm }: TimePickerModal
 
               {/* Actions */}
               <View style={styles.actions}>
-                <TouchableOpacity
-                  style={styles.cancelBtn}
-                  onPress={onClose}
-                  activeOpacity={0.7}
-                >
+                <TouchableOpacity style={styles.cancelBtn} onPress={onClose} activeOpacity={0.7}>
                   <Text style={styles.cancelText}>Cancel</Text>
                 </TouchableOpacity>
                 <TouchableOpacity

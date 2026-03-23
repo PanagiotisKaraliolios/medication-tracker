@@ -1,9 +1,9 @@
-import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { type ColorScheme, gradients, borderRadius } from './theme';
+import { useMemo } from 'react';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useThemeColors } from '../../hooks/useThemeColors';
+import { borderRadius, type ColorScheme, gradients } from './theme';
 
 type Props = {
   times: string[];

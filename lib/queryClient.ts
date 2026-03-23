@@ -1,10 +1,9 @@
-import { QueryClient, onlineManager } from '@tanstack/react-query';
-import { AppState, Platform } from 'react-native';
-import type { AppStateStatus } from 'react-native';
-import { focusManager } from '@tanstack/react-query';
-import NetInfo from '@react-native-community/netinfo';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import NetInfo from '@react-native-community/netinfo';
 import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister';
+import { focusManager, onlineManager, QueryClient } from '@tanstack/react-query';
+import type { AppStateStatus } from 'react-native';
+import { AppState, Platform } from 'react-native';
 import { QUERY_CACHE_KEY } from '../constants/storage';
 
 // ── App-focus refetch for React Native ──────────────────────────────
@@ -32,8 +31,8 @@ const TWENTY_FOUR_HOURS = 1000 * 60 * 60 * 24;
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 60 * 2,    // 2 minutes — data considered fresh
-      gcTime: TWENTY_FOUR_HOURS,    // 24 hours — survive app restarts with persister
+      staleTime: 1000 * 60 * 2, // 2 minutes — data considered fresh
+      gcTime: TWENTY_FOUR_HOURS, // 24 hours — survive app restarts with persister
       retry: 2,
       refetchOnWindowFocus: true,
       refetchOnReconnect: true,

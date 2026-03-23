@@ -1,13 +1,18 @@
+import { Feather } from '@expo/vector-icons';
+import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Tabs } from 'expo-router';
 import { useEffect, useMemo, useRef } from 'react';
 import { Animated, Pressable, StyleSheet, View } from 'react-native';
-import { Tabs } from 'expo-router';
-import { Feather } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
-import { type ColorScheme, borderRadius, shadows, tablet as tabletLayout } from '../../components/ui/theme';
-import { useThemeColors } from '../../hooks/useThemeColors';
+import {
+  borderRadius,
+  type ColorScheme,
+  shadows,
+  tablet as tabletLayout,
+} from '../../components/ui/theme';
 import { useResponsive } from '../../hooks/useResponsive';
+import { useThemeColors } from '../../hooks/useThemeColors';
 
 const TAB_ICONS: Record<string, keyof typeof Feather.glyphMap> = {
   index: 'home',
@@ -135,9 +140,7 @@ function renderTabItems(
         )}
         <AnimatedTabIcon name={iconName} color={color} focused={isFocused} />
         <Animated.Text
-          style={[
-            { fontSize: 11, fontWeight: '600', marginTop: 4, color },
-          ]}
+          style={[{ fontSize: 11, fontWeight: '600', marginTop: 4, color }]}
           numberOfLines={1}
         >
           {label}
@@ -218,10 +221,7 @@ function BottomBar({ state, descriptors, navigation }: BottomTabBarProps) {
             >
               {isFocused && <View style={styles.pill} />}
               <AnimatedTabIcon name={iconName} color={color} focused={isFocused} />
-              <Animated.Text
-                style={[styles.label, { color }]}
-                numberOfLines={1}
-              >
+              <Animated.Text style={[styles.label, { color }]} numberOfLines={1}>
                 {label}
               </Animated.Text>
             </Pressable>
@@ -233,15 +233,13 @@ function BottomBar({ state, descriptors, navigation }: BottomTabBarProps) {
 }
 
 export default function TabLayout() {
-  const c = useThemeColors();
+  const _c = useThemeColors();
   const { isTablet } = useResponsive();
 
   return (
     <View style={{ flex: 1 }}>
       <Tabs
-        tabBar={(props) =>
-          isTablet ? <SideRail {...props} /> : <BottomBar {...props} />
-        }
+        tabBar={(props) => (isTablet ? <SideRail {...props} /> : <BottomBar {...props} />)}
         screenOptions={{
           headerShown: false,
           animation: 'fade',

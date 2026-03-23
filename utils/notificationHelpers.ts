@@ -1,5 +1,5 @@
 import type { Feather } from '@expo/vector-icons';
-import * as Notifications from 'expo-notifications';
+import type * as Notifications from 'expo-notifications';
 import { WEEKDAY_NAMES } from '../constants/days';
 import { formatHourMinute, getRelativeTime } from './date';
 
@@ -38,7 +38,7 @@ function nextWeeklyDate(weekday: number, hour: number, minute: number): Date {
   // expo-notifications weekday: 1=Sun, 2=Mon, ..., 7=Sat → JS getDay: 0=Sun, 1=Mon, ..., 6=Sat
   const jsDay = weekday - 1;
   const today = now.getDay();
-  let daysAhead = (jsDay - today + 7) % 7;
+  const daysAhead = (jsDay - today + 7) % 7;
   const candidate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hour, minute, 0, 0);
   candidate.setDate(candidate.getDate() + daysAhead);
   if (candidate <= now) candidate.setDate(candidate.getDate() + 7);
@@ -102,7 +102,12 @@ export function describeTrigger(trigger: Notifications.NotificationTrigger): {
   if (t.type === 'timeInterval') {
     const seconds = (t.seconds as number) ?? 0;
     const nextDate = new Date(Date.now() + seconds * 1000);
-    if (seconds < 60) return { description: `In ${seconds}s`, sortKey: -seconds, dateInfo: formatNextDate(nextDate) };
+    if (seconds < 60)
+      return {
+        description: `In ${seconds}s`,
+        sortKey: -seconds,
+        dateInfo: formatNextDate(nextDate),
+      };
     const mins = Math.round(seconds / 60);
     return { description: `In ${mins} min`, sortKey: -seconds, dateInfo: formatNextDate(nextDate) };
   }
@@ -113,9 +118,7 @@ export function describeTrigger(trigger: Notifications.NotificationTrigger): {
 /**
  * Determine which Feather icon to use for a notification based on its data payload.
  */
-export function getNotificationIcon(
-  data?: Record<string, unknown>,
-): keyof typeof Feather.glyphMap {
+export function getNotificationIcon(data?: Record<string, unknown>): keyof typeof Feather.glyphMap {
   if (!data) return 'bell';
   if (data.type === 'medication-reminder' || data.medicationName) return 'clock';
   if (data.doseKey) return 'bell';
@@ -139,17 +142,15 @@ export function buildScheduledItems(
       timeInfo: description,
       dateInfo,
       sortKey,
-      medicationName: (n.content.data as Record<string, unknown>)
-        ?.medicationName as string | undefined,
+      medicationName: (n.content.data as Record<string, unknown>)?.medicationName as
+        | string
+        | undefined,
       data: n.content.data as Record<string, unknown> | undefined,
     };
   });
 
   // Group by medication + trigger description to de-duplicate weekly entries
-  const groupedMap = new Map<
-    string,
-    NotificationItem & { days: string[]; count: number }
-  >();
+  const groupedMap = new Map<string, NotificationItem & { days: string[]; count: number }>();
   for (const item of scheduledItems) {
     const data = item.data;
     const scheduleId = data?.scheduleId as string | undefined;
@@ -211,8 +212,9 @@ export function buildDeliveredItems(
     type: 'delivered' as const,
     timeInfo: getRelativeTime(n.date),
     sortKey: -n.date,
-    medicationName: (n.request.content.data as Record<string, unknown>)
-      ?.medicationName as string | undefined,
+    medicationName: (n.request.content.data as Record<string, unknown>)?.medicationName as
+      | string
+      | undefined,
     data: n.request.content.data as Record<string, unknown> | undefined,
   }));
   items.sort((a, b) => a.sortKey - b.sortKey);

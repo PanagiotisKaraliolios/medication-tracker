@@ -1,23 +1,23 @@
-import React, { useMemo, useState } from 'react';
+import { Feather } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
+import { useMemo, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  StyleSheet,
+  Text,
   TouchableOpacity,
+  View,
 } from 'react-native';
-import { useRouter } from 'expo-router';
-import { Feather } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
-import { supabase } from '../lib/supabase';
-import { useAuth } from '../contexts/AuthContext';
+import Toast from 'react-native-toast-message';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
-import { type ColorScheme, gradients, borderRadius, shadows } from '../components/ui/theme';
+import { borderRadius, type ColorScheme, gradients, shadows } from '../components/ui/theme';
+import { useAuth } from '../contexts/AuthContext';
 import { useThemeColors } from '../hooks/useThemeColors';
-import Toast from 'react-native-toast-message';
+import { supabase } from '../lib/supabase';
 
 export default function ChangePasswordScreen() {
   const c = useThemeColors();
@@ -45,7 +45,11 @@ export default function ChangePasswordScreen() {
       return;
     }
     if (newPassword.length < 8) {
-      Toast.show({ type: 'error', text1: 'Error', text2: 'New password must be at least 8 characters' });
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'New password must be at least 8 characters',
+      });
       return;
     }
     if (newPassword !== confirmPassword) {
@@ -53,7 +57,11 @@ export default function ChangePasswordScreen() {
       return;
     }
     if (newPassword === currentPassword) {
-      Toast.show({ type: 'error', text1: 'Error', text2: 'New password must be different from current password' });
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'New password must be different from current password',
+      });
       return;
     }
 
@@ -78,7 +86,11 @@ export default function ChangePasswordScreen() {
     if (error) {
       Toast.show({ type: 'error', text1: 'Error', text2: error.message });
     } else {
-      Toast.show({ type: 'success', text1: 'Password changed', text2: 'Your password has been updated' });
+      Toast.show({
+        type: 'success',
+        text1: 'Password changed',
+        text2: 'Your password has been updated',
+      });
       router.back();
     }
   };
@@ -103,9 +115,7 @@ export default function ChangePasswordScreen() {
           <Text style={styles.headerTitle}>Change Password</Text>
           <View style={{ width: 40 }} />
         </View>
-        <Text style={styles.headerSubtitle}>
-          Enter your current password and choose a new one
-        </Text>
+        <Text style={styles.headerSubtitle}>Enter your current password and choose a new one</Text>
       </LinearGradient>
 
       <KeyboardAvoidingView
@@ -130,11 +140,7 @@ export default function ChangePasswordScreen() {
                 autoCapitalize="none"
                 rightIcon={
                   <TouchableOpacity onPress={() => setShowCurrent(!showCurrent)}>
-                    <Feather
-                      name={showCurrent ? 'eye-off' : 'eye'}
-                      size={20}
-                      color={c.gray400}
-                    />
+                    <Feather name={showCurrent ? 'eye-off' : 'eye'} size={20} color={c.gray400} />
                   </TouchableOpacity>
                 }
               />
@@ -153,11 +159,7 @@ export default function ChangePasswordScreen() {
                 autoCapitalize="none"
                 rightIcon={
                   <TouchableOpacity onPress={() => setShowNew(!showNew)}>
-                    <Feather
-                      name={showNew ? 'eye-off' : 'eye'}
-                      size={20}
-                      color={c.gray400}
-                    />
+                    <Feather name={showNew ? 'eye-off' : 'eye'} size={20} color={c.gray400} />
                   </TouchableOpacity>
                 }
               />
@@ -180,11 +182,7 @@ export default function ChangePasswordScreen() {
                 autoCapitalize="none"
                 rightIcon={
                   <TouchableOpacity onPress={() => setShowConfirm(!showConfirm)}>
-                    <Feather
-                      name={showConfirm ? 'eye-off' : 'eye'}
-                      size={20}
-                      color={c.gray400}
-                    />
+                    <Feather name={showConfirm ? 'eye-off' : 'eye'} size={20} color={c.gray400} />
                   </TouchableOpacity>
                 }
               />

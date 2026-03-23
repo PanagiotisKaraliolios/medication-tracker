@@ -7,21 +7,21 @@ import type { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
  */
 export const FORM_ICON_MAP: Record<string, keyof typeof MaterialCommunityIcons.glyphMap> = {
   // Current keys (form value = icon key)
-  tablet:    'pill',
-  capsule:   'medication',
-  liquid:    'bottle-tonic',
+  tablet: 'pill',
+  capsule: 'medication',
+  liquid: 'bottle-tonic',
   injection: 'needle',
-  cream:     'lotion-outline',
-  drops:     'eyedropper',
-  inhaler:   'lungs',
-  patch:     'bandage',
+  cream: 'lotion-outline',
+  drops: 'eyedropper',
+  inhaler: 'lungs',
+  patch: 'bandage',
 
   // Legacy keys (backward compat for existing DB records)
-  pill:      'pill',
-  syringe:   'needle',
-  drop:      'eyedropper',
-  vitamin:   'pill',
-  brain:     'pill',
+  pill: 'pill',
+  syringe: 'needle',
+  drop: 'eyedropper',
+  vitamin: 'pill',
+  brain: 'pill',
 };
 
 /** Get the MaterialCommunityIcons name for a medication form. */

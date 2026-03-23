@@ -1,6 +1,6 @@
-import { InterstitialAd, AdEventType } from 'react-native-google-mobile-ads';
-import { AD_UNIT_IDS } from './ads';
+import { AdEventType, InterstitialAd } from 'react-native-google-mobile-ads';
 import { useAdPreferences } from '../stores/adPreferencesStore';
+import { AD_UNIT_IDS } from './ads';
 
 const MIN_INTERVAL_MS = 2 * 60 * 1000; // 2 minutes between interstitials
 

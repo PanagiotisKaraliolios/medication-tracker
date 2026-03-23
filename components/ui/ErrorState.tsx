@@ -1,9 +1,9 @@
-import React, { useMemo } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { Button } from './Button';
-import { type ColorScheme, borderRadius } from './theme';
+import { useMemo } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 import { useThemeColors } from '../../hooks/useThemeColors';
+import { Button } from './Button';
+import type { ColorScheme } from './theme';
 
 interface ErrorStateProps {
   title?: string;

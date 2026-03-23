@@ -1,27 +1,20 @@
-import React, { useState, useCallback, useMemo } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  RefreshControl,
-} from 'react-native';
-import { useRouter, useFocusEffect } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Notifications from 'expo-notifications';
-import { EmptyState } from '../components/ui/EmptyState';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useMemo, useState } from 'react';
+import { RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { AdBanner } from '../components/ui/AdBanner';
+import { EmptyState } from '../components/ui/EmptyState';
 import { LoadingState } from '../components/ui/LoadingState';
-import { deduplicateScheduledNotifications } from '../lib/notifications';
-import { type ColorScheme, gradients, borderRadius, shadows } from '../components/ui/theme';
+import { borderRadius, type ColorScheme, gradients, shadows } from '../components/ui/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
+import { deduplicateScheduledNotifications } from '../lib/notifications';
 import {
-  type NotificationItem,
-  getNotificationIcon,
-  buildScheduledItems,
   buildDeliveredItems,
+  buildScheduledItems,
+  getNotificationIcon,
+  type NotificationItem,
 } from '../utils/notificationHelpers';
 
 // ── Screen ───────────────────────────────────────────────────────────
@@ -68,17 +61,14 @@ export default function NotificationsScreen() {
     loadNotifications(true);
   }, [loadNotifications]);
 
-  const handleDismiss = useCallback(
-    async (id: string) => {
-      try {
-        await Notifications.dismissNotificationAsync(id);
-        setDelivered((prev) => prev.filter((n) => n.id !== id));
-      } catch {
-        // already dismissed
-      }
-    },
-    [],
-  );
+  const handleDismiss = useCallback(async (id: string) => {
+    try {
+      await Notifications.dismissNotificationAsync(id);
+      setDelivered((prev) => prev.filter((n) => n.id !== id));
+    } catch {
+      // already dismissed
+    }
+  }, []);
 
   const handleDismissAll = useCallback(async () => {
     try {
@@ -157,12 +147,7 @@ export default function NotificationsScreen() {
               </View>
             </View>
             {scheduled.map((item) => (
-              <NotificationCard
-                key={item.id}
-                item={item}
-                c={c}
-                styles={styles}
-              />
+              <NotificationCard key={item.id} item={item} c={c} styles={styles} />
             ))}
           </View>
         )}
@@ -174,9 +159,7 @@ export default function NotificationsScreen() {
               <Feather name="check-circle" size={18} color={c.success} />
               <Text style={styles.sectionTitle}>Recent</Text>
               <View style={[styles.badge, { backgroundColor: c.successLight }]}>
-                <Text style={[styles.badgeText, { color: c.success }]}>
-                  {delivered.length}
-                </Text>
+                <Text style={[styles.badgeText, { color: c.success }]}>{delivered.length}</Text>
               </View>
             </View>
             {delivered.map((item) => (
@@ -230,11 +213,7 @@ function NotificationCard({
           {item.body}
         </Text>
         <View style={styles.cardMeta}>
-          <Feather
-            name={isScheduled ? 'repeat' : 'clock'}
-            size={12}
-            color={c.gray400}
-          />
+          <Feather name={isScheduled ? 'repeat' : 'clock'} size={12} color={c.gray400} />
           <Text style={styles.cardTime}>{item.timeInfo}</Text>
           {isScheduled && item.dateInfo && (
             <>

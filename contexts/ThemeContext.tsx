@@ -1,7 +1,8 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { useColorScheme } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { colors, darkColors, type ColorScheme } from '../components/ui/theme';
+import type React from 'react';
+import { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import { useColorScheme } from 'react-native';
+import { type ColorScheme, colors, darkColors } from '../components/ui/theme';
 
 const THEME_KEY = '@meditrack_theme';
 
@@ -60,11 +61,7 @@ export function ThemePreferenceProvider({ children }: { children: React.ReactNod
   // Don't render until we've loaded the persisted preference to avoid flash
   if (!loaded) return null;
 
-  return (
-    <ThemeContext.Provider value={value}>
-      {children}
-    </ThemeContext.Provider>
-  );
+  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }
 
 export function useThemePreference() {

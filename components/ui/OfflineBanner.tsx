@@ -1,10 +1,10 @@
+import { Feather } from '@expo/vector-icons';
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, StyleSheet, View } from 'react-native';
-import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNetworkStatus } from '../../hooks/useNetworkStatus';
-import { type ColorScheme } from './theme';
 import { useThemeColors } from '../../hooks/useThemeColors';
+import type { ColorScheme } from './theme';
 
 const BANNER_HEIGHT = 36;
 const RECONNECT_DISPLAY_MS = 3000;
@@ -49,7 +49,7 @@ export function OfflineBanner() {
     return () => {
       if (reconnectTimer.current) clearTimeout(reconnectTimer.current);
     };
-  }, [isConnected]);
+  }, [isConnected, heightAnim, insets.top, isOffline, wasOffline]);
 
   // Don't render anything if never been offline this session
   if (!isOffline && !showReconnected) return null;

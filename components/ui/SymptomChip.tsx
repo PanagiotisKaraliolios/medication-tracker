@@ -1,8 +1,7 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { borderRadius } from './theme';
+import { StyleSheet, Text, View } from 'react-native';
 import type { ColorScheme } from './theme';
+import { borderRadius } from './theme';
 
 type Props = {
   name: string;
@@ -13,7 +12,12 @@ type Props = {
 export function SymptomChip({ name, severity, colors: c }: Props) {
   const bg = severity === 'severe' ? c.errorLight : c.warningLight;
   const fg = severity === 'severe' ? c.error : c.warning;
-  const icon = severity === 'severe' ? 'alert-octagon' : severity === 'moderate' ? 'alert-triangle' : 'alert-circle';
+  const icon =
+    severity === 'severe'
+      ? 'alert-octagon'
+      : severity === 'moderate'
+        ? 'alert-triangle'
+        : 'alert-circle';
 
   return (
     <View style={[styles.chip, { backgroundColor: bg }]}>

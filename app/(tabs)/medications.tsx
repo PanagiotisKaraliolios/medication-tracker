@@ -1,20 +1,26 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
-import { useMemo, useState, useCallback } from 'react';
-import { router } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { InventoryProgressBar } from '../../components/ui/InventoryProgressBar';
-import { EmptyState } from '../../components/ui/EmptyState';
-import { LoadingState } from '../../components/ui/LoadingState';
-import { ErrorState } from '../../components/ui/ErrorState';
-import { AdBanner } from '../../components/ui/AdBanner';
-import { InteractionWarning } from '../../components/ui/InteractionWarning';
+import { router } from 'expo-router';
+import { useCallback, useMemo, useState } from 'react';
+import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { MedicationDetailPanel } from '../../components/MedicationDetailPanel';
-import { type ColorScheme, gradients, borderRadius, shadows, tablet as tabletLayout } from '../../components/ui/theme';
-import { useThemeColors } from '../../hooks/useThemeColors';
-import { useResponsive } from '../../hooks/useResponsive';
-import { useMedications } from '../../hooks/useQueryHooks';
+import { AdBanner } from '../../components/ui/AdBanner';
+import { EmptyState } from '../../components/ui/EmptyState';
+import { ErrorState } from '../../components/ui/ErrorState';
+import { InteractionWarning } from '../../components/ui/InteractionWarning';
+import { InventoryProgressBar } from '../../components/ui/InventoryProgressBar';
+import { LoadingState } from '../../components/ui/LoadingState';
+import {
+  borderRadius,
+  type ColorScheme,
+  gradients,
+  shadows,
+  tablet as tabletLayout,
+} from '../../components/ui/theme';
 import { useDrugInteractions } from '../../hooks/useDrugSearch';
+import { useMedications } from '../../hooks/useQueryHooks';
+import { useResponsive } from '../../hooks/useResponsive';
+import { useThemeColors } from '../../hooks/useThemeColors';
 import type { MedicationRow } from '../../types/database';
 
 export default function MedicationsScreen() {
@@ -26,7 +32,7 @@ export default function MedicationsScreen() {
 
   // Drug interaction checking
   const drugNames = useMemo(
-    () => medications.map(m => m.generic_name || m.name).filter(Boolean),
+    () => medications.map((m) => m.generic_name || m.name).filter(Boolean),
     [medications],
   );
   const { data: interactions = [] } = useDrugInteractions(drugNames);
@@ -36,7 +42,7 @@ export default function MedicationsScreen() {
     for (const med of medications) {
       const name = (med.generic_name || med.name).toLowerCase();
       const relevant = interactions.filter(
-        i => i.drug1.toLowerCase() === name || i.drug2.toLowerCase() === name,
+        (i) => i.drug1.toLowerCase() === name || i.drug2.toLowerCase() === name,
       );
       if (relevant.length > 0) map.set(med.id, relevant);
     }
@@ -49,6 +55,83 @@ export default function MedicationsScreen() {
     await refetch();
     setRefreshing(false);
   }, [refetch]);
+
+  const renderMedCard = useCallback(
+    ({ item: med }: { item: MedicationRow }) => {
+      const isLow = med.current_supply <= (med.low_supply_threshold ?? 10);
+      const isSelected = isTablet && selectedMedId === med.id;
+      return (
+        <Pressable
+          style={[styles.cardWrapper, styles.card, isSelected && styles.cardSelected]}
+          onPress={() => {
+            if (isTablet) {
+              setSelectedMedId(med.id);
+            } else {
+              router.push(`/medication/${med.id}`);
+            }
+          }}
+          accessibilityRole="button"
+          accessibilityLabel={`${med.name}, ${med.dosage}, ${med.form}${isLow ? ', low supply' : ''}`}
+        >
+          <View style={styles.cardTop}>
+            <View style={styles.cardInfo}>
+              <Text style={styles.medName}>{med.name}</Text>
+              <Text style={styles.medDosage}>
+                {med.dosage} · {med.form}
+              </Text>
+            </View>
+            {med.is_prn && (
+              <View style={styles.prnBadge}>
+                <Feather name="zap" size={12} color={c.teal} />
+                <Text style={styles.prnBadgeText}>PRN</Text>
+              </View>
+            )}
+            {isLow && (
+              <View style={styles.lowBadge}>
+                <Feather name="alert-triangle" size={14} color={c.warning} />
+                <Text style={styles.lowBadgeText}>Low</Text>
+              </View>
+            )}
+          </View>
+
+          <InventoryProgressBar
+            current={med.current_supply}
+            threshold={med.low_supply_threshold ?? 10}
+          />
+
+          {interactionsByMed.has(med.id) && (
+            <View style={{ marginTop: 8 }}>
+              <InteractionWarning interactions={interactionsByMed.get(med.id) ?? []} compact />
+            </View>
+          )}
+
+          <View style={styles.cardBottom}>
+            <View style={styles.nextDose}>
+              <Feather name="clock" size={14} color={c.gray500} />
+              <Text style={styles.nextDoseText}>{med.form}</Text>
+            </View>
+            <Feather name="chevron-right" size={20} color={c.gray400} />
+          </View>
+        </Pressable>
+      );
+    },
+    [styles, isTablet, selectedMedId, c, interactionsByMed],
+  );
+
+  const listHeader = useMemo(
+    () => (
+      <LinearGradient
+        colors={[...gradients.primary]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.header}
+      >
+        <Text style={styles.headerTitle}>Medications</Text>
+        <Text style={styles.headerSub}>{medications.length} active medications</Text>
+      </LinearGradient>
+    ),
+    [styles, medications.length],
+  );
 
   if (isLoading) {
     return (
@@ -108,90 +191,29 @@ export default function MedicationsScreen() {
   }
 
   const listContent = (
-    <ScrollView
+    <FlatList
+      data={medications}
+      keyExtractor={(item) => item.id}
+      renderItem={renderMedCard}
+      ListHeaderComponent={listHeader}
+      ListFooterComponent={<View style={{ height: 100 }} />}
       showsVerticalScrollIndicator={false}
       refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[c.teal]} tintColor={c.teal} />
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          colors={[c.teal]}
+          tintColor={c.teal}
+        />
       }
-    >
-      {/* Header */}
-      <LinearGradient
-        colors={[...gradients.primary]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.header}
-      >
-        <Text style={styles.headerTitle}>Medications</Text>
-        <Text style={styles.headerSub}>{medications.length} active medications</Text>
-      </LinearGradient>
-
-      <View style={styles.content}>
-        {medications.map((med) => {
-          const isLow = med.current_supply <= (med.low_supply_threshold ?? 10);
-          const isSelected = isTablet && selectedMedId === med.id;
-          return (
-            <TouchableOpacity
-              key={med.id}
-              style={[styles.card, isSelected && styles.cardSelected]}
-              activeOpacity={0.7}
-              onPress={() => {
-                if (isTablet) {
-                  setSelectedMedId(med.id);
-                } else {
-                  router.push(`/medication/${med.id}`);
-                }
-              }}
-            >
-              <View style={styles.cardTop}>
-                <View style={styles.cardInfo}>
-                  <Text style={styles.medName}>{med.name}</Text>
-                  <Text style={styles.medDosage}>{med.dosage} · {med.form}</Text>
-                </View>
-                {med.is_prn && (
-                  <View style={styles.prnBadge}>
-                    <Feather name="zap" size={12} color={c.teal} />
-                    <Text style={styles.prnBadgeText}>PRN</Text>
-                  </View>
-                )}
-                {isLow && (
-                  <View style={styles.lowBadge}>
-                    <Feather name="alert-triangle" size={14} color={c.warning} />
-                    <Text style={styles.lowBadgeText}>Low</Text>
-                  </View>
-                )}
-              </View>
-
-              <InventoryProgressBar current={med.current_supply} threshold={med.low_supply_threshold ?? 10} />
-
-              {interactionsByMed.has(med.id) && (
-                <View style={{ marginTop: 8 }}>
-                  <InteractionWarning interactions={interactionsByMed.get(med.id)!} compact />
-                </View>
-              )}
-
-              <View style={styles.cardBottom}>
-                <View style={styles.nextDose}>
-                  <Feather name="clock" size={14} color={c.gray500} />
-                  <Text style={styles.nextDoseText}>{med.form}</Text>
-                </View>
-                <Feather name="chevron-right" size={20} color={c.gray400} />
-              </View>
-            </TouchableOpacity>
-          );
-        })}
-
-        <View style={{ height: 100 }} />
-      </View>
-    </ScrollView>
+    />
   );
 
   if (isTablet) {
     return (
       <View style={styles.container}>
         <View style={styles.masterDetail}>
-          <View style={styles.masterPane}>
-            {listContent}
-          </View>
+          <View style={styles.masterPane}>{listContent}</View>
           <View style={styles.detailPane}>
             {selectedMedId ? (
               <MedicationDetailPanel
@@ -247,6 +269,7 @@ function makeStyles(c: ColorScheme, isTablet: boolean) {
       paddingTop: isTablet ? 24 : 60,
       paddingHorizontal: isTablet ? 16 : 24,
       paddingBottom: isTablet ? 20 : 32,
+      marginBottom: isTablet ? 12 : 24,
       borderBottomLeftRadius: 24,
       borderBottomRightRadius: 24,
     },
@@ -264,6 +287,10 @@ function makeStyles(c: ColorScheme, isTablet: boolean) {
     content: {
       paddingHorizontal: isTablet ? 12 : 24,
       paddingTop: isTablet ? 12 : 24,
+    },
+    cardWrapper: {
+      marginHorizontal: isTablet ? 12 : 24,
+      marginTop: isTablet ? 12 : 0,
     },
     card: {
       backgroundColor: c.card,

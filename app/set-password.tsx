@@ -1,23 +1,23 @@
-import React, { useMemo, useState } from 'react';
+import { Feather } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
+import { useMemo, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  StyleSheet,
+  Text,
   TouchableOpacity,
+  View,
 } from 'react-native';
-import { useRouter } from 'expo-router';
-import { Feather } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
-import { supabase } from '../lib/supabase';
-import { useAuth } from '../contexts/AuthContext';
+import Toast from 'react-native-toast-message';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
-import { type ColorScheme, gradients, borderRadius, shadows } from '../components/ui/theme';
+import { borderRadius, type ColorScheme, gradients, shadows } from '../components/ui/theme';
+import { useAuth } from '../contexts/AuthContext';
 import { useThemeColors } from '../hooks/useThemeColors';
-import Toast from 'react-native-toast-message';
+import { supabase } from '../lib/supabase';
 
 export default function SetPasswordScreen() {
   const c = useThemeColors();
@@ -39,7 +39,11 @@ export default function SetPasswordScreen() {
       return;
     }
     if (password.length < 8) {
-      Toast.show({ type: 'error', text1: 'Error', text2: 'Password must be at least 8 characters' });
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Password must be at least 8 characters',
+      });
       return;
     }
     if (password !== confirmPassword) {
@@ -50,21 +54,20 @@ export default function SetPasswordScreen() {
     setSaving(true);
     try {
       // Use Edge Function with admin API to properly create the email identity
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       if (!session?.access_token) throw new Error('No active session');
 
-      const res = await fetch(
-        `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/set-password`,
-        {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
-            apikey: process.env.EXPO_PUBLIC_SUPABASE_KEY!,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ password }),
+      const res = await fetch(`${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/set-password`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+          apikey: process.env.EXPO_PUBLIC_SUPABASE_KEY ?? '',
+          'Content-Type': 'application/json',
         },
-      );
+        body: JSON.stringify({ password }),
+      });
 
       const body = await res.json();
       if (!res.ok) throw new Error(body.error ?? 'Failed to set password');
@@ -76,7 +79,11 @@ export default function SetPasswordScreen() {
         await supabase.auth.signInWithPassword({ email, password });
       }
 
-      Toast.show({ type: 'success', text1: 'Password set', text2: 'You can now sign in with email and password' });
+      Toast.show({
+        type: 'success',
+        text1: 'Password set',
+        text2: 'You can now sign in with email and password',
+      });
       router.back();
     } catch (err: unknown) {
       Toast.show({
@@ -145,11 +152,7 @@ export default function SetPasswordScreen() {
                 autoCapitalize="none"
                 rightIcon={
                   <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-                    <Feather
-                      name={showPassword ? 'eye-off' : 'eye'}
-                      size={20}
-                      color={c.gray400}
-                    />
+                    <Feather name={showPassword ? 'eye-off' : 'eye'} size={20} color={c.gray400} />
                   </TouchableOpacity>
                 }
               />
@@ -169,11 +172,7 @@ export default function SetPasswordScreen() {
                 autoCapitalize="none"
                 rightIcon={
                   <TouchableOpacity onPress={() => setShowConfirm(!showConfirm)}>
-                    <Feather
-                      name={showConfirm ? 'eye-off' : 'eye'}
-                      size={20}
-                      color={c.gray400}
-                    />
+                    <Feather name={showConfirm ? 'eye-off' : 'eye'} size={20} color={c.gray400} />
                   </TouchableOpacity>
                 }
               />

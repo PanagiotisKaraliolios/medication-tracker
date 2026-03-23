@@ -1,29 +1,30 @@
-import React, { useMemo, useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Linking,
-  LayoutAnimation,
-  UIManager,
-  Platform,
-} from 'react-native';
-import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
-import { type ColorScheme, gradients, borderRadius, shadows } from '../components/ui/theme';
-import { useThemeColors } from '../hooks/useThemeColors';
+import React, { useMemo, useState } from 'react';
+import {
+  LayoutAnimation,
+  Linking,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  UIManager,
+  View,
+} from 'react-native';
 import Toast from 'react-native-toast-message';
+import { borderRadius, type ColorScheme, gradients, shadows } from '../components/ui/theme';
+import { useThemeColors } from '../hooks/useThemeColors';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
 const SUPPORT_EMAIL = 'karaliolios.panagiotis@gmail.com';
-const PRIVACY_POLICY_URL = 'https://github.com/PanagiotisKaraliolios/medication-tracker/blob/main/PRIVACY_POLICY.md';
+const PRIVACY_POLICY_URL =
+  'https://github.com/PanagiotisKaraliolios/medication-tracker/blob/main/PRIVACY_POLICY.md';
 
 type FAQItem = {
   question: string;
@@ -54,7 +55,7 @@ const faqItems: FAQItem[] = [
   {
     question: 'How does snooze work?',
     answer:
-      'When you receive a dose reminder notification, you can snooze it. The dose card will show a countdown timer. Once the snooze expires, you\'ll be reminded again.',
+      "When you receive a dose reminder notification, you can snooze it. The dose card will show a countdown timer. Once the snooze expires, you'll be reminded again.",
   },
   {
     question: 'How is my adherence calculated?',
@@ -86,14 +87,18 @@ export default function HelpSupportScreen() {
 
   const handleEmailSupport = async () => {
     const subject = encodeURIComponent('MediTrack Support Request');
-    const body = encodeURIComponent('\n\n---\nApp: MediTrack v1.3.0\nPlatform: ' + Platform.OS);
+    const body = encodeURIComponent(`\n\n---\nApp: MediTrack v1.3.0\nPlatform: ${Platform.OS}`);
     const url = `mailto:${SUPPORT_EMAIL}?subject=${subject}&body=${body}`;
 
     const supported = await Linking.canOpenURL(url);
     if (supported) {
       await Linking.openURL(url);
     } else {
-      Toast.show({ type: 'error', text1: 'No email app', text2: 'Please email us at ' + SUPPORT_EMAIL });
+      Toast.show({
+        type: 'error',
+        text1: 'No email app',
+        text2: `Please email us at ${SUPPORT_EMAIL}`,
+      });
     }
   };
 
@@ -121,9 +126,7 @@ export default function HelpSupportScreen() {
           <Text style={styles.headerTitle}>Help & Support</Text>
           <View style={{ width: 40 }} />
         </View>
-        <Text style={styles.headerSubtitle}>
-          Find answers or get in touch with us
-        </Text>
+        <Text style={styles.headerSubtitle}>Find answers or get in touch with us</Text>
       </LinearGradient>
 
       <ScrollView
@@ -142,7 +145,7 @@ export default function HelpSupportScreen() {
             {faqItems.map((item, i) => {
               const isExpanded = expandedIndex === i;
               return (
-                <React.Fragment key={i}>
+                <React.Fragment key={item.question}>
                   {i > 0 && <View style={styles.divider} />}
                   <TouchableOpacity
                     style={styles.faqRow}

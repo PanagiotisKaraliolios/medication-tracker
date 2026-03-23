@@ -1,29 +1,24 @@
+import { Feather } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
+import { useMemo, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  StyleSheet,
+  Text,
   TouchableOpacity,
+  View,
 } from 'react-native';
-import { useRouter } from 'expo-router';
-import { useState, useMemo } from 'react';
-import { Feather } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
-import { supabase } from '../../lib/supabase';
-import { useAuth } from '../../contexts/AuthContext';
-import { Button } from '../../components/ui/Button';
-import { Input } from '../../components/ui/Input';
-import { DatePickerModal } from '../../components/ui/DatePickerModal';
-import {
-  type ColorScheme,
-  gradients,
-  borderRadius,
-  shadows,
-} from '../../components/ui/theme';
-import { useThemeColors } from '../../hooks/useThemeColors';
 import Toast from 'react-native-toast-message';
+import { Button } from '../../components/ui/Button';
+import { DatePickerModal } from '../../components/ui/DatePickerModal';
+import { Input } from '../../components/ui/Input';
+import { borderRadius, type ColorScheme, gradients, shadows } from '../../components/ui/theme';
+import { useAuth } from '../../contexts/AuthContext';
+import { useThemeColors } from '../../hooks/useThemeColors';
+import { supabase } from '../../lib/supabase';
 
 export default function EditProfileScreen() {
   const c = useThemeColors();
@@ -39,13 +34,11 @@ export default function EditProfileScreen() {
   const todayISO = new Date().toISOString().split('T')[0];
 
   const formatDisplayDate = (iso: string) => {
-    const d = new Date(iso + 'T00:00:00');
+    const d = new Date(`${iso}T00:00:00`);
     return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
   };
 
-  const hasChanges =
-    name !== (profileName ?? '') ||
-    dateOfBirth !== profileDateOfBirth;
+  const hasChanges = name !== (profileName ?? '') || dateOfBirth !== profileDateOfBirth;
 
   const handleSave = async () => {
     if (!name.trim()) {
@@ -64,7 +57,9 @@ export default function EditProfileScreen() {
         date_of_birth: dateOfBirth,
         updated_at: new Date().toISOString(),
       })
-      .eq('id', userId);
+      .eq('id', userId)
+      .select()
+      .single();
     setSaving(false);
 
     if (error) {
@@ -137,7 +132,9 @@ export default function EditProfileScreen() {
               </View>
 
               <View style={styles.field}>
-                <Text style={styles.label}>Date of Birth <Text style={styles.optionalBadge}>(optional)</Text></Text>
+                <Text style={styles.label}>
+                  Date of Birth <Text style={styles.optionalBadge}>(optional)</Text>
+                </Text>
                 <TouchableOpacity
                   style={styles.dobButton}
                   onPress={() => setShowDatePicker(true)}
@@ -189,12 +186,7 @@ export default function EditProfileScreen() {
 
           {/* Save */}
           <View style={styles.actions}>
-            <Button
-              variant="primary"
-              onPress={handleSave}
-              loading={saving}
-              disabled={!hasChanges}
-            >
+            <Button variant="primary" onPress={handleSave} loading={saving} disabled={!hasChanges}>
               Save Changes
             </Button>
           </View>

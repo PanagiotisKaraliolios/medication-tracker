@@ -1,19 +1,12 @@
-import React, { useMemo } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Switch,
-} from 'react-native';
-import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
+import React, { useMemo } from 'react';
+import { ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { type ColorScheme, gradients, borderRadius, shadows } from '../components/ui/theme';
+import { borderRadius, type ColorScheme, gradients, shadows } from '../components/ui/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
-import { useAdPreferences, type AdPreferences } from '../stores/adPreferencesStore';
+import { type AdPreferences, useAdPreferences } from '../stores/adPreferencesStore';
 
 type ToggleItem = {
   key: keyof AdPreferences;
@@ -23,12 +16,28 @@ type ToggleItem = {
 
 const bannerItems: ToggleItem[] = [
   { key: 'todayBanner', label: 'Today Tab', description: 'Banner on the Today screen' },
-  { key: 'medicationsBanner', label: 'Medications Tab', description: 'Banner on the Medications list' },
+  {
+    key: 'medicationsBanner',
+    label: 'Medications Tab',
+    description: 'Banner on the Medications list',
+  },
   { key: 'reportsBanner', label: 'Reports Tab', description: 'Banner on the Reports screen' },
   { key: 'profileBanner', label: 'Profile Tab', description: 'Banner on the Profile screen' },
-  { key: 'medicationDetailBanner', label: 'Medication Detail', description: 'Banner on medication details' },
-  { key: 'notificationsBanner', label: 'Notifications', description: 'Banner on the Notifications screen' },
-  { key: 'notificationSettingsBanner', label: 'Notification Settings', description: 'Banner on notification settings' },
+  {
+    key: 'medicationDetailBanner',
+    label: 'Medication Detail',
+    description: 'Banner on medication details',
+  },
+  {
+    key: 'notificationsBanner',
+    label: 'Notifications',
+    description: 'Banner on the Notifications screen',
+  },
+  {
+    key: 'notificationSettingsBanner',
+    label: 'Notification Settings',
+    description: 'Banner on notification settings',
+  },
 ];
 
 const otherItems: ToggleItem[] = [
@@ -43,8 +52,10 @@ export default function AdPreferencesScreen() {
   const router = useRouter();
   const prefs = useAdPreferences();
 
-  const allEnabled = bannerItems.every((i) => prefs[i.key]) && otherItems.every((i) => prefs[i.key]);
-  const allDisabled = bannerItems.every((i) => !prefs[i.key]) && otherItems.every((i) => !prefs[i.key]);
+  const allEnabled =
+    bannerItems.every((i) => prefs[i.key]) && otherItems.every((i) => prefs[i.key]);
+  const allDisabled =
+    bannerItems.every((i) => !prefs[i.key]) && otherItems.every((i) => !prefs[i.key]);
 
   const renderToggle = (item: ToggleItem) => (
     <View key={item.key} style={styles.toggleRow}>

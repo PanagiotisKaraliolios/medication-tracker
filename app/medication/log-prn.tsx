@@ -1,29 +1,43 @@
-import React, { useMemo, useState, useCallback, useRef } from 'react';
+import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
-import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
+import {
+  AutocompleteDropdown,
+  type AutocompleteDropdownItem,
+  type IAutocompleteDropdownRef,
+} from 'react-native-autocomplete-dropdown';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Toast from 'react-native-toast-message';
 import { Button } from '../../components/ui/Button';
-import { Input } from '../../components/ui/Input';
 import { EmptyState } from '../../components/ui/EmptyState';
+import { Input } from '../../components/ui/Input';
 import { LoadingState } from '../../components/ui/LoadingState';
 import { TimePickerModal } from '../../components/ui/TimePickerModal';
-import { AutocompleteDropdown, type AutocompleteDropdownItem, type IAutocompleteDropdownRef } from 'react-native-autocomplete-dropdown';
-import { type ColorScheme, borderRadius, shadows, tablet as tabletLayout } from '../../components/ui/theme';
-import { useThemeColors } from '../../hooks/useThemeColors';
-import { useResponsive } from '../../hooks/useResponsive';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useMedications, useMedication as useMedicationQuery, useLogDose, useAdjustSupply } from '../../hooks/useQueryHooks';
-import { PRN_REASONS } from '../../constants/symptoms';
+import {
+  borderRadius,
+  type ColorScheme,
+  shadows,
+  tablet as tabletLayout,
+} from '../../components/ui/theme';
 import { getIconForForm } from '../../constants/icons';
-import Toast from 'react-native-toast-message';
+import { PRN_REASONS } from '../../constants/symptoms';
+import {
+  useAdjustSupply,
+  useLogDose,
+  useMedication as useMedicationQuery,
+  useMedications,
+} from '../../hooks/useQueryHooks';
+import { useResponsive } from '../../hooks/useResponsive';
+import { useThemeColors } from '../../hooks/useThemeColors';
 import { toISO } from '../../utils/date';
 
 export default function LogPrnScreen() {
@@ -32,7 +46,10 @@ export default function LogPrnScreen() {
   const c = useThemeColors();
   const insets = useSafeAreaInsets();
   const { isTablet } = useResponsive();
-  const styles = useMemo(() => makeStyles(c, insets.bottom, isTablet), [c, insets.bottom, isTablet]);
+  const styles = useMemo(
+    () => makeStyles(c, insets.bottom, isTablet),
+    [c, insets.bottom, isTablet],
+  );
 
   const [selectedMedId, setSelectedMedId] = useState<string | undefined>(paramMedId);
   const medicationId = selectedMedId;
@@ -63,11 +80,13 @@ export default function LogPrnScreen() {
     if (!medicationId || !med) return;
 
     try {
-      const timeLabel = customTime ?? new Date().toLocaleTimeString('en-US', {
-        hour: 'numeric',
-        minute: '2-digit',
-        hour12: true,
-      });
+      const timeLabel =
+        customTime ??
+        new Date().toLocaleTimeString('en-US', {
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true,
+        });
 
       await logDoseMut.mutateAsync({
         scheduleId: null,
@@ -82,17 +101,28 @@ export default function LogPrnScreen() {
 
       Toast.show({ type: 'success', text1: `${med.name} dose logged` });
       router.back();
-    } catch (err: any) {
-      Toast.show({ type: 'error', text1: 'Failed to log dose', text2: err.message });
+    } catch (err: unknown) {
+      Toast.show({
+        type: 'error',
+        text1: 'Failed to log dose',
+        text2: err instanceof Error ? err.message : String(err),
+      });
     }
-  }, [medicationId, med, reason, dosesCount, todayISO, customTime, logDoseMut, adjustSupplyMut, router]);
+  }, [
+    medicationId,
+    med,
+    reason,
+    dosesCount,
+    todayISO,
+    customTime,
+    logDoseMut,
+    adjustSupplyMut,
+    router,
+  ]);
 
-  const handleDropdownSelect = useCallback(
-    (item: AutocompleteDropdownItem | null) => {
-      if (item) setSelectedMedId(item.id);
-    },
-    [],
-  );
+  const handleDropdownSelect = useCallback((item: AutocompleteDropdownItem | null) => {
+    if (item) setSelectedMedId(item.id);
+  }, []);
 
   const renderDropdownItem = useCallback(
     (item: AutocompleteDropdownItem) => {
@@ -104,7 +134,11 @@ export default function LogPrnScreen() {
           </View>
           <View style={styles.pickerInfo}>
             <Text style={styles.pickerName}>{m?.name ?? item.title}</Text>
-            {m && <Text style={styles.pickerDosage}>{m.dosage} · {m.form}</Text>}
+            {m && (
+              <Text style={styles.pickerDosage}>
+                {m.dosage} · {m.form}
+              </Text>
+            )}
           </View>
         </View>
       );
@@ -117,7 +151,6 @@ export default function LogPrnScreen() {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -129,12 +162,12 @@ export default function LogPrnScreen() {
             <Text style={styles.fieldLabel}>Select Medication</Text>
 
             {medsLoading && <LoadingState />}
-            {!medsLoading && prnMeds.length === 0 && (
-              <EmptyState variant="medications" />
-            )}
+            {!medsLoading && prnMeds.length === 0 && <EmptyState variant="medications" />}
             {!medsLoading && prnMeds.length > 0 && (
               <AutocompleteDropdown
-                controller={(ref) => { dropdownRef.current = ref; }}
+                controller={(ref) => {
+                  dropdownRef.current = ref;
+                }}
                 dataSet={dropdownDataSet}
                 onSelectItem={handleDropdownSelect}
                 renderItem={renderDropdownItem}
@@ -183,7 +216,9 @@ export default function LogPrnScreen() {
               <Text style={styles.medName}>{med.name}</Text>
               {!paramMedId && <Feather name="x" size={18} color={c.gray400} />}
             </View>
-            <Text style={styles.medDosage}>{med.dosage} · {med.form}</Text>
+            <Text style={styles.medDosage}>
+              {med.dosage} · {med.form}
+            </Text>
           </TouchableOpacity>
         )}
 
@@ -219,7 +254,9 @@ export default function LogPrnScreen() {
               onPress={() => setCustomTime(null)}
             >
               <Feather name="clock" size={16} color={!customTime ? c.teal : c.gray500} />
-              <Text style={[styles.timeOptionText, !customTime && styles.timeOptionTextSelected]}>Now</Text>
+              <Text style={[styles.timeOptionText, !customTime && styles.timeOptionTextSelected]}>
+                Now
+              </Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.timeOption, !!customTime && styles.timeOptionSelected]}
@@ -247,9 +284,7 @@ export default function LogPrnScreen() {
                   activeOpacity={0.7}
                   onPress={() => setReason(selected ? '' : r)}
                 >
-                  <Text style={[styles.chipText, selected && styles.chipTextSelected]}>
-                    {r}
-                  </Text>
+                  <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{r}</Text>
                 </TouchableOpacity>
               );
             })}
@@ -301,7 +336,11 @@ function makeStyles(c: ColorScheme, bottomInset: number, isTablet: boolean) {
       paddingHorizontal: 24,
       paddingTop: 16,
       paddingBottom: 120,
-      ...(isTablet && { alignSelf: 'center' as const, width: '100%', maxWidth: tabletLayout.contentMaxWidth }),
+      ...(isTablet && {
+        alignSelf: 'center' as const,
+        width: '100%',
+        maxWidth: tabletLayout.contentMaxWidth,
+      }),
     },
     noResults: {
       alignItems: 'center',

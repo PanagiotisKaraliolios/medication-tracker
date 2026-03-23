@@ -1,9 +1,9 @@
-import React, { ReactNode, useMemo } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { Button } from './Button';
-import { type ColorScheme } from './theme';
+import { useMemo } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 import { useThemeColors } from '../../hooks/useThemeColors';
+import { Button } from './Button';
+import type { ColorScheme } from './theme';
 
 type EmptyVariant = 'medications' | 'reports' | 'schedule' | 'search' | 'inventory';
 
@@ -15,7 +15,10 @@ interface EmptyStateProps {
   onAction?: () => void;
 }
 
-const defaults: Record<EmptyVariant, { icon: keyof typeof Feather.glyphMap; title: string; message: string }> = {
+const defaults: Record<
+  EmptyVariant,
+  { icon: keyof typeof Feather.glyphMap; title: string; message: string }
+> = {
   medications: {
     icon: 'package',
     title: 'No medications yet',

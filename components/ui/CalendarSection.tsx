@@ -1,10 +1,10 @@
-import React, { useMemo, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated as RNAnimated } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { type ColorScheme, borderRadius, shadows } from './theme';
-import { useThemeColors } from '../../hooks/useThemeColors';
+import { useCallback, useMemo } from 'react';
+import { Pressable, Animated as RNAnimated, StyleSheet, Text, View } from 'react-native';
 import { DAY_LABELS, MONTHS } from '../../constants/days';
+import { useThemeColors } from '../../hooks/useThemeColors';
 import type { DayStatus } from '../../utils/calendar';
+import { borderRadius, type ColorScheme, shadows } from './theme';
 
 interface CalendarSectionProps {
   selectedISO: string;
@@ -67,15 +67,17 @@ export function CalendarSection({
           const isWdToday = wd.iso === todayISO;
           const dotColor = statusDotColor(dayStatusMap[wd.iso], isSel);
           return (
-            <TouchableOpacity
+            <Pressable
               key={wd.iso}
               style={[
                 styles.weekDay,
                 isSel && styles.weekDaySelected,
                 isWdToday && !isSel && styles.weekDayToday,
               ]}
-              activeOpacity={0.7}
               onPress={() => handleWeekDaySelect(wd.iso)}
+              accessibilityRole="button"
+              accessibilityLabel={`${wd.label} ${wd.dayNum}${isSel ? ', selected' : ''}${isWdToday ? ', today' : ''}`}
+              accessibilityState={{ selected: isSel }}
             >
               <Text style={[styles.weekDayLabel, isSel && styles.weekDayLabelSelected]}>
                 {wd.label}
@@ -90,11 +92,14 @@ export function CalendarSection({
                 {wd.dayNum}
               </Text>
               {dotColor ? (
-                <View style={[styles.statusDot, { backgroundColor: dotColor }]} />
+                <View
+                  style={[styles.statusDot, { backgroundColor: dotColor }]}
+                  accessible={false}
+                />
               ) : (
-                <View style={styles.statusDotSpacer} />
+                <View style={styles.statusDotSpacer} accessible={false} />
               )}
-            </TouchableOpacity>
+            </Pressable>
           );
         })}
       </View>
@@ -102,17 +107,23 @@ export function CalendarSection({
       {/* Expand/Collapse toggle + go-to-today */}
       <View style={styles.calendarToggle}>
         {!isToday ? (
-          <TouchableOpacity style={styles.goTodayButton} activeOpacity={0.7} onPress={goToToday}>
+          <Pressable
+            style={styles.goTodayButton}
+            onPress={goToToday}
+            accessibilityRole="button"
+            accessibilityLabel="Go to today"
+          >
             <Feather name="corner-up-left" size={14} color={c.teal} />
             <Text style={styles.goTodayText}>Today</Text>
-          </TouchableOpacity>
+          </Pressable>
         ) : (
           <View style={styles.goTodayPlaceholder} />
         )}
-        <TouchableOpacity
+        <Pressable
           style={styles.calendarToggleInner}
-          activeOpacity={0.7}
           onPress={toggleCalendar}
+          accessibilityRole="button"
+          accessibilityLabel={calendarExpanded ? 'Hide calendar' : 'Show calendar'}
         >
           <Text style={styles.calendarToggleText}>
             {calendarExpanded ? 'Hide Calendar' : 'Show Calendar'}
@@ -120,7 +131,7 @@ export function CalendarSection({
           <RNAnimated.View style={{ transform: [{ rotate: chevronRotation }] }}>
             <Feather name="chevron-down" size={18} color={c.gray500} />
           </RNAnimated.View>
-        </TouchableOpacity>
+        </Pressable>
         <View style={styles.goTodayPlaceholder} />
       </View>
 
@@ -130,15 +141,27 @@ export function CalendarSection({
       >
         {/* Month nav */}
         <View style={styles.calMonthNav}>
-          <TouchableOpacity onPress={() => goMonth(-1)} hitSlop={12}>
+          <Pressable
+            onPress={() => goMonth(-1)}
+            hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel="Previous month"
+            style={styles.monthChevron}
+          >
             <Feather name="chevron-left" size={22} color={c.gray700} />
-          </TouchableOpacity>
+          </Pressable>
           <Text style={styles.calMonthLabel}>
             {MONTHS[calendarViewMonth]} {calendarViewYear}
           </Text>
-          <TouchableOpacity onPress={() => goMonth(1)} hitSlop={12}>
+          <Pressable
+            onPress={() => goMonth(1)}
+            hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel="Next month"
+            style={styles.monthChevron}
+          >
             <Feather name="chevron-right" size={22} color={c.gray700} />
-          </TouchableOpacity>
+          </Pressable>
         </View>
 
         {/* Day-of-week headers */}
@@ -154,6 +177,7 @@ export function CalendarSection({
         <View style={styles.calGrid}>
           {calendarDays.map((day, i) => {
             if (day === null) {
+              // biome-ignore lint/suspicious/noArrayIndexKey: blank calendar cells have no data identity; position is stable
               return <View key={`blank-${i}`} style={styles.calDayCell} />;
             }
             const iso = `${calendarViewYear}-${String(calendarViewMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
@@ -162,7 +186,7 @@ export function CalendarSection({
             const dotColor = statusDotColor(dayStatusMap[iso], isSel);
 
             return (
-              <TouchableOpacity
+              <Pressable
                 key={`day-${day}`}
                 style={[
                   styles.calDayCell,
@@ -170,7 +194,9 @@ export function CalendarSection({
                   isTodayCell && !isSel && styles.calDayCellToday,
                 ]}
                 onPress={() => handleDaySelect(day)}
-                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={`${day}${isSel ? ', selected' : ''}${isTodayCell ? ', today' : ''}`}
+                accessibilityState={{ selected: isSel }}
               >
                 <Text
                   style={[
@@ -184,7 +210,7 @@ export function CalendarSection({
                 {dotColor ? (
                   <View style={[styles.statusDot, { backgroundColor: dotColor }]} />
                 ) : null}
-              </TouchableOpacity>
+              </Pressable>
             );
           })}
         </View>
@@ -301,6 +327,12 @@ function makeStyles(c: ColorScheme) {
       paddingHorizontal: 16,
       paddingTop: 8,
       paddingBottom: 4,
+    },
+    monthChevron: {
+      minWidth: 44,
+      minHeight: 44,
+      alignItems: 'center',
+      justifyContent: 'center',
     },
     calMonthLabel: {
       fontSize: 16,

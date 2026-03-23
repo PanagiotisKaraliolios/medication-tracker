@@ -1,8 +1,8 @@
-import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, Switch } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { type ColorScheme, borderRadius, shadows } from './theme';
+import { useMemo } from 'react';
+import { StyleSheet, Switch, Text, View } from 'react-native';
 import { useThemeColors } from '../../hooks/useThemeColors';
+import { borderRadius, type ColorScheme, shadows } from './theme';
 
 type Props = {
   pushEnabled: boolean;
@@ -30,6 +30,8 @@ export function NotificationCard({ pushEnabled, onPushChange }: Props) {
           onValueChange={onPushChange}
           trackColor={{ false: c.gray200, true: c.teal }}
           thumbColor={c.white}
+          accessibilityLabel="Push Notifications"
+          accessibilityHint="Toggle push notification reminders"
         />
       </View>
 
@@ -55,6 +57,9 @@ export function NotificationCard({ pushEnabled, onPushChange }: Props) {
           disabled
           trackColor={{ false: c.gray200, true: c.teal }}
           thumbColor={c.white}
+          accessibilityLabel="SMS Alerts"
+          accessibilityHint="Coming soon"
+          accessibilityState={{ disabled: true }}
         />
       </View>
     </View>

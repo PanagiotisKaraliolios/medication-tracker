@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useCallback, useRef, useState } from 'react';
 
-import { searchDrugs, checkInteractions } from '../lib/drugApi';
+import { checkInteractions, searchDrugs } from '../lib/drugApi';
 import { queryKeys } from '../lib/queryKeys';
 import type { DrugSearchResult, InteractionResult } from '../types/drug';
 

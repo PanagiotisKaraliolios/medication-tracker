@@ -18,12 +18,12 @@ export const MEDICATION_TYPES: {
   label: string;
   icon: keyof typeof MaterialCommunityIcons.glyphMap;
 }[] = [
-  { form: 'tablet',    label: 'Tablet',    icon: 'pill' },
-  { form: 'capsule',   label: 'Capsule',   icon: 'medication' },
-  { form: 'liquid',    label: 'Liquid',    icon: 'bottle-tonic' },
+  { form: 'tablet', label: 'Tablet', icon: 'pill' },
+  { form: 'capsule', label: 'Capsule', icon: 'medication' },
+  { form: 'liquid', label: 'Liquid', icon: 'bottle-tonic' },
   { form: 'injection', label: 'Injection', icon: 'needle' },
-  { form: 'cream',     label: 'Cream',     icon: 'lotion-outline' },
-  { form: 'drops',     label: 'Drops',     icon: 'eyedropper' },
-  { form: 'inhaler',   label: 'Inhaler',   icon: 'lungs' },
-  { form: 'patch',     label: 'Patch',     icon: 'bandage' },
+  { form: 'cream', label: 'Cream', icon: 'lotion-outline' },
+  { form: 'drops', label: 'Drops', icon: 'eyedropper' },
+  { form: 'inhaler', label: 'Inhaler', icon: 'lungs' },
+  { form: 'patch', label: 'Patch', icon: 'bandage' },
 ];

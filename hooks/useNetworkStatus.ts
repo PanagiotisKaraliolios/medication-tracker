@@ -1,5 +1,5 @@
-import { useEffect, useSyncExternalStore } from 'react';
 import NetInfo, { type NetInfoState } from '@react-native-community/netinfo';
+import { useSyncExternalStore } from 'react';
 
 // ── Shared network state singleton ──────────────────────────────────
 let currentState: NetInfoState | null = null;
@@ -9,7 +9,7 @@ function subscribe(callback: () => void) {
   listeners.add(callback);
   const unsubscribe = NetInfo.addEventListener((state) => {
     currentState = state;
-    listeners.forEach((l) => l());
+    for (const l of listeners) l();
   });
   return () => {
     listeners.delete(callback);

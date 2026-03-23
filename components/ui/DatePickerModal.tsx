@@ -1,22 +1,32 @@
-import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
+import { Feather } from '@expo/vector-icons';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  View,
-  Text,
-  Modal,
-  TouchableOpacity,
-  StyleSheet,
   Dimensions,
   FlatList,
+  Modal,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { Feather } from '@expo/vector-icons';
-import { type ColorScheme, borderRadius, shadows } from './theme';
 import { useThemeColors } from '../../hooks/useThemeColors';
+import { borderRadius, type ColorScheme, shadows } from './theme';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const;
 const MONTHS = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
 ] as const;
 
 const PICKER_ITEM_HEIGHT = 48;
@@ -27,9 +37,9 @@ type Props = {
   visible: boolean;
   onClose: () => void;
   onConfirm: (dateISO: string) => void;
-  initialDate?: string;   // YYYY-MM-DD
-  minDate?: string;        // YYYY-MM-DD
-  maxDate?: string;        // YYYY-MM-DD
+  initialDate?: string; // YYYY-MM-DD
+  minDate?: string; // YYYY-MM-DD
+  maxDate?: string; // YYYY-MM-DD
   title?: string;
 };
 
@@ -47,7 +57,15 @@ function toISO(date: Date) {
   return `${y}-${m}-${d}`;
 }
 
-export function DatePickerModal({ visible, onClose, onConfirm, initialDate, minDate, maxDate, title }: Props) {
+export function DatePickerModal({
+  visible,
+  onClose,
+  onConfirm,
+  initialDate,
+  minDate,
+  maxDate,
+  title,
+}: Props) {
   const c = useThemeColors();
   const styles = useMemo(() => makeStyles(c), [c]);
 
@@ -138,63 +156,74 @@ export function DatePickerModal({ visible, onClose, onConfirm, initialDate, minD
     onClose();
   };
 
-  const handleYearSelect = (year: number) => {
+  const handleYearSelect = useCallback((year: number) => {
     setViewYear(year);
     setStep('month');
-  };
+  }, []);
 
-  const handleMonthSelect = (month: number) => {
+  const handleMonthSelect = useCallback((month: number) => {
     setViewMonth(month);
     setStep('day');
-  };
+  }, []);
 
-  const isMonthDisabled = (month: number) => {
-    if (minDate) {
-      const [minY, minM] = minDate.split('-').map(Number);
-      if (viewYear < minY || (viewYear === minY && month < minM - 1)) return true;
-    }
-    if (maxDate) {
-      const [maxY, maxM] = maxDate.split('-').map(Number);
-      if (viewYear > maxY || (viewYear === maxY && month > maxM - 1)) return true;
-    }
-    return false;
-  };
+  const isMonthDisabled = useCallback(
+    (month: number) => {
+      if (minDate) {
+        const [minY, minM] = minDate.split('-').map(Number);
+        if (viewYear < minY || (viewYear === minY && month < minM - 1)) return true;
+      }
+      if (maxDate) {
+        const [maxY, maxM] = maxDate.split('-').map(Number);
+        if (viewYear > maxY || (viewYear === maxY && month > maxM - 1)) return true;
+      }
+      return false;
+    },
+    [minDate, maxDate, viewYear],
+  );
 
-  const renderYearItem = useCallback(({ item: year }: { item: number }) => {
-    const isSelected = year === viewYear;
-    return (
-      <TouchableOpacity
-        style={[styles.pickerItem, isSelected && styles.pickerItemSelected]}
-        onPress={() => handleYearSelect(year)}
-        activeOpacity={0.7}
-      >
-        <Text style={[styles.pickerItemText, isSelected && styles.pickerItemTextSelected]}>
-          {year}
-        </Text>
-      </TouchableOpacity>
-    );
-  }, [viewYear, styles]);
+  const renderYearItem = useCallback(
+    ({ item: year }: { item: number }) => {
+      const isSelected = year === viewYear;
+      return (
+        <TouchableOpacity
+          style={[styles.pickerItem, isSelected && styles.pickerItemSelected]}
+          onPress={() => handleYearSelect(year)}
+          activeOpacity={0.7}
+        >
+          <Text style={[styles.pickerItemText, isSelected && styles.pickerItemTextSelected]}>
+            {year}
+          </Text>
+        </TouchableOpacity>
+      );
+    },
+    [viewYear, styles, handleYearSelect],
+  );
 
-  const renderMonthItem = useCallback(({ item: month }: { item: number }) => {
-    const isSelected = month === viewMonth;
-    const disabled = isMonthDisabled(month);
-    return (
-      <TouchableOpacity
-        style={[styles.pickerItem, isSelected && styles.pickerItemSelected]}
-        onPress={() => handleMonthSelect(month)}
-        activeOpacity={0.7}
-        disabled={disabled}
-      >
-        <Text style={[
-          styles.pickerItemText,
-          isSelected && styles.pickerItemTextSelected,
-          disabled && styles.pickerItemTextDisabled,
-        ]}>
-          {MONTHS[month]}
-        </Text>
-      </TouchableOpacity>
-    );
-  }, [viewMonth, viewYear, minDate, maxDate, styles]);
+  const renderMonthItem = useCallback(
+    ({ item: month }: { item: number }) => {
+      const isSelected = month === viewMonth;
+      const disabled = isMonthDisabled(month);
+      return (
+        <TouchableOpacity
+          style={[styles.pickerItem, isSelected && styles.pickerItemSelected]}
+          onPress={() => handleMonthSelect(month)}
+          activeOpacity={0.7}
+          disabled={disabled}
+        >
+          <Text
+            style={[
+              styles.pickerItemText,
+              isSelected && styles.pickerItemTextSelected,
+              disabled && styles.pickerItemTextDisabled,
+            ]}
+          >
+            {MONTHS[month]}
+          </Text>
+        </TouchableOpacity>
+      );
+    },
+    [viewMonth, styles, handleMonthSelect, isMonthDisabled],
+  );
 
   const renderYearPicker = () => (
     <View style={styles.pickerContainer}>
@@ -267,15 +296,18 @@ export function DatePickerModal({ visible, onClose, onConfirm, initialDate, minD
       {/* Day-of-week header */}
       <View style={styles.weekRow}>
         {DAYS.map((d) => (
-          <Text key={d} style={styles.weekLabel}>{d[0]}</Text>
+          <Text key={d} style={styles.weekLabel}>
+            {d[0]}
+          </Text>
         ))}
       </View>
 
       {/* Calendar grid */}
       <View style={styles.grid}>
-        {calendarDays.map((day, i) => {
+        {calendarDays.map((day, dayIndex) => {
           if (day === null) {
-            return <View key={`blank-${i}`} style={styles.dayCell} />;
+            // biome-ignore lint/suspicious/noArrayIndexKey: calendar grid positions are fixed
+            return <View key={`blank-${dayIndex}`} style={styles.dayCell} />;
           }
           const iso = toISO(new Date(viewYear, viewMonth, day));
           const isSelected = iso === selectedDate;
@@ -312,12 +344,7 @@ export function DatePickerModal({ visible, onClose, onConfirm, initialDate, minD
   );
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="fade"
-      onRequestClose={onClose}
-    >
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.backdrop}>
         <View style={styles.modal}>
           {/* Title */}
@@ -403,7 +430,7 @@ function makeStyles(c: ColorScheme) {
       marginHorizontal: 16,
     },
     pickerItemSelected: {
-      backgroundColor: c.teal + '18',
+      backgroundColor: `${c.teal}18`,
     },
     pickerItemText: {
       fontSize: 17,

@@ -1,8 +1,8 @@
-import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { type ColorScheme, borderRadius, shadows } from './theme';
+import { useMemo } from 'react';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useThemeColors } from '../../hooks/useThemeColors';
+import { borderRadius, type ColorScheme, shadows } from './theme';
 
 type Props = {
   value: number;

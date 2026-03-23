@@ -1,23 +1,22 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Switch,
-  Platform,
-  Linking,
-} from 'react-native';
-import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Notifications from 'expo-notifications';
-import { type ColorScheme, gradients, borderRadius, shadows } from '../components/ui/theme';
-import { useThemeColors } from '../hooks/useThemeColors';
-import { AdBanner } from '../components/ui/AdBanner';
-import { useBatteryOptimization } from '../hooks/useBatteryOptimization';
+import { useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  Linking,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import Toast from 'react-native-toast-message';
+import { AdBanner } from '../components/ui/AdBanner';
+import { borderRadius, type ColorScheme, gradients, shadows } from '../components/ui/theme';
+import { useBatteryOptimization } from '../hooks/useBatteryOptimization';
+import { useThemeColors } from '../hooks/useThemeColors';
 
 export default function NotificationSettingsScreen() {
   const c = useThemeColors();
@@ -170,9 +169,7 @@ export default function NotificationSettingsScreen() {
                   style={[
                     styles.settingIcon,
                     {
-                      backgroundColor: isOptimizationEnabled
-                        ? `${c.warning}15`
-                        : `${c.success}15`,
+                      backgroundColor: isOptimizationEnabled ? `${c.warning}15` : `${c.success}15`,
                     },
                   ]}
                 >
@@ -194,16 +191,12 @@ export default function NotificationSettingsScreen() {
                 </View>
                 {batteryChecked && isOptimizationEnabled && (
                   <View style={[styles.statusBadge, { backgroundColor: c.warningLight }]}>
-                    <Text style={[styles.statusBadgeText, { color: c.warning }]}>
-                      Restricted
-                    </Text>
+                    <Text style={[styles.statusBadgeText, { color: c.warning }]}>Restricted</Text>
                   </View>
                 )}
                 {batteryChecked && !isOptimizationEnabled && (
                   <View style={[styles.statusBadge, { backgroundColor: c.successLight }]}>
-                    <Text style={[styles.statusBadgeText, { color: c.success }]}>
-                      OK
-                    </Text>
+                    <Text style={[styles.statusBadgeText, { color: c.success }]}>OK</Text>
                   </View>
                 )}
               </View>
@@ -215,8 +208,8 @@ export default function NotificationSettingsScreen() {
                   <View style={styles.warningBanner}>
                     <Feather name="alert-triangle" size={16} color={c.warning} />
                     <Text style={styles.warningText}>
-                      Android may delay or silence your reminders to save battery.
-                      Allow unrestricted background activity so notifications arrive on time.
+                      Android may delay or silence your reminders to save battery. Allow
+                      unrestricted background activity so notifications arrive on time.
                     </Text>
                   </View>
                   <TouchableOpacity
@@ -255,23 +248,25 @@ export default function NotificationSettingsScreen() {
           </View>
 
           <View style={styles.card}>
-            {([
-              {
-                icon: 'volume-2' as const,
-                title: 'Keep your phone unmuted',
-                desc: 'Notification sounds need your ringer to be on.',
-              },
-              {
-                icon: 'moon' as const,
-                title: 'Do Not Disturb',
-                desc: "Reminders won't ring during DND unless you add an exception for MediTrack.",
-              },
-              {
-                icon: 'wifi-off' as const,
-                title: 'Works offline',
-                desc: 'Scheduled reminders are stored locally and fire even without internet.',
-              },
-            ] as const).map((tip, i, arr) => (
+            {(
+              [
+                {
+                  icon: 'volume-2' as const,
+                  title: 'Keep your phone unmuted',
+                  desc: 'Notification sounds need your ringer to be on.',
+                },
+                {
+                  icon: 'moon' as const,
+                  title: 'Do Not Disturb',
+                  desc: "Reminders won't ring during DND unless you add an exception for MediTrack.",
+                },
+                {
+                  icon: 'wifi-off' as const,
+                  title: 'Works offline',
+                  desc: 'Scheduled reminders are stored locally and fire even without internet.',
+                },
+              ] as const
+            ).map((tip, i, arr) => (
               <React.Fragment key={tip.title}>
                 <View style={styles.tipRow}>
                   <View style={styles.tipIcon}>

@@ -68,8 +68,8 @@ export type ScheduleDraft = {
   smsAlerts: boolean;
   snoozeDuration: string;
   instructions: string;
-  startDate: string;        // ISO date string (YYYY-MM-DD)
-  endDate: string | null;   // null = continue forever
+  startDate: string; // ISO date string (YYYY-MM-DD)
+  endDate: string | null; // null = continue forever
   intervalDays: number | null; // only used when frequency = 'Interval'
 };
 
@@ -100,8 +100,8 @@ export type ScheduleRow = {
   sms_alerts: boolean;
   snooze_duration: string;
   instructions: string;
-  start_date: string;       // ISO date (YYYY-MM-DD)
-  end_date: string | null;  // null = forever
+  start_date: string; // ISO date (YYYY-MM-DD)
+  end_date: string | null; // null = forever
   interval_days: number | null;
   is_active: boolean;
   created_at: string;

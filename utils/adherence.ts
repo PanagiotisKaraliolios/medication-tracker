@@ -1,7 +1,7 @@
 import { DAY_LABELS } from '../constants/days';
+import type { DoseLogRow, MedicationRow, ScheduleRow } from '../types/database';
 import { toISO } from './date';
-import { resolveTimeSlot, isIntervalDayMatch } from './dose';
-import type { MedicationRow, ScheduleRow, DoseLogRow } from '../types/database';
+import { isIntervalDayMatch, resolveTimeSlot } from './dose';
 
 /**
  * Compute overall adherence percentage for the given date range.
@@ -28,8 +28,8 @@ export function computeAdherence(
   let total = 0;
   let taken = 0;
 
-  const current = new Date(startISO + 'T00:00:00');
-  const end = new Date(endISO + 'T00:00:00');
+  const current = new Date(`${startISO}T00:00:00`);
+  const end = new Date(`${endISO}T00:00:00`);
 
   while (current <= end) {
     const iso = toISO(current);
@@ -84,7 +84,7 @@ export function computeStreak(
   const medIds = new Set(scheduledMeds.map((m) => m.id));
 
   let streak = 0;
-  const d = new Date(todayISO + 'T00:00:00');
+  const d = new Date(`${todayISO}T00:00:00`);
   d.setDate(d.getDate() - 1);
 
   for (let i = 0; i < 365; i++) {

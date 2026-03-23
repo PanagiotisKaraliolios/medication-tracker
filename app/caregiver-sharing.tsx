@@ -1,25 +1,30 @@
-import React, { useMemo, useState, useCallback } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Share,
-  ActivityIndicator,
-} from 'react-native';
-import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
+import React, { useCallback, useMemo, useState } from 'react';
+import {
+  ActivityIndicator,
+  ScrollView,
+  Share,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import Toast from 'react-native-toast-message';
+import { borderRadius, type ColorScheme, gradients, shadows } from '../components/ui/theme';
 import { useAuth } from '../contexts/AuthContext';
-import { useMedications, useSchedules, useDoseLogsByRange, useSymptomsByRange } from '../hooks/useQueryHooks';
+import {
+  useDoseLogsByRange,
+  useMedications,
+  useSchedules,
+  useSymptomsByRange,
+} from '../hooks/useQueryHooks';
+import { useThemeColors } from '../hooks/useThemeColors';
+import type { DoseLogRow, MedicationRow, ScheduleRow, SymptomRow } from '../types/database';
 import { computeAdherence, computeStreak } from '../utils/adherence';
 import { toISO } from '../utils/date';
 import { capitalize } from '../utils/string';
-import { type ColorScheme, gradients, borderRadius, shadows } from '../components/ui/theme';
-import { useThemeColors } from '../hooks/useThemeColors';
-import Toast from 'react-native-toast-message';
-import type { MedicationRow, ScheduleRow, DoseLogRow, SymptomRow } from '../types/database';
 
 const PERIOD_OPTIONS = [
   { label: 'Last 7 days', days: 7 },
@@ -48,7 +53,9 @@ function buildSummaryText(
 
   lines.push('📋 MediTrack — Caregiver Summary');
   lines.push(`Shared by: ${name}`);
-  lines.push(`Period: Last ${periodDays} days (${formatSimpleDate(startISO)} – ${formatSimpleDate(endISO)})`);
+  lines.push(
+    `Period: Last ${periodDays} days (${formatSimpleDate(startISO)} – ${formatSimpleDate(endISO)})`,
+  );
   lines.push(`Generated: ${formatSimpleDate(endISO)}`);
   lines.push('');
 
@@ -62,8 +69,7 @@ function buildSummaryText(
   lines.push(`── Medications (${medications.length}) ──`);
   for (const med of medications) {
     const medSchedules = schedules.filter((s) => s.medication_id === med.id);
-    const supplyInfo =
-      med.current_supply > 0 ? ` | Supply: ${med.current_supply} remaining` : '';
+    const supplyInfo = med.current_supply > 0 ? ` | Supply: ${med.current_supply} remaining` : '';
     lines.push(`• ${med.name} — ${med.dosage} (${capitalize(med.form)})${supplyInfo}`);
 
     for (const sched of medSchedules) {
@@ -181,7 +187,7 @@ export default function CaregiverSharingScreen() {
     } finally {
       setSharing(false);
     }
-  }, [profileName, medications, schedules, logs, periodDays, startISO, todayISO]);
+  }, [profileName, medications, schedules, logs, periodDays, startISO, todayISO, symptoms]);
 
   return (
     <View style={styles.container}>
@@ -230,12 +236,7 @@ export default function CaregiverSharingScreen() {
                   onPress={() => setSelectedPeriod(i)}
                   activeOpacity={0.7}
                 >
-                  <Text
-                    style={[
-                      styles.periodChipText,
-                      isActive && styles.periodChipTextActive,
-                    ]}
-                  >
+                  <Text style={[styles.periodChipText, isActive && styles.periodChipTextActive]}>
                     {opt.label}
                   </Text>
                 </TouchableOpacity>
@@ -275,9 +276,7 @@ export default function CaregiverSharingScreen() {
             {/* Medication list */}
             {medications.length > 0 ? (
               medications.map((med, i) => {
-                const medSchedules = schedules.filter(
-                  (s) => s.medication_id === med.id,
-                );
+                const medSchedules = schedules.filter((s) => s.medication_id === med.id);
                 return (
                   <React.Fragment key={med.id}>
                     {i > 0 && <View style={styles.divider} />}
@@ -289,9 +288,7 @@ export default function CaregiverSharingScreen() {
                         <Text style={styles.medName}>{med.name}</Text>
                         <Text style={styles.medDetail}>
                           {med.dosage} — {capitalize(med.form)}
-                          {med.current_supply > 0
-                            ? ` — ${med.current_supply} left`
-                            : ''}
+                          {med.current_supply > 0 ? ` — ${med.current_supply} left` : ''}
                         </Text>
                         {medSchedules.map((sched) => {
                           const freq =
@@ -367,8 +364,8 @@ export default function CaregiverSharingScreen() {
         </TouchableOpacity>
 
         <Text style={styles.disclaimer}>
-          Only the summary above is shared — no login credentials or personal
-          health identifiers are included.
+          Only the summary above is shared — no login credentials or personal health identifiers are
+          included.
         </Text>
 
         <View style={{ height: 40 }} />

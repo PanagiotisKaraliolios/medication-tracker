@@ -1,8 +1,8 @@
-import React, { useMemo } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import Svg, { Circle, Defs, LinearGradient as SvgLinearGradient, Stop } from 'react-native-svg';
-import { type ColorScheme } from './theme';
+import { useMemo } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
+import Svg, { Circle, Defs, Stop, LinearGradient as SvgLinearGradient } from 'react-native-svg';
 import { useThemeColors } from '../../hooks/useThemeColors';
+import type { ColorScheme } from './theme';
 
 interface ProgressRingProps {
   percentage: number;
@@ -10,11 +10,7 @@ interface ProgressRingProps {
   strokeWidth?: number;
 }
 
-export function ProgressRing({
-  percentage,
-  size = 120,
-  strokeWidth = 12,
-}: ProgressRingProps) {
+export function ProgressRing({ percentage, size = 120, strokeWidth = 12 }: ProgressRingProps) {
   const radius = (size - strokeWidth) / 2;
   const circumference = radius * 2 * Math.PI;
   const offset = circumference - (percentage / 100) * circumference;
@@ -22,7 +18,12 @@ export function ProgressRing({
   const styles = useMemo(() => makeStyles(c), [c]);
 
   return (
-    <View style={[styles.container, { width: size, height: size }]}>
+    <View
+      style={[styles.container, { width: size, height: size }]}
+      accessibilityRole="progressbar"
+      accessibilityLabel={`${percentage}% progress`}
+      accessibilityValue={{ min: 0, max: 100, now: percentage }}
+    >
       <Svg width={size} height={size} style={{ transform: [{ rotate: '-90deg' }] }}>
         <Defs>
           <SvgLinearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="100%">

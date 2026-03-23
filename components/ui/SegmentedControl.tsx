@@ -1,7 +1,7 @@
-import React, { useMemo } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { type ColorScheme, borderRadius } from './theme';
+import { useMemo } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useThemeColors } from '../../hooks/useThemeColors';
+import { borderRadius, type ColorScheme } from './theme';
 
 interface SegmentedControlProps {
   options: string[];
@@ -14,26 +14,20 @@ export function SegmentedControl({ options, selected, onChange }: SegmentedContr
   const styles = useMemo(() => makeStyles(c), [c]);
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} accessibilityRole="tablist">
       {options.map((option) => (
-        <TouchableOpacity
+        <Pressable
           key={option}
           onPress={() => onChange(option)}
-          style={[
-            styles.option,
-            selected === option && styles.optionSelected,
-          ]}
-          activeOpacity={0.7}
+          style={[styles.option, selected === option && styles.optionSelected]}
+          accessibilityRole="tab"
+          accessibilityLabel={option}
+          accessibilityState={{ selected: selected === option }}
         >
-          <Text
-            style={[
-              styles.optionText,
-              selected === option && styles.optionTextSelected,
-            ]}
-          >
+          <Text style={[styles.optionText, selected === option && styles.optionTextSelected]}>
             {option}
           </Text>
-        </TouchableOpacity>
+        </Pressable>
       ))}
     </View>
   );
@@ -50,7 +44,7 @@ function makeStyles(c: ColorScheme) {
     },
     option: {
       flex: 1,
-      height: 40,
+      minHeight: 44,
       borderRadius: borderRadius.md,
       alignItems: 'center',
       justifyContent: 'center',

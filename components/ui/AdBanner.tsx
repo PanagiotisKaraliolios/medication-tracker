@@ -1,9 +1,9 @@
-import { useState, useEffect, useRef } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { StyleSheet, View } from 'react-native';
 import { BannerAd, BannerAdSize } from 'react-native-google-mobile-ads';
-import { AD_UNIT_IDS, canShowPersonalizedAds } from '../../lib/ads';
 import { useThemeColors } from '../../hooks/useThemeColors';
-import { useAdPreferences, type AdPreferences } from '../../stores/adPreferencesStore';
+import { AD_UNIT_IDS } from '../../lib/ads';
+import { type AdPreferences, useAdPreferences } from '../../stores/adPreferencesStore';
 
 const MAX_RETRIES = 3;
 const RETRY_DELAYS = [5_000, 15_000, 45_000]; // exponential backoff

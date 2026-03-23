@@ -1,15 +1,15 @@
-import React, { useMemo } from 'react';
-import {
-  TouchableOpacity,
-  Text,
-  StyleSheet,
-  ActivityIndicator,
-  ViewStyle,
-  TextStyle,
-} from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { type ColorScheme, borderRadius, gradients } from './theme';
+import { useMemo } from 'react';
+import {
+  ActivityIndicator,
+  Pressable,
+  StyleSheet,
+  Text,
+  type TextStyle,
+  type ViewStyle,
+} from 'react-native';
 import { useThemeColors } from '../../hooks/useThemeColors';
+import { borderRadius, type ColorScheme, gradients } from './theme';
 
 type ButtonVariant = 'primary' | 'secondary' | 'destructive' | 'ghost';
 
@@ -36,11 +36,13 @@ export function Button({
 
   if (variant === 'primary') {
     return (
-      <TouchableOpacity
-        activeOpacity={0.85}
+      <Pressable
         onPress={onPress}
         disabled={isDisabled}
         style={[{ opacity: isDisabled ? 0.6 : 1 }, style]}
+        accessibilityRole="button"
+        accessibilityLabel={children}
+        accessibilityState={{ disabled: isDisabled, busy: loading }}
       >
         <LinearGradient
           colors={[...gradients.primary]}
@@ -54,7 +56,7 @@ export function Button({
             <Text style={styles.primaryText}>{children}</Text>
           )}
         </LinearGradient>
-      </TouchableOpacity>
+      </Pressable>
     );
   }
 
@@ -80,23 +82,20 @@ export function Button({
   const vs = variantStyles[variant] || variantStyles.secondary;
 
   return (
-    <TouchableOpacity
-      activeOpacity={0.85}
+    <Pressable
       onPress={onPress}
       disabled={isDisabled}
-      style={[
-        styles.base,
-        vs.container,
-        { opacity: isDisabled ? 0.6 : 1 },
-        style,
-      ]}
+      style={[styles.base, vs.container, { opacity: isDisabled ? 0.6 : 1 }, style]}
+      accessibilityRole="button"
+      accessibilityLabel={children}
+      accessibilityState={{ disabled: isDisabled, busy: loading }}
     >
       {loading ? (
         <ActivityIndicator color={vs.text.color as string} />
       ) : (
         <Text style={[styles.text, vs.text]}>{children}</Text>
       )}
-    </TouchableOpacity>
+    </Pressable>
   );
 }
 

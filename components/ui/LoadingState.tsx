@@ -1,7 +1,7 @@
-import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
-import { type ColorScheme } from './theme';
+import { useMemo } from 'react';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { useThemeColors } from '../../hooks/useThemeColors';
+import type { ColorScheme } from './theme';
 
 interface LoadingStateProps {
   message?: string;

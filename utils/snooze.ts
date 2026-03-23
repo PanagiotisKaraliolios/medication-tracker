@@ -4,7 +4,7 @@
 export function parseSnoozeDuration(duration: string): number {
   if (duration.endsWith('s') && !duration.includes('min')) {
     const secs = parseInt(duration, 10);
-    return (isNaN(secs) ? 30 : secs) * 1000;
+    return (Number.isNaN(secs) ? 30 : secs) * 1000;
   }
   const match = duration.match(/(\d+)/);
   const minutes = match ? parseInt(match[1], 10) : 5;

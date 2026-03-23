@@ -1,32 +1,35 @@
-import React, { useMemo, useState, useCallback } from 'react';
+import { Feather } from '@expo/vector-icons';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useCallback, useMemo, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
-import { Feather } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Toast from 'react-native-toast-message';
 import { Button } from '../components/ui/Button';
+import { DatePickerModal } from '../components/ui/DatePickerModal';
 import { Input } from '../components/ui/Input';
 import { SegmentedControl } from '../components/ui/SegmentedControl';
-import { DatePickerModal } from '../components/ui/DatePickerModal';
 import { TimePickerModal } from '../components/ui/TimePickerModal';
-import { type ColorScheme, borderRadius, shadows } from '../components/ui/theme';
+import { borderRadius, type ColorScheme } from '../components/ui/theme';
+import { SEVERITY_OPTIONS, SYMPTOM_PRESETS } from '../constants/symptoms';
+import { useLogSymptom, useMedications } from '../hooks/useQueryHooks';
 import { useThemeColors } from '../hooks/useThemeColors';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useMedications, useLogSymptom } from '../hooks/useQueryHooks';
-import { SYMPTOM_PRESETS, SEVERITY_OPTIONS } from '../constants/symptoms';
+import { formatDateLabel, toISO } from '../utils/date';
 import { capitalize } from '../utils/string';
-import { toISO, formatDateLabel } from '../utils/date';
-import Toast from 'react-native-toast-message';
 
 export default function LogSymptomScreen() {
   const router = useRouter();
-  const { medicationId: preselectedMedId, date: dateParam } = useLocalSearchParams<{ medicationId?: string; date?: string }>();
+  const { medicationId: preselectedMedId, date: dateParam } = useLocalSearchParams<{
+    medicationId?: string;
+    date?: string;
+  }>();
   const c = useThemeColors();
   const insets = useSafeAreaInsets();
   const styles = useMemo(() => makeStyles(c, insets.bottom), [c, insets.bottom]);
@@ -60,8 +63,12 @@ export default function LogSymptomScreen() {
       });
       Toast.show({ type: 'success', text1: 'Symptom logged' });
       router.back();
-    } catch (err: any) {
-      Toast.show({ type: 'error', text1: 'Failed to log symptom', text2: err.message });
+    } catch (err: unknown) {
+      Toast.show({
+        type: 'error',
+        text1: 'Failed to log symptom',
+        text2: err instanceof Error ? err.message : String(err),
+      });
     }
   }, [name, severity, selectedMedId, notes, selectedDate, selectedTime, logSymptomMut, router]);
 
@@ -148,7 +155,7 @@ export default function LogSymptomScreen() {
           <View style={{ marginTop: 12 }}>
             <Input
               placeholder="Or type a custom symptom…"
-              value={SYMPTOM_PRESETS.includes(name as any) ? '' : name}
+              value={(SYMPTOM_PRESETS as readonly string[]).includes(name) ? '' : name}
               onChangeText={setName}
             />
           </View>

@@ -1,11 +1,12 @@
-import React, { createContext, useState, useEffect, useContext, useRef } from 'react';
-import { Session, User } from '@supabase/supabase-js';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import type { Session, User } from '@supabase/supabase-js';
 import * as Notifications from 'expo-notifications';
-import { supabase } from '../lib/supabase';
-import { queryClient } from '../lib/queryClient';
-import { PROFILE_CACHE_KEY } from '../constants/storage';
+import type React from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { AlertDialog } from '../components/ui/AlertDialog';
+import { PROFILE_CACHE_KEY } from '../constants/storage';
+import { queryClient } from '../lib/queryClient';
+import { supabase } from '../lib/supabase';
 
 type AuthContextType = {
   session: Session | null;
@@ -39,51 +40,57 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const isUserSignOut = useRef(false);
   const [sessionExpired, setSessionExpired] = useState(false);
 
-  const checkProfile = async (userId?: string) => {
-    const uid = userId || user?.id;
-    if (!uid) {
-      setHasProfile(null);
-      setProfileName(null);
-      setProfileDateOfBirth(null);
-      return;
-    }
-    const { data, error } = await supabase.from('profiles').select('id, full_name, date_of_birth').eq('id', uid).single();
-    if (data) {
-      setHasProfile(true);
-      setProfileName(data.full_name ?? null);
-      setProfileDateOfBirth(data.date_of_birth ?? null);
-      // Cache profile for offline fallback
-      await AsyncStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify({
-        hasProfile: true,
-        fullName: data.full_name ?? null,
-        dateOfBirth: data.date_of_birth ?? null,
-      }));
-    } else if (error && error.code !== 'PGRST116') {
-      // Network/server error (not "row not found") — try cached profile
-      try {
-        const cached = await AsyncStorage.getItem(PROFILE_CACHE_KEY);
-        if (cached) {
-          const parsed = JSON.parse(cached);
-          setHasProfile(parsed.hasProfile);
-          setProfileName(parsed.fullName);
-          setProfileDateOfBirth(parsed.dateOfBirth ?? null);
-          return;
-        }
-      } catch {}
-      // No cache available — keep hasProfile as null (loading state) rather than false
-      setHasProfile(null);
-    } else {
-      // PGRST116 (row not found) or no data — user genuinely has no profile
-      setHasProfile(false);
-      setProfileName(null);
-      setProfileDateOfBirth(null);
-    }
-  };
+  const checkProfile = useCallback(
+    async (userId?: string) => {
+      const uid = userId || user?.id;
+      if (!uid) {
+        setHasProfile(null);
+        setProfileName(null);
+        setProfileDateOfBirth(null);
+        return;
+      }
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, full_name, date_of_birth')
+        .eq('id', uid)
+        .single();
+      if (data) {
+        setHasProfile(true);
+        setProfileName(data.full_name ?? null);
+        setProfileDateOfBirth(data.date_of_birth ?? null);
+        await AsyncStorage.setItem(
+          PROFILE_CACHE_KEY,
+          JSON.stringify({
+            hasProfile: true,
+            fullName: data.full_name ?? null,
+            dateOfBirth: data.date_of_birth ?? null,
+          }),
+        );
+      } else if (error && error.code !== 'PGRST116') {
+        try {
+          const cached = await AsyncStorage.getItem(PROFILE_CACHE_KEY);
+          if (cached) {
+            const parsed = JSON.parse(cached);
+            setHasProfile(parsed.hasProfile);
+            setProfileName(parsed.fullName);
+            setProfileDateOfBirth(parsed.dateOfBirth ?? null);
+            return;
+          }
+        } catch {}
+        setHasProfile(null);
+      } else {
+        setHasProfile(false);
+        setProfileName(null);
+        setProfileDateOfBirth(null);
+      }
+    },
+    [user?.id],
+  );
 
   useEffect(() => {
     // Get initial session
     supabase.auth.getSession().then(({ data: { session }, error }) => {
-      if (error && error.message?.includes('Refresh Token')) {
+      if (error?.message?.includes('Refresh Token')) {
         setSessionExpired(true);
         supabase.auth.signOut();
         setLoading(false);
@@ -99,7 +106,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     });
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_OUT' && !isUserSignOut.current) {
         setSessionExpired(true);
       }
@@ -120,7 +129,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
+  }, [checkProfile]);
 
   const signOut = async () => {
     setLoading(true);
@@ -132,7 +141,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ session, user, loading, hasProfile, profileName, profileDateOfBirth, checkProfile, signOut }}>
+    <AuthContext.Provider
+      value={{
+        session,
+        user,
+        loading,
+        hasProfile,
+        profileName,
+        profileDateOfBirth,
+        checkProfile,
+        signOut,
+      }}
+    >
       {children}
       <AlertDialog
         visible={sessionExpired}

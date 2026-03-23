@@ -1,24 +1,30 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Toast from 'react-native-toast-message';
-import {
-  scheduleSnoozeNotification,
-  cancelSnoozeNotification,
-  addNotificationResponseListener,
-  requestNotificationPermissions,
-  SNOOZE_ACTION_TAKE,
-  SNOOZE_ACTION_SNOOZE_AGAIN,
-  type SnoozeNotificationData,
-} from '../lib/notifications';
 import { SNOOZE_STORAGE_KEY } from '../constants/storage';
-import { parseSnoozeDuration, formatTimeLeft } from '../utils/snooze';
+import {
+  addNotificationResponseListener,
+  cancelSnoozeNotification,
+  requestNotificationPermissions,
+  SNOOZE_ACTION_SNOOZE_AGAIN,
+  SNOOZE_ACTION_TAKE,
+  type SnoozeNotificationData,
+  scheduleSnoozeNotification,
+} from '../lib/notifications';
 import type { TodayDose } from '../utils/dose';
+import { formatTimeLeft, parseSnoozeDuration } from '../utils/snooze';
 
 interface UseSnoozeParams {
   selectedISO: string;
   loadDoses: () => void;
-  logDose: (scheduleId: string | null, medicationId: string, date: string, timeLabel: string, status: 'taken' | 'skipped') => Promise<{ data: any; error: string | null }>;
+  logDose: (
+    scheduleId: string | null,
+    medicationId: string,
+    date: string,
+    timeLabel: string,
+    status: 'taken' | 'skipped',
+  ) => Promise<{ data: unknown; error: string | null }>;
   adjustSupply: (medicationId: string, delta: number) => void;
   handleStatusChange: (dose: TodayDose, status: 'taken' | 'skipped') => Promise<void>;
 }
@@ -45,7 +51,9 @@ export function useSnooze({
   useEffect(() => {
     const subscription = addNotificationResponseListener(async (response) => {
       const actionId = response.actionIdentifier;
-      const data = response.notification.request.content.data as unknown as SnoozeNotificationData | undefined;
+      const data = response.notification.request.content.data as unknown as
+        | SnoozeNotificationData
+        | undefined;
 
       if (!data?.doseKey) return;
 
@@ -180,7 +188,11 @@ export function useSnooze({
     setSnoozeDialogDose(null);
 
     if (snoozedUntil[dose.key] && snoozedUntil[dose.key] > Date.now()) {
-      Toast.show({ type: 'info', text1: 'Already snoozed', text2: `${dose.name} is already snoozed` });
+      Toast.show({
+        type: 'info',
+        text1: 'Already snoozed',
+        text2: `${dose.name} is already snoozed`,
+      });
       return;
     }
 

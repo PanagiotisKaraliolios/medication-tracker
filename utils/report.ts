@@ -1,7 +1,7 @@
 import { DAY_LABELS } from '../constants/days';
+import type { DoseLogRow, MedicationRow, ScheduleRow } from '../types/database';
 import { toISO } from './date';
-import { resolveTimeSlot, isIntervalDayMatch } from './dose';
-import type { MedicationRow, ScheduleRow, DoseLogRow } from '../types/database';
+import { isIntervalDayMatch, resolveTimeSlot } from './dose';
 
 export type DayBar = { label: string; taken: number; total: number };
 
@@ -41,8 +41,8 @@ export function buildReport(
 
   const dayBuckets = new Map<string, { taken: number; total: number }>();
 
-  const current = new Date(startISO + 'T00:00:00');
-  const end = new Date(endISO + 'T00:00:00');
+  const current = new Date(`${startISO}T00:00:00`);
+  const end = new Date(`${endISO}T00:00:00`);
 
   while (current <= end) {
     const iso = toISO(current);
@@ -82,7 +82,11 @@ export function buildReport(
           if (iso < todayISO || iso === todayISO) {
             missed.push({
               medName: med ? `${med.name} ${med.dosage}` : 'Unknown',
-              dateLabel: new Date(iso + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
+              dateLabel: new Date(`${iso}T00:00:00`).toLocaleDateString('en-US', {
+                weekday: 'short',
+                month: 'short',
+                day: 'numeric',
+              }),
               timeLabel: label,
             });
           }
@@ -103,7 +107,7 @@ export function buildReport(
 
   if (periodDays <= 7) {
     for (const [iso, bucket] of allDays) {
-      const d = new Date(iso + 'T00:00:00');
+      const d = new Date(`${iso}T00:00:00`);
       chartBars.push({
         label: DAY_LABELS[d.getDay()],
         taken: bucket.taken,
@@ -122,7 +126,7 @@ export function buildReport(
         taken += b.taken;
         total += b.total;
       }
-      const firstDate = new Date(slice[0][0] + 'T00:00:00');
+      const firstDate = new Date(`${slice[0][0]}T00:00:00`);
       chartBars.push({
         label: `${firstDate.getDate()}/${firstDate.getMonth() + 1}`,
         taken,
@@ -137,10 +141,21 @@ export function buildReport(
   // PRN usage stats
   const prnMeds = medications.filter((m) => m.is_prn);
   const prnLogs = doseLogs.filter((l) => !l.schedule_id);
-  const prnUsage = prnMeds.map((m) => {
-    const logs = prnLogs.filter((l) => l.medication_id === m.id && l.status === 'taken');
-    return { name: `${m.name} ${m.dosage}`, count: logs.length };
-  }).filter((p) => p.count > 0);
+  const prnUsage = prnMeds
+    .map((m) => {
+      const logs = prnLogs.filter((l) => l.medication_id === m.id && l.status === 'taken');
+      return { name: `${m.name} ${m.dosage}`, count: logs.length };
+    })
+    .filter((p) => p.count > 0);
 
-  return { adherence, totalDoses, takenDoses, missedDoses: Math.max(0, missedDoses), skippedDoses, chartBars, recentMissed, prnUsage };
+  return {
+    adherence,
+    totalDoses,
+    takenDoses,
+    missedDoses: Math.max(0, missedDoses),
+    skippedDoses,
+    chartBars,
+    recentMissed,
+    prnUsage,
+  };
 }

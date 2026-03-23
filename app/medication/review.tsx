@@ -1,16 +1,18 @@
-import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
-import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
-import { Button } from '../../components/ui/Button';
-import { type ColorScheme, borderRadius, shadows } from '../../components/ui/theme';
-import { useThemeColors } from '../../hooks/useThemeColors';
+import { useRouter } from 'expo-router';
+import { useMemo, useState } from 'react';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useScheduleDraft } from '../../stores/draftStores';
-import { useCreateSchedule, useUpdateSchedule } from '../../hooks/useQueryHooks';
-import { useAuth } from '../../contexts/AuthContext';
-import { supabase } from '../../lib/supabase';
 import Toast from 'react-native-toast-message';
+import { Button } from '../../components/ui/Button';
+import { borderRadius, type ColorScheme, shadows } from '../../components/ui/theme';
+import {
+  useCreateSchedule,
+  useSchedulesByMedication,
+  useUpdateSchedule,
+} from '../../hooks/useQueryHooks';
+import { useThemeColors } from '../../hooks/useThemeColors';
+import { useScheduleDraft } from '../../stores/draftStores';
 import { formatDateLabel } from '../../utils/date';
 
 export default function ReviewScreen() {
@@ -21,79 +23,72 @@ export default function ReviewScreen() {
   const { scheduleDraft, schedulingMedId } = useScheduleDraft();
   const createScheduleMut = useCreateSchedule();
   const updateScheduleMut = useUpdateSchedule();
-  const { user } = useAuth();
+  const { data: existingSchedules = [] } = useSchedulesByMedication(schedulingMedId ?? undefined);
   const [saving, setSaving] = useState(false);
 
   const reviewSections = useMemo(() => {
     return [
-    {
-      icon: 'clock' as const,
-      iconBg: c.blueLight,
-      iconColor: c.blue,
-      title: 'Schedule',
-      items: [
-        scheduleDraft.frequency === 'Interval' && scheduleDraft.intervalDays
-          ? `Every ${scheduleDraft.intervalDays} days`
-          : scheduleDraft.frequency === 'Weekly'
-            ? `${scheduleDraft.frequency} — ${scheduleDraft.selectedDays.join(', ')}`
-            : scheduleDraft.frequency,
-        scheduleDraft.timesOfDay.join(', '),
-        `${scheduleDraft.dosagePerDose} ${scheduleDraft.dosagePerDose === 1 ? 'pill' : 'pills'} per dose`,
-      ],
-    },
-    {
-      icon: 'calendar' as const,
-      iconBg: c.tealLight,
-      iconColor: c.teal,
-      title: 'Duration',
-      items: [
-        `Starts: ${formatDateLabel(scheduleDraft.startDate)}`,
-        scheduleDraft.endDate ? `Ends: ${formatDateLabel(scheduleDraft.endDate)}` : 'Continues forever',
-      ],
-    },
-    {
-      icon: 'bell' as const,
-      iconBg: c.warningLight,
-      iconColor: c.warning,
-      title: 'Reminders',
-      items: [
-        `Push Notifications: ${scheduleDraft.pushNotifications ? 'On' : 'Off'}`,
-        `SMS Alerts: ${scheduleDraft.smsAlerts ? 'On' : 'Off'}`,
-        `Snooze: ${scheduleDraft.snoozeDuration}`,
-      ],
-    },
-    ...(scheduleDraft.instructions
-      ? [
-          {
-            icon: 'file-text' as const,
-            iconBg: c.successLight,
-            iconColor: c.success,
-            title: 'Instructions',
-            items: [scheduleDraft.instructions],
-          },
-        ]
-      : []),
-  ];
+      {
+        icon: 'clock' as const,
+        iconBg: c.blueLight,
+        iconColor: c.blue,
+        title: 'Schedule',
+        items: [
+          scheduleDraft.frequency === 'Interval' && scheduleDraft.intervalDays
+            ? `Every ${scheduleDraft.intervalDays} days`
+            : scheduleDraft.frequency === 'Weekly'
+              ? `${scheduleDraft.frequency} — ${scheduleDraft.selectedDays.join(', ')}`
+              : scheduleDraft.frequency,
+          scheduleDraft.timesOfDay.join(', '),
+          `${scheduleDraft.dosagePerDose} ${scheduleDraft.dosagePerDose === 1 ? 'pill' : 'pills'} per dose`,
+        ],
+      },
+      {
+        icon: 'calendar' as const,
+        iconBg: c.tealLight,
+        iconColor: c.teal,
+        title: 'Duration',
+        items: [
+          `Starts: ${formatDateLabel(scheduleDraft.startDate)}`,
+          scheduleDraft.endDate
+            ? `Ends: ${formatDateLabel(scheduleDraft.endDate)}`
+            : 'Continues forever',
+        ],
+      },
+      {
+        icon: 'bell' as const,
+        iconBg: c.warningLight,
+        iconColor: c.warning,
+        title: 'Reminders',
+        items: [
+          `Push Notifications: ${scheduleDraft.pushNotifications ? 'On' : 'Off'}`,
+          `SMS Alerts: ${scheduleDraft.smsAlerts ? 'On' : 'Off'}`,
+          `Snooze: ${scheduleDraft.snoozeDuration}`,
+        ],
+      },
+      ...(scheduleDraft.instructions
+        ? [
+            {
+              icon: 'file-text' as const,
+              iconBg: c.successLight,
+              iconColor: c.success,
+              title: 'Instructions',
+              items: [scheduleDraft.instructions],
+            },
+          ]
+        : []),
+    ];
   }, [scheduleDraft, c]);
 
   const handleSave = async () => {
-    if (!schedulingMedId || !user?.id) return;
+    if (!schedulingMedId) return;
     setSaving(true);
 
     try {
-      // Check if there's an existing schedule to update
-      const { data: existing } = await supabase
-        .from('schedules')
-        .select('*')
-        .eq('medication_id', schedulingMedId)
-        .eq('user_id', user.id)
-        .eq('is_active', true)
-        .order('created_at', { ascending: false });
-
-      if (existing && existing.length > 0) {
+      if (existingSchedules.length > 0) {
         // Update existing schedule
         await updateScheduleMut.mutateAsync({
-          id: existing[0].id,
+          id: existingSchedules[0].id,
           updates: {
             frequency: scheduleDraft.frequency.toLowerCase(),
             selected_days: scheduleDraft.selectedDays,
@@ -105,7 +100,8 @@ export default function ReviewScreen() {
             instructions: scheduleDraft.instructions,
             start_date: scheduleDraft.startDate,
             end_date: scheduleDraft.endDate,
-            interval_days: scheduleDraft.frequency === 'Interval' ? (scheduleDraft.intervalDays ?? 2) : null,
+            interval_days:
+              scheduleDraft.frequency === 'Interval' ? (scheduleDraft.intervalDays ?? 2) : null,
           },
         });
       } else {
@@ -117,8 +113,12 @@ export default function ReviewScreen() {
       }
 
       router.replace('/medication/success');
-    } catch (err: any) {
-      Toast.show({ type: 'error', text1: 'Save failed', text2: err.message });
+    } catch (err: unknown) {
+      Toast.show({
+        type: 'error',
+        text1: 'Save failed',
+        text2: err instanceof Error ? err.message : String(err),
+      });
     } finally {
       setSaving(false);
     }
@@ -126,13 +126,8 @@ export default function ReviewScreen() {
 
   return (
     <View style={styles.container}>
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        <Text style={styles.subtitle}>
-          Review the schedule details before saving.
-        </Text>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <Text style={styles.subtitle}>Review the schedule details before saving.</Text>
 
         {reviewSections.map((section) => (
           <View key={section.title} style={styles.card}>
@@ -143,8 +138,8 @@ export default function ReviewScreen() {
               <Text style={styles.cardTitle}>{section.title}</Text>
             </View>
             <View style={styles.cardBody}>
-              {section.items.map((item, index) => (
-                <View key={index} style={styles.cardRow}>
+              {section.items.map((item) => (
+                <View key={item} style={styles.cardRow}>
                   <View style={styles.dot} />
                   <Text style={styles.cardValue}>{item}</Text>
                 </View>

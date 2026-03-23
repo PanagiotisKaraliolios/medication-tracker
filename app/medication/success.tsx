@@ -1,14 +1,14 @@
-import React, { useMemo, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, BackHandler } from 'react-native';
-import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Button } from '../../components/ui/Button';
-import { type ColorScheme, gradients, borderRadius } from '../../components/ui/theme';
-import { useThemeColors } from '../../hooks/useThemeColors';
+import { useRouter } from 'expo-router';
+import { useCallback, useEffect, useMemo } from 'react';
+import { BackHandler, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useMedicationDraft, useScheduleDraft } from '../../stores/draftStores';
+import { Button } from '../../components/ui/Button';
+import { type ColorScheme, gradients } from '../../components/ui/theme';
+import { useThemeColors } from '../../hooks/useThemeColors';
 import { showInterstitial } from '../../lib/interstitialManager';
+import { useMedicationDraft, useScheduleDraft } from '../../stores/draftStores';
 
 export default function SuccessScreen() {
   const router = useRouter();
@@ -52,8 +52,8 @@ export default function SuccessScreen() {
         <Text style={styles.title}>{isScheduling ? 'Schedule Updated!' : 'Medication Added!'}</Text>
         <Text style={styles.message}>
           {isScheduling
-            ? 'Your medication schedule has been updated. You\'ll receive reminders at your set times.'
-            : 'Your medication has been saved. You can set up a schedule from the Today tab whenever you\'re ready.'}
+            ? "Your medication schedule has been updated. You'll receive reminders at your set times."
+            : "Your medication has been saved. You can set up a schedule from the Today tab whenever you're ready."}
         </Text>
       </View>
 

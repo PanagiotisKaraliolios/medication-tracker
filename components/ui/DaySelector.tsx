@@ -1,8 +1,8 @@
-import React, { useMemo } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { type ColorScheme, borderRadius, gradients } from './theme';
+import { useMemo } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useThemeColors } from '../../hooks/useThemeColors';
+import { borderRadius, type ColorScheme, gradients } from './theme';
 
 interface DaySelectorProps {
   days: string[];
@@ -27,11 +27,13 @@ export function DaySelector({ days, selected, onChange }: DaySelectorProps) {
       {days.map((day) => {
         const isSelected = selected.includes(day);
         return (
-          <TouchableOpacity
+          <Pressable
             key={day}
             onPress={() => toggleDay(day)}
             style={styles.dayWrapper}
-            activeOpacity={0.7}
+            accessibilityRole="checkbox"
+            accessibilityLabel={day}
+            accessibilityState={{ checked: isSelected }}
           >
             {isSelected ? (
               <LinearGradient
@@ -47,7 +49,7 @@ export function DaySelector({ days, selected, onChange }: DaySelectorProps) {
                 <Text style={styles.dayText}>{day}</Text>
               </View>
             )}
-          </TouchableOpacity>
+          </Pressable>
         );
       })}
     </View>

@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useRef } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { Animated as RNAnimated } from 'react-native';
 import { DAY_LABELS } from '../constants/days';
 import { toISO } from '../utils/date';
@@ -62,7 +62,7 @@ export function useCalendar() {
       });
     }
     return days;
-  }, [todayISO]);
+  }, [today]);
 
   // ── Month calendar grid ──
 

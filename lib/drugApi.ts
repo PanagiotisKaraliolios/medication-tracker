@@ -1,4 +1,4 @@
-import type { DrugSearchResult, DrugProperties, InteractionResult } from '../types/drug';
+import type { DrugProperties, DrugSearchResult, InteractionResult } from '../types/drug';
 
 const RXNORM_BASE = 'https://rxnav.nlm.nih.gov/REST';
 const OPENFDA_BASE = 'https://api.fda.gov/drug/label.json';
@@ -7,10 +7,7 @@ const OPENFDA_BASE = 'https://api.fda.gov/drug/label.json';
  * Search for drugs by name using RxNorm approximate term endpoint.
  * Returns up to `maxResults` matches.
  */
-export async function searchDrugs(
-  query: string,
-  maxResults = 10,
-): Promise<DrugSearchResult[]> {
+export async function searchDrugs(query: string, maxResults = 10): Promise<DrugSearchResult[]> {
   if (!query || query.trim().length < 2) return [];
 
   const url = `${RXNORM_BASE}/approximateTerm.json?term=${encodeURIComponent(query.trim())}&maxEntries=${maxResults}`;
@@ -99,9 +96,7 @@ export async function getDrugProperties(rxcui: string): Promise<DrugProperties |
  * Check drug interactions using OpenFDA drug labeling data.
  * Searches the drug_interactions field for mentions of all other drug names.
  */
-export async function checkInteractions(
-  drugNames: string[],
-): Promise<InteractionResult[]> {
+export async function checkInteractions(drugNames: string[]): Promise<InteractionResult[]> {
   if (drugNames.length < 2) return [];
 
   const results: InteractionResult[] = [];
@@ -139,7 +134,7 @@ export async function checkInteractions(
 
             // Avoid duplicate pairs
             const pairKey = [drug1, drug2].sort().join('|');
-            if (!results.some(r => [r.drug1, r.drug2].sort().join('|') === pairKey)) {
+            if (!results.some((r) => [r.drug1, r.drug2].sort().join('|') === pairKey)) {
               results.push({
                 drug1,
                 drug2,
@@ -162,12 +157,24 @@ export async function checkInteractions(
 function inferSeverity(text: string, drugName: string): 'high' | 'moderate' | 'low' {
   // Look for severity indicators near the drug mention
   const highIndicators = [
-    'contraindicated', 'do not use', 'avoid', 'serious', 'fatal',
-    'life-threatening', 'prohibited', 'never',
+    'contraindicated',
+    'do not use',
+    'avoid',
+    'serious',
+    'fatal',
+    'life-threatening',
+    'prohibited',
+    'never',
   ];
   const moderateIndicators = [
-    'caution', 'monitor', 'adjust dose', 'reduce', 'may increase',
-    'may decrease', 'potential', 'risk',
+    'caution',
+    'monitor',
+    'adjust dose',
+    'reduce',
+    'may increase',
+    'may decrease',
+    'potential',
+    'risk',
   ];
 
   const drugIdx = text.indexOf(drugName);
@@ -176,8 +183,8 @@ function inferSeverity(text: string, drugName: string): 'high' | 'moderate' | 'l
   const end = Math.min(text.length, drugIdx + drugName.length + 100);
   const context = text.substring(start, end).toLowerCase();
 
-  if (highIndicators.some(ind => context.includes(ind))) return 'high';
-  if (moderateIndicators.some(ind => context.includes(ind))) return 'moderate';
+  if (highIndicators.some((ind) => context.includes(ind))) return 'high';
+  if (moderateIndicators.some((ind) => context.includes(ind))) return 'moderate';
   return 'low';
 }
 
@@ -194,5 +201,5 @@ function extractRelevantSentence(text: string, drugName: string): string {
   else sentenceEnd += 1;
 
   const sentence = text.substring(sentenceStart, sentenceEnd).trim();
-  return sentence.length > 300 ? sentence.substring(0, 300) + '…' : sentence;
+  return sentence.length > 300 ? `${sentence.substring(0, 300)}…` : sentence;
 }

@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
 import { useRouter } from 'expo-router';
+import { useEffect } from 'react';
 
 /**
  * This screen exists only to catch the deep-link redirect from Supabase OAuth

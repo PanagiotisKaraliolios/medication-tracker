@@ -1,36 +1,36 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { Feather } from '@expo/vector-icons';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect, useMemo, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
+  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
-  ActivityIndicator,
+  ScrollView,
+  StyleSheet,
+  Text,
   TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
-import { Feather } from '@expo/vector-icons';
-import { TimePickerModal } from '../../components/ui/TimePickerModal';
-import { Button } from '../../components/ui/Button';
-import { SegmentedControl } from '../../components/ui/SegmentedControl';
-import { DaySelector } from '../../components/ui/DaySelector';
-import { TimeSlotGrid } from '../../components/ui/TimeSlotGrid';
-import { CustomTimeChips } from '../../components/ui/CustomTimeChips';
-import { Stepper } from '../../components/ui/Stepper';
-import { DateRangeSection } from '../../components/ui/DateRangeSection';
-import { NotificationCard } from '../../components/ui/NotificationCard';
-import { type ColorScheme, borderRadius } from '../../components/ui/theme';
-import { useThemeColors } from '../../hooks/useThemeColors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { showInterstitial } from '../../lib/interstitialManager';
-import { useSchedule, useUpdateSchedule } from '../../hooks/useQueryHooks';
 import Toast from 'react-native-toast-message';
-import { PRESET_LABELS, FREQUENCY_OPTIONS, SNOOZE_OPTIONS } from '../../constants/schedule';
+import { Button } from '../../components/ui/Button';
+import { CustomTimeChips } from '../../components/ui/CustomTimeChips';
+import { DateRangeSection } from '../../components/ui/DateRangeSection';
+import { DaySelector } from '../../components/ui/DaySelector';
+import { NotificationCard } from '../../components/ui/NotificationCard';
+import { SegmentedControl } from '../../components/ui/SegmentedControl';
+import { Stepper } from '../../components/ui/Stepper';
+import { TimePickerModal } from '../../components/ui/TimePickerModal';
+import { TimeSlotGrid } from '../../components/ui/TimeSlotGrid';
+import { borderRadius, type ColorScheme } from '../../components/ui/theme';
 import { WEEKDAY_ORDER } from '../../constants/days';
-import { capitalize } from '../../utils/string';
+import { FREQUENCY_OPTIONS, PRESET_LABELS, SNOOZE_OPTIONS } from '../../constants/schedule';
+import { useSchedule, useUpdateSchedule } from '../../hooks/useQueryHooks';
+import { useThemeColors } from '../../hooks/useThemeColors';
+import { showInterstitial } from '../../lib/interstitialManager';
 import type { ScheduleUpdate } from '../../types/database';
+import { capitalize } from '../../utils/string';
 
 export default function EditScheduleScreen() {
   const router = useRouter();
@@ -38,12 +38,20 @@ export default function EditScheduleScreen() {
   const c = useThemeColors();
   const insets = useSafeAreaInsets();
   const styles = useMemo(() => makeStyles(c, insets.bottom), [c, insets.bottom]);
-  const { data: original, isLoading: loading, error: queryError } = useSchedule(id);
+  const { data: original, isLoading: loading } = useSchedule(id);
   const updateScheduleMut = useUpdateSchedule();
 
   const [saving, setSaving] = useState(false);
   const [frequency, setFrequency] = useState('Daily');
-  const [selectedDays, setSelectedDays] = useState<string[]>(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']);
+  const [selectedDays, setSelectedDays] = useState<string[]>([
+    'Mon',
+    'Tue',
+    'Wed',
+    'Thu',
+    'Fri',
+    'Sat',
+    'Sun',
+  ]);
   const [timesOfDay, setTimesOfDay] = useState<string[]>(['Morning']);
   const [dosagePerDose, setDosagePerDose] = useState(1);
   const [pushNotifications, setPushNotifications] = useState(true);
@@ -87,11 +95,9 @@ export default function EditScheduleScreen() {
     setShowTimePicker(false);
   };
 
-  const isFormValid = timesOfDay.length > 0 && (
-    frequency === 'Daily' ||
-    frequency === 'Interval' ||
-    selectedDays.length > 0
-  );
+  const isFormValid =
+    timesOfDay.length > 0 &&
+    (frequency === 'Daily' || frequency === 'Interval' || selectedDays.length > 0);
 
   const handleSave = async () => {
     if (!id || !original) return;
@@ -114,8 +120,12 @@ export default function EditScheduleScreen() {
       await updateScheduleMut.mutateAsync({ id, updates });
       Toast.show({ type: 'success', text1: 'Schedule updated' });
       showInterstitial(() => router.back());
-    } catch (err: any) {
-      Toast.show({ type: 'error', text1: 'Update failed', text2: err.message });
+    } catch (err: unknown) {
+      Toast.show({
+        type: 'error',
+        text1: 'Update failed',
+        text2: err instanceof Error ? err.message : String(err),
+      });
     } finally {
       setSaving(false);
     }
@@ -131,7 +141,9 @@ export default function EditScheduleScreen() {
 
   if (!original && !loading) {
     return (
-      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center', padding: 24 }]}>
+      <View
+        style={[styles.container, { justifyContent: 'center', alignItems: 'center', padding: 24 }]}
+      >
         <Feather name="alert-circle" size={48} color={c.error} />
         <Text style={{ color: c.gray600, fontSize: 16, marginTop: 12 }}>Schedule not found</Text>
       </View>

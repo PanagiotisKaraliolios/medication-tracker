@@ -1,21 +1,21 @@
-import React, { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
-import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
-import { TimePickerModal } from '../../components/ui/TimePickerModal';
-import { SegmentedControl } from '../../components/ui/SegmentedControl';
-import { DaySelector } from '../../components/ui/DaySelector';
-import { Button } from '../../components/ui/Button';
-import { TimeSlotGrid } from '../../components/ui/TimeSlotGrid';
-import { CustomTimeChips } from '../../components/ui/CustomTimeChips';
-import { Stepper } from '../../components/ui/Stepper';
-import { DateRangeSection } from '../../components/ui/DateRangeSection';
-import { type ColorScheme, borderRadius } from '../../components/ui/theme';
-import { useThemeColors } from '../../hooks/useThemeColors';
+import { useRouter } from 'expo-router';
+import { useMemo, useState } from 'react';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useScheduleDraft } from '../../stores/draftStores';
-import { PRESET_LABELS, FREQUENCY_OPTIONS } from '../../constants/schedule';
+import { Button } from '../../components/ui/Button';
+import { CustomTimeChips } from '../../components/ui/CustomTimeChips';
+import { DateRangeSection } from '../../components/ui/DateRangeSection';
+import { DaySelector } from '../../components/ui/DaySelector';
+import { SegmentedControl } from '../../components/ui/SegmentedControl';
+import { Stepper } from '../../components/ui/Stepper';
+import { TimePickerModal } from '../../components/ui/TimePickerModal';
+import { TimeSlotGrid } from '../../components/ui/TimeSlotGrid';
+import { borderRadius, type ColorScheme } from '../../components/ui/theme';
 import { WEEKDAY_ORDER } from '../../constants/days';
+import { FREQUENCY_OPTIONS, PRESET_LABELS } from '../../constants/schedule';
+import { useThemeColors } from '../../hooks/useThemeColors';
+import { useScheduleDraft } from '../../stores/draftStores';
 
 export default function ScheduleScreen() {
   const router = useRouter();
@@ -43,10 +43,7 @@ export default function ScheduleScreen() {
 
   return (
     <View style={styles.container}>
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Frequency */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Frequency</Text>
@@ -87,7 +84,9 @@ export default function ScheduleScreen() {
           <TimeSlotGrid selected={scheduleDraft.timesOfDay} onToggle={toggleTime} />
           <CustomTimeChips
             times={customTimes}
-            onRemove={(t) => updateScheduleDraft({ timesOfDay: scheduleDraft.timesOfDay.filter((x) => x !== t) })}
+            onRemove={(t) =>
+              updateScheduleDraft({ timesOfDay: scheduleDraft.timesOfDay.filter((x) => x !== t) })
+            }
           />
 
           <TouchableOpacity

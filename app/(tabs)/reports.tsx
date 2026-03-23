@@ -1,19 +1,37 @@
-import { View, Text, StyleSheet, ScrollView, RefreshControl } from 'react-native';
-import { useState, useMemo, useCallback } from 'react';
 import { Feather } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useQueryClient } from '@tanstack/react-query';
-import { EmptyState } from '../../components/ui/EmptyState';
-import { LoadingState } from '../../components/ui/LoadingState';
-import { ErrorState } from '../../components/ui/ErrorState';
-import { SegmentedControl } from '../../components/ui/SegmentedControl';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useCallback, useMemo, useState } from 'react';
+import {
+  type DimensionValue,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { AdBanner } from '../../components/ui/AdBanner';
-import { type ColorScheme, gradients, borderRadius, shadows, tablet as tabletLayout } from '../../components/ui/theme';
-import { useThemeColors } from '../../hooks/useThemeColors';
-import { useResponsive } from '../../hooks/useResponsive';
-import { useMedications, useSchedules, useDoseLogsByRange, useSymptomsByRange } from '../../hooks/useQueryHooks';
-import { queryKeys } from '../../lib/queryKeys';
+import { EmptyState } from '../../components/ui/EmptyState';
+import { ErrorState } from '../../components/ui/ErrorState';
+import { LoadingState } from '../../components/ui/LoadingState';
+import { SegmentedControl } from '../../components/ui/SegmentedControl';
+import {
+  borderRadius,
+  type ColorScheme,
+  gradients,
+  shadows,
+  tablet as tabletLayout,
+} from '../../components/ui/theme';
 import { PERIOD_DAYS, PERIOD_OPTIONS } from '../../constants/reports';
+import {
+  useDoseLogsByRange,
+  useMedications,
+  useSchedules,
+  useSymptomsByRange,
+} from '../../hooks/useQueryHooks';
+import { useResponsive } from '../../hooks/useResponsive';
+import { useThemeColors } from '../../hooks/useThemeColors';
+import { queryKeys } from '../../lib/queryKeys';
 import { toISO } from '../../utils/date';
 import { buildReport } from '../../utils/report';
 import { buildSymptomSummary } from '../../utils/symptom';
@@ -40,9 +58,24 @@ export default function ReportsScreen() {
 
   // ── Queries ──
 
-  const { data: medications = [], isLoading: medsLoading, error: medsError, refetch: refetchMeds } = useMedications();
-  const { data: schedules = [], isLoading: schLoading, error: schError, refetch: refetchSchedules } = useSchedules();
-  const { data: doseLogs = [], isLoading: logsLoading, error: logsError, refetch: refetchLogs } = useDoseLogsByRange(startISO, endISO);
+  const {
+    data: medications = [],
+    isLoading: medsLoading,
+    error: medsError,
+    refetch: refetchMeds,
+  } = useMedications();
+  const {
+    data: schedules = [],
+    isLoading: schLoading,
+    error: schError,
+    refetch: refetchSchedules,
+  } = useSchedules();
+  const {
+    data: doseLogs = [],
+    isLoading: logsLoading,
+    error: logsError,
+    refetch: refetchLogs,
+  } = useDoseLogsByRange(startISO, endISO);
   const { data: symptoms = [] } = useSymptomsByRange(startISO, endISO);
 
   const loading = medsLoading || schLoading || logsLoading;
@@ -57,15 +90,13 @@ export default function ReportsScreen() {
 
   // ── Computed report data ──
 
-  const { adherence, totalDoses, takenDoses, missedDoses, skippedDoses, chartBars, recentMissed } = useMemo(
-    () => buildReport(startISO, endISO, medications, schedules, doseLogs, days),
-    [startISO, endISO, medications, schedules, doseLogs, days],
-  );
+  const { adherence, totalDoses, takenDoses, missedDoses, skippedDoses, chartBars, recentMissed } =
+    useMemo(
+      () => buildReport(startISO, endISO, medications, schedules, doseLogs, days),
+      [startISO, endISO, medications, schedules, doseLogs, days],
+    );
 
-  const symptomSummary = useMemo(
-    () => buildSymptomSummary(symptoms),
-    [symptoms],
-  );
+  const symptomSummary = useMemo(() => buildSymptomSummary(symptoms), [symptoms]);
 
   // ── Header (always shown) ──
 
@@ -123,7 +154,12 @@ export default function ReportsScreen() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[c.teal]} tintColor={c.teal} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[c.teal]}
+            tintColor={c.teal}
+          />
         }
       >
         {/* Gradient header with adherence */}
@@ -136,20 +172,26 @@ export default function ReportsScreen() {
 
         <View style={styles.content}>
           {/* Period selector */}
-          <SegmentedControl
-            options={[...PERIOD_OPTIONS]}
-            selected={period}
-            onChange={setPeriod}
-          />
+          <SegmentedControl options={[...PERIOD_OPTIONS]} selected={period} onChange={setPeriod} />
 
           {/* Stats grid */}
           <View style={styles.statsGrid}>
-            {([
-              { icon: 'check-circle' as const, color: c.success, value: takenDoses, label: 'Taken' },
-              { icon: 'skip-forward' as const, color: c.warning, value: skippedDoses, label: 'Skipped' },
+            {[
+              {
+                icon: 'check-circle' as const,
+                color: c.success,
+                value: takenDoses,
+                label: 'Taken',
+              },
+              {
+                icon: 'skip-forward' as const,
+                color: c.warning,
+                value: skippedDoses,
+                label: 'Skipped',
+              },
               { icon: 'x-circle' as const, color: c.error, value: missedDoses, label: 'Missed' },
               { icon: 'calendar' as const, color: c.blue, value: totalDoses, label: 'Total' },
-            ]).map((s) => (
+            ].map((s) => (
               <View key={s.label} style={styles.statCard}>
                 <Feather name={s.icon} size={24} color={s.color} />
                 <Text style={styles.statValue}>{s.value}</Text>
@@ -162,10 +204,10 @@ export default function ReportsScreen() {
           <View style={styles.chartCard}>
             <Text style={styles.chartTitle}>Doses Taken</Text>
             <View style={styles.chartContainer}>
-              {chartBars.map((item, i) => {
+              {chartBars.map((item) => {
                 const height = maxBar > 0 ? (item.taken / maxBar) * 100 : 0;
                 return (
-                  <View key={`${item.label}-${i}`} style={styles.barContainer}>
+                  <View key={item.label} style={styles.barContainer}>
                     <Text style={styles.barCount}>{item.taken}</Text>
                     <View style={styles.barTrack}>
                       <LinearGradient
@@ -184,71 +226,107 @@ export default function ReportsScreen() {
 
           {/* Bottom sections: side-by-side on tablet */}
           <View style={styles.bottomSections}>
-          {/* Recently Missed */}
-          {recentMissed.length > 0 && (
-            <View style={[styles.missedCard, isTablet && styles.bottomSectionItem]}>
-              <Text style={styles.missedTitle}>Recently Missed</Text>
-              {recentMissed.map((item, i) => (
-                <View key={i} style={[styles.missedRow, i === recentMissed.length - 1 && { borderBottomWidth: 0 }]}>
-                  <View style={styles.missedDot} />
-                  <View style={styles.missedInfo}>
-                    <Text style={styles.missedMed}>{item.medName}</Text>
-                    <Text style={styles.missedDate}>{item.dateLabel} · {item.timeLabel}</Text>
-                  </View>
-                </View>
-              ))}
-            </View>
-          )}
-
-          {/* Symptom Summary */}
-          {symptomSummary.totalCount > 0 && (
-            <View style={[styles.missedCard, isTablet && styles.bottomSectionItem]}>
-              <Text style={styles.missedTitle}>Symptoms Reported</Text>
-              <View style={styles.symptomStatsRow}>
-                <View style={styles.symptomStatItem}>
-                  <Text style={styles.symptomStatValue}>{symptomSummary.totalCount}</Text>
-                  <Text style={styles.statLabel}>Total</Text>
-                </View>
-                {symptomSummary.severityBreakdown.severe > 0 && (
-                  <View style={styles.symptomStatItem}>
-                    <Text style={[styles.symptomStatValue, { color: c.error }]}>{symptomSummary.severityBreakdown.severe}</Text>
-                    <Text style={styles.statLabel}>Severe</Text>
-                  </View>
-                )}
-                {symptomSummary.severityBreakdown.moderate > 0 && (
-                  <View style={styles.symptomStatItem}>
-                    <Text style={[styles.symptomStatValue, { color: c.warning }]}>{symptomSummary.severityBreakdown.moderate}</Text>
-                    <Text style={styles.statLabel}>Moderate</Text>
-                  </View>
-                )}
-                {symptomSummary.severityBreakdown.mild > 0 && (
-                  <View style={styles.symptomStatItem}>
-                    <Text style={[styles.symptomStatValue, { color: c.teal }]}>{symptomSummary.severityBreakdown.mild}</Text>
-                    <Text style={styles.statLabel}>Mild</Text>
-                  </View>
-                )}
-              </View>
-              <View style={styles.symptomChipsRow}>
-                {symptomSummary.uniqueSymptoms.map((name) => {
-                  const count = symptomSummary.symptomCounts.get(name) ?? 0;
-                  const isMostFrequent = name === symptomSummary.mostFrequent;
-                  return (
-                    <View key={name} style={[styles.symptomReportChip, isMostFrequent && styles.symptomReportChipHighlight]}>
-                      <Text style={[styles.symptomReportChipText, isMostFrequent && styles.symptomReportChipTextHighlight]}>
-                        {name}
+            {/* Recently Missed */}
+            {recentMissed.length > 0 && (
+              <View style={[styles.missedCard, isTablet && styles.bottomSectionItem]}>
+                <Text style={styles.missedTitle}>Recently Missed</Text>
+                {recentMissed.map((item, i) => (
+                  <View
+                    key={`${item.dateLabel}-${item.medName}-${item.timeLabel}`}
+                    style={[
+                      styles.missedRow,
+                      i === recentMissed.length - 1 && styles.missedRowLast,
+                    ]}
+                  >
+                    <View style={styles.missedDot} />
+                    <View style={styles.missedInfo}>
+                      <Text style={styles.missedMed}>{item.medName}</Text>
+                      <Text style={styles.missedDate}>
+                        {item.dateLabel} · {item.timeLabel}
                       </Text>
-                      {count > 1 && (
-                        <View style={[styles.symptomCountBadge, isMostFrequent && styles.symptomCountBadgeHighlight]}>
-                          <Text style={[styles.symptomCountText, isMostFrequent && styles.symptomCountTextHighlight]}>{count}</Text>
-                        </View>
-                      )}
                     </View>
-                  );
-                })}
+                  </View>
+                ))}
               </View>
-            </View>
-          )}
+            )}
 
+            {/* Symptom Summary */}
+            {symptomSummary.totalCount > 0 && (
+              <View style={[styles.missedCard, isTablet && styles.bottomSectionItem]}>
+                <Text style={styles.missedTitle}>Symptoms Reported</Text>
+                <View style={styles.symptomStatsRow}>
+                  <View style={styles.symptomStatItem}>
+                    <Text style={styles.symptomStatValue}>{symptomSummary.totalCount}</Text>
+                    <Text style={styles.statLabel}>Total</Text>
+                  </View>
+                  {symptomSummary.severityBreakdown.severe > 0 && (
+                    <View style={styles.symptomStatItem}>
+                      <Text style={[styles.symptomStatValue, styles.severityError]}>
+                        {symptomSummary.severityBreakdown.severe}
+                      </Text>
+                      <Text style={styles.statLabel}>Severe</Text>
+                    </View>
+                  )}
+                  {symptomSummary.severityBreakdown.moderate > 0 && (
+                    <View style={styles.symptomStatItem}>
+                      <Text style={[styles.symptomStatValue, styles.severityWarning]}>
+                        {symptomSummary.severityBreakdown.moderate}
+                      </Text>
+                      <Text style={styles.statLabel}>Moderate</Text>
+                    </View>
+                  )}
+                  {symptomSummary.severityBreakdown.mild > 0 && (
+                    <View style={styles.symptomStatItem}>
+                      <Text style={[styles.symptomStatValue, styles.severityMild]}>
+                        {symptomSummary.severityBreakdown.mild}
+                      </Text>
+                      <Text style={styles.statLabel}>Mild</Text>
+                    </View>
+                  )}
+                </View>
+                <View style={styles.symptomChipsRow}>
+                  {symptomSummary.uniqueSymptoms.map((name) => {
+                    const count = symptomSummary.symptomCounts.get(name) ?? 0;
+                    const isMostFrequent = name === symptomSummary.mostFrequent;
+                    return (
+                      <View
+                        key={name}
+                        style={[
+                          styles.symptomReportChip,
+                          isMostFrequent && styles.symptomReportChipHighlight,
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.symptomReportChipText,
+                            isMostFrequent && styles.symptomReportChipTextHighlight,
+                          ]}
+                        >
+                          {name}
+                        </Text>
+                        {count > 1 && (
+                          <View
+                            style={[
+                              styles.symptomCountBadge,
+                              isMostFrequent && styles.symptomCountBadgeHighlight,
+                            ]}
+                          >
+                            <Text
+                              style={[
+                                styles.symptomCountText,
+                                isMostFrequent && styles.symptomCountTextHighlight,
+                              ]}
+                            >
+                              {count}
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+                    );
+                  })}
+                </View>
+              </View>
+            )}
           </View>
           <View style={{ height: 80 }} />
         </View>
@@ -271,7 +349,11 @@ function makeStyles(c: ColorScheme, isTablet: boolean) {
       paddingBottom: 32,
       borderBottomLeftRadius: 24,
       borderBottomRightRadius: 24,
-      ...(isTablet && { maxWidth: tabletLayout.contentMaxWidth, alignSelf: 'center' as const, width: '100%' as const }),
+      ...(isTablet && {
+        maxWidth: tabletLayout.contentMaxWidth,
+        alignSelf: 'center' as const,
+        width: '100%' as const,
+      }),
     },
     headerTitle: {
       fontSize: 28,
@@ -296,7 +378,11 @@ function makeStyles(c: ColorScheme, isTablet: boolean) {
       paddingHorizontal: 24,
       paddingTop: 24,
       gap: 20,
-      ...(isTablet && { maxWidth: tabletLayout.contentMaxWidth, alignSelf: 'center' as const, width: '100%' as const }),
+      ...(isTablet && {
+        maxWidth: tabletLayout.contentMaxWidth,
+        alignSelf: 'center' as const,
+        width: '100%' as const,
+      }),
     },
     bottomSections: {
       ...(isTablet ? { flexDirection: 'row' as const, gap: 16 } : { gap: 20 }),
@@ -311,7 +397,7 @@ function makeStyles(c: ColorScheme, isTablet: boolean) {
     },
     statCard: {
       flex: 1,
-      minWidth: isTablet ? ('20%' as any) : ('40%' as any),
+      minWidth: isTablet ? ('20%' as DimensionValue) : ('40%' as DimensionValue),
       backgroundColor: c.card,
       borderRadius: borderRadius.xl,
       padding: 16,
@@ -393,6 +479,9 @@ function makeStyles(c: ColorScheme, isTablet: boolean) {
       borderBottomWidth: 1,
       borderBottomColor: c.gray100,
     },
+    missedRowLast: {
+      borderBottomWidth: 0,
+    },
     missedDot: {
       width: 10,
       height: 10,
@@ -425,6 +514,15 @@ function makeStyles(c: ColorScheme, isTablet: boolean) {
       fontSize: 22,
       fontWeight: '700',
       color: c.gray900,
+    },
+    severityError: {
+      color: c.error,
+    },
+    severityWarning: {
+      color: c.warning,
+    },
+    severityMild: {
+      color: c.teal,
     },
     symptomChipsRow: {
       flexDirection: 'row',

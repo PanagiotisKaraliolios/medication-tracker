@@ -1,19 +1,33 @@
-import React, { useState, useMemo, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { useAuth } from '../../contexts/AuthContext';
-import { useThemePreference, type ThemePreference } from '../../contexts/ThemeContext';
-import { useMedications, useSchedules, useDoseLogsByRange } from '../../hooks/useQueryHooks';
-import { AlertDialog } from '../../components/ui/AlertDialog';
-import { AdBanner } from '../../components/ui/AdBanner';
-import { type ColorScheme, gradients, borderRadius, shadows, tablet as tabletLayout } from '../../components/ui/theme';
-import { useThemeColors } from '../../hooks/useThemeColors';
-import { useResponsive } from '../../hooks/useResponsive';
+import React, { useCallback, useMemo, useState } from 'react';
+import {
+  type DimensionValue,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import Toast from 'react-native-toast-message';
-import { toISO } from '../../utils/date';
+import { AdBanner } from '../../components/ui/AdBanner';
+import { AlertDialog } from '../../components/ui/AlertDialog';
+import {
+  borderRadius,
+  type ColorScheme,
+  gradients,
+  shadows,
+  tablet as tabletLayout,
+} from '../../components/ui/theme';
+import { useAuth } from '../../contexts/AuthContext';
+import { type ThemePreference, useThemePreference } from '../../contexts/ThemeContext';
+import { useDoseLogsByRange, useMedications, useSchedules } from '../../hooks/useQueryHooks';
+import { useResponsive } from '../../hooks/useResponsive';
+import { useThemeColors } from '../../hooks/useThemeColors';
 import { computeAdherence, computeStreak } from '../../utils/adherence';
+import { toISO } from '../../utils/date';
 
 type MenuItem = {
   icon: keyof typeof Feather.glyphMap;
@@ -31,7 +45,11 @@ const menuItems: MenuItem[] = [
   { icon: 'help-circle', label: 'Help & Support', subtitle: 'FAQ and contact' },
 ];
 
-const themeOptions: { value: ThemePreference; label: string; icon: keyof typeof Feather.glyphMap }[] = [
+const themeOptions: {
+  value: ThemePreference;
+  label: string;
+  icon: keyof typeof Feather.glyphMap;
+}[] = [
   { value: 'dark', label: 'Dark', icon: 'moon' },
   { value: 'system', label: 'System', icon: 'smartphone' },
   { value: 'light', label: 'Light', icon: 'sun' },
@@ -111,7 +129,12 @@ export default function ProfileScreen() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[c.teal]} tintColor={c.teal} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[c.teal]}
+            tintColor={c.teal}
+          />
         }
       >
         {/* Gradient header */}
@@ -124,16 +147,18 @@ export default function ProfileScreen() {
           <View style={styles.avatar}>
             <Feather name="user" size={36} color={c.teal} />
           </View>
-          <Text style={styles.headerName}>{profileName || user?.email?.split('@')[0] || 'User'}</Text>
+          <Text style={styles.headerName}>
+            {profileName || user?.email?.split('@')[0] || 'User'}
+          </Text>
           <Text style={styles.headerEmail}>{user?.email ?? ''}</Text>
 
           {/* Stats row */}
           <View style={styles.statsRow}>
-            {([
+            {[
               { value: String(medCount), label: 'Medications' },
               { value: `${adherence}%`, label: 'Adherence' },
               { value: String(streak), label: 'Day Streak' },
-            ]).map((s, i) => (
+            ].map((s, i) => (
               <React.Fragment key={s.label}>
                 {i > 0 && <View style={styles.statDivider} />}
                 <View style={styles.statItem}>
@@ -162,12 +187,10 @@ export default function ProfileScreen() {
                     onPress={() => setPreference(opt.value)}
                     activeOpacity={0.7}
                   >
-                    <Feather
-                      name={opt.icon}
-                      size={16}
-                      color={isActive ? c.white : c.gray500}
-                    />
-                    <Text style={[styles.themeOptionText, isActive && styles.themeOptionTextActive]}>
+                    <Feather name={opt.icon} size={16} color={isActive ? c.white : c.gray500} />
+                    <Text
+                      style={[styles.themeOptionText, isActive && styles.themeOptionTextActive]}
+                    >
                       {opt.label}
                     </Text>
                   </TouchableOpacity>
@@ -207,9 +230,7 @@ export default function ProfileScreen() {
                 </View>
                 <View style={styles.menuText}>
                   <Text style={styles.menuLabel}>{item.label}</Text>
-                  {item.subtitle && (
-                    <Text style={styles.menuSubtitle}>{item.subtitle}</Text>
-                  )}
+                  {item.subtitle && <Text style={styles.menuSubtitle}>{item.subtitle}</Text>}
                 </View>
                 <Feather name="chevron-right" size={20} color={c.gray400} />
               </TouchableOpacity>
@@ -264,7 +285,11 @@ function makeStyles(c: ColorScheme, isTablet: boolean) {
       borderBottomLeftRadius: 24,
       borderBottomRightRadius: 24,
       alignItems: 'center',
-      ...(isTablet && { maxWidth: profileMaxWidth, alignSelf: 'center' as const, width: '100%' as const }),
+      ...(isTablet && {
+        maxWidth: profileMaxWidth,
+        alignSelf: 'center' as const,
+        width: '100%' as const,
+      }),
     },
     avatar: {
       width: isTablet ? 100 : 80,
@@ -315,7 +340,11 @@ function makeStyles(c: ColorScheme, isTablet: boolean) {
     content: {
       paddingHorizontal: 24,
       paddingTop: 24,
-      ...(isTablet && { maxWidth: profileMaxWidth, alignSelf: 'center' as const, width: '100%' as const }),
+      ...(isTablet && {
+        maxWidth: profileMaxWidth,
+        alignSelf: 'center' as const,
+        width: '100%' as const,
+      }),
     },
     themeCard: {
       backgroundColor: c.card,
@@ -364,14 +393,24 @@ function makeStyles(c: ColorScheme, isTablet: boolean) {
     menuContainer: {
       ...(isTablet
         ? { flexDirection: 'row' as const, flexWrap: 'wrap' as const, gap: 12, marginBottom: 24 }
-        : { backgroundColor: c.card, borderRadius: borderRadius.xl, ...shadows.sm, marginBottom: 24 }),
+        : {
+            backgroundColor: c.card,
+            borderRadius: borderRadius.xl,
+            ...shadows.sm,
+            marginBottom: 24,
+          }),
     },
     menuItem: {
       flexDirection: 'row',
       alignItems: 'center',
       padding: 16,
       gap: 12,
-      ...(isTablet && { backgroundColor: c.card, borderRadius: borderRadius.xl, ...shadows.sm, width: '48%' as any }),
+      ...(isTablet && {
+        backgroundColor: c.card,
+        borderRadius: borderRadius.xl,
+        ...shadows.sm,
+        width: '48%' as DimensionValue,
+      }),
     },
     menuItemBorder: {
       borderBottomWidth: 1,

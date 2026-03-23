@@ -1,14 +1,22 @@
-import { View, Text, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
-import { useRouter } from 'expo-router';
-import { useState, useMemo } from 'react';
 import { Feather } from '@expo/vector-icons';
-import { supabase } from '../../lib/supabase';
+import { useRouter } from 'expo-router';
+import { useMemo, useState } from 'react';
+import {
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import Toast from 'react-native-toast-message';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
-import { type ColorScheme, borderRadius } from '../../components/ui/theme';
-import { useThemeColors } from '../../hooks/useThemeColors';
+import { borderRadius, type ColorScheme } from '../../components/ui/theme';
 import { useGoogleAuth } from '../../hooks/useGoogleAuth';
-import Toast from 'react-native-toast-message';
+import { useThemeColors } from '../../hooks/useThemeColors';
+import { supabase } from '../../lib/supabase';
 
 export default function LoginScreen() {
   const c = useThemeColors();
@@ -25,7 +33,7 @@ export default function LoginScreen() {
       Toast.show({
         type: 'error',
         text1: 'Error',
-        text2: 'Please enter email and password'
+        text2: 'Please enter email and password',
       });
       return;
     }
@@ -42,22 +50,19 @@ export default function LoginScreen() {
       Toast.show({
         type: 'error',
         text1: 'Error',
-        text2: error.message
+        text2: error.message,
       });
     } else {
       Toast.show({
         type: 'success',
         text1: 'Success',
-        text2: 'Logged in successfully'
+        text2: 'Logged in successfully',
       });
     }
   };
 
   const handleGoogleSignIn = async () => {
     const { error } = await signInWithGoogle();
-
-    console.log('🚀 ~ login.tsx:59 ~ handleGoogleSignIn ~ error:', error);
-
 
     if (error) {
       Toast.show({ type: 'error', text1: 'Google Sign-In Error', text2: error });

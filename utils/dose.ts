@@ -1,6 +1,6 @@
 import { TIME_SLOT_MAP } from '../constants/schedule';
+import type { DoseLogRow, MedicationRow, ScheduleRow } from '../types/database';
 import { parseTimeToMinutes } from './date';
-import type { MedicationRow, ScheduleRow, DoseLogRow } from '../types/database';
 
 /** Represents a single dose to take/track on the Today screen. */
 export type TodayDose = {
@@ -30,9 +30,13 @@ export function resolveTimeSlot(label: string): { time: string; sortOrder: numbe
 }
 
 /** Check whether `dateISO` falls on an interval day anchored to `startDate`. */
-export function isIntervalDayMatch(startDate: string, dateISO: string, intervalDays: number): boolean {
-  const start = new Date(startDate + 'T00:00:00');
-  const date = new Date(dateISO + 'T00:00:00');
+export function isIntervalDayMatch(
+  startDate: string,
+  dateISO: string,
+  intervalDays: number,
+): boolean {
+  const start = new Date(`${startDate}T00:00:00`);
+  const date = new Date(`${dateISO}T00:00:00`);
   const diffDays = Math.round((date.getTime() - start.getTime()) / 86400000);
   return diffDays >= 0 && diffDays % intervalDays === 0;
 }
@@ -49,9 +53,7 @@ export function buildTodayDoses(
   dateISO?: string,
 ): TodayDose[] {
   const medMap = new Map(medications.map((m) => [m.id, m]));
-  const logMap = new Map(
-    doseLogs.map((l) => [`${l.schedule_id}-${l.time_label}`, l]),
-  );
+  const logMap = new Map(doseLogs.map((l) => [`${l.schedule_id}-${l.time_label}`, l]));
   const doses: TodayDose[] = [];
   const usedLogKeys = new Set<string>();
 

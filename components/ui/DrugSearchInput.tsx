@@ -1,15 +1,14 @@
-import React, { useCallback, useEffect, useMemo, useRef } from 'react';
-import {
-  ActivityIndicator,
-  View,
-  Text,
-  StyleSheet,
-} from 'react-native';
-import { AutocompleteDropdown, type AutocompleteDropdownItem, type IAutocompleteDropdownRef } from 'react-native-autocomplete-dropdown';
 import { Feather } from '@expo/vector-icons';
-import { type ColorScheme, borderRadius } from './theme';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import {
+  AutocompleteDropdown,
+  type AutocompleteDropdownItem,
+  type IAutocompleteDropdownRef,
+} from 'react-native-autocomplete-dropdown';
 import { useThemeColors } from '../../hooks/useThemeColors';
 import type { DrugSearchResult } from '../../types/drug';
+import { borderRadius, type ColorScheme } from './theme';
 
 const TTY_LABELS = {
   BN: 'Brand Name',
@@ -57,7 +56,7 @@ export function DrugSearchInput({
   // Keep a map of rxcui → DrugSearchResult for lookup on select
   useEffect(() => {
     const map = new Map<string, DrugSearchResult>();
-    results.forEach((r) => map.set(r.rxcui, r));
+    for (const r of results) map.set(r.rxcui, r);
     resultsMapRef.current = map;
   }, [results]);
 
@@ -66,7 +65,7 @@ export function DrugSearchInput({
     if (selectedRxcui) {
       controllerRef.current?.setInputText(query);
     }
-  }, [selectedRxcui]);
+  }, [selectedRxcui, query]);
 
   const dataSet: AutocompleteDropdownItem[] = useMemo(
     () => results.map((r) => ({ id: r.rxcui, title: r.name })),
@@ -89,7 +88,7 @@ export function DrugSearchInput({
   const hasQuery = query.length >= 2;
 
   const emptyComponent = useMemo(() => {
-    if (!hasQuery) return <></>;
+    if (!hasQuery) return null;
     if (isLoading) {
       return (
         <View style={styles.emptyResult}>
@@ -115,7 +114,7 @@ export function DrugSearchInput({
   const renderItem = useCallback(
     (item: AutocompleteDropdownItem) => {
       const drug = resultsMapRef.current.get(item.id);
-      const ttyLabel = drug ? (TTY_LABELS as Record<string, string>)[drug.tty] ?? drug.tty : '';
+      const ttyLabel = drug ? ((TTY_LABELS as Record<string, string>)[drug.tty] ?? drug.tty) : '';
       return (
         <View style={styles.resultRow}>
           <View style={styles.resultInfo}>
@@ -138,7 +137,9 @@ export function DrugSearchInput({
   return (
     <View style={styles.wrapper}>
       <AutocompleteDropdown
-        controller={(c) => { controllerRef.current = c; }}
+        controller={(c) => {
+          controllerRef.current = c;
+        }}
         dataSet={dataSet}
         onChangeText={onChangeQuery}
         onSelectItem={handleSelect}

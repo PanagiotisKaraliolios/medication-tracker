@@ -1,7 +1,7 @@
 import { DAY_LABELS } from '../constants/days';
+import type { DoseLogRow, MedicationRow, ScheduleRow } from '../types/database';
 import { toISO } from './date';
 import { isIntervalDayMatch } from './dose';
-import type { MedicationRow, ScheduleRow, DoseLogRow } from '../types/database';
 
 /** Status of doses on a given calendar day. */
 export type DayStatus = 'all' | 'partial' | 'none' | 'empty';
@@ -28,15 +28,18 @@ export function computeDayStatusMap(
   for (const l of doseLogs) {
     const k = `${l.scheduled_date}|${l.schedule_id}`;
     let s = logsByDateSch.get(k);
-    if (!s) { s = new Set(); logsByDateSch.set(k, s); }
+    if (!s) {
+      s = new Set();
+      logsByDateSch.set(k, s);
+    }
     s.add(l.time_label);
   }
 
   const map: Record<string, DayStatus> = {};
   const medIds = new Set(medications.map((m) => m.id));
 
-  const current = new Date(startISO + 'T00:00:00');
-  const end = new Date(endISO + 'T00:00:00');
+  const current = new Date(`${startISO}T00:00:00`);
+  const end = new Date(`${endISO}T00:00:00`);
 
   while (current <= end) {
     const iso = toISO(current);

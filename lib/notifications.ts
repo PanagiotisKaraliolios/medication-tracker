@@ -1,6 +1,6 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // ── Constants ────────────────────────────────────────────────────────
 
@@ -143,7 +143,10 @@ let _schedulingChain: Promise<void> = Promise.resolve();
 
 function withSchedulingLock<T>(fn: () => Promise<T>): Promise<T> {
   const next = _schedulingChain.then(fn, fn); // always proceed regardless of prior failure
-  _schedulingChain = next.then(() => {}, () => {}); // swallow result to keep chain as Promise<void>
+  _schedulingChain = next.then(
+    () => {},
+    () => {},
+  ); // swallow result to keep chain as Promise<void>
   return next;
 }
 
@@ -317,16 +320,19 @@ async function _scheduleMedicationReminders(
     } else if (schedule.frequency === 'interval' && schedule.interval_days) {
       // Interval — schedule DATE triggers for the next 7 occurrences
       const intervalDays = schedule.interval_days;
-      const startDate = new Date(schedule.start_date + 'T00:00:00');
+      const startDate = new Date(`${schedule.start_date}T00:00:00`);
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
       // Find the first occurrence on or after today
       const diffMs = today.getTime() - startDate.getTime();
       const diffDays = Math.floor(diffMs / 86400000);
-      let offset = diffDays >= 0
-        ? (intervalDays - (diffDays % intervalDays)) % intervalDays
-        : Math.abs(diffDays) % intervalDays === 0 ? 0 : intervalDays - (Math.abs(diffDays) % intervalDays);
+      const offset =
+        diffDays >= 0
+          ? (intervalDays - (diffDays % intervalDays)) % intervalDays
+          : Math.abs(diffDays) % intervalDays === 0
+            ? 0
+            : intervalDays - (Math.abs(diffDays) % intervalDays);
 
       for (let i = 0; i < 7; i++) {
         const occDate = new Date(today);
@@ -416,15 +422,15 @@ export async function cancelMedicationReminders(scheduleId: string): Promise<voi
         (id: string) => !matching.some((n) => n.identifier === id),
       );
       await Promise.all(
-        legacyIds.map((id) =>
-          Notifications.cancelScheduledNotificationAsync(id).catch(() => {}),
-        ),
+        legacyIds.map((id) => Notifications.cancelScheduledNotificationAsync(id).catch(() => {})),
       );
       await AsyncStorage.removeItem(`${NOTIF_IDS_PREFIX}${scheduleId}`);
     }
 
     if (matching.length > 0) {
-      console.log(`[Notifications] Cancelled ${matching.length} reminder(s) for schedule ${scheduleId}`);
+      console.log(
+        `[Notifications] Cancelled ${matching.length} reminder(s) for schedule ${scheduleId}`,
+      );
     }
   } catch (err) {
     console.warn('[Notifications] Failed to cancel medication reminders:', err);
@@ -517,7 +523,9 @@ async function _scheduleLowSupplyReminder(
   });
 
   await AsyncStorage.setItem(`${LOW_SUPPLY_NOTIF_PREFIX}${medicationId}`, notifId);
-  console.log(`[Notifications] Low-supply reminder scheduled for ${medicationName} (${medicationId})`);
+  console.log(
+    `[Notifications] Low-supply reminder scheduled for ${medicationName} (${medicationId})`,
+  );
 }
 
 /**
@@ -533,7 +541,8 @@ async function _cancelLowSupplyReminder(medicationId: string): Promise<void> {
     // Query OS for all scheduled notifications matching this medication's low-supply
     const allScheduled = await Notifications.getAllScheduledNotificationsAsync();
     const matching = allScheduled.filter(
-      (n) => n.content.data?.notifType === 'low-supply' && n.content.data?.medicationId === medicationId,
+      (n) =>
+        n.content.data?.notifType === 'low-supply' && n.content.data?.medicationId === medicationId,
     );
     await Promise.all(
       matching.map((n) =>
@@ -544,7 +553,9 @@ async function _cancelLowSupplyReminder(medicationId: string): Promise<void> {
     // Also dismiss any already-presented low-supply notifications for this medication
     const presented = await Notifications.getPresentedNotificationsAsync();
     const presentedMatching = presented.filter(
-      (n) => n.request.content.data?.notifType === 'low-supply' && n.request.content.data?.medicationId === medicationId,
+      (n) =>
+        n.request.content.data?.notifType === 'low-supply' &&
+        n.request.content.data?.medicationId === medicationId,
     );
     await Promise.all(
       presentedMatching.map((n) =>
@@ -562,7 +573,9 @@ async function _cancelLowSupplyReminder(medicationId: string): Promise<void> {
     }
 
     if (matching.length > 0 || presentedMatching.length > 0) {
-      console.log(`[Notifications] Low-supply reminder cancelled for medication ${medicationId} (${matching.length} scheduled, ${presentedMatching.length} presented)`);
+      console.log(
+        `[Notifications] Low-supply reminder cancelled for medication ${medicationId} (${matching.length} scheduled, ${presentedMatching.length} presented)`,
+      );
     }
   } catch (err) {
     console.warn('[Notifications] Failed to cancel low-supply reminder:', err);
@@ -583,9 +596,7 @@ export type LowSupplyMedication = {
  * Call on app launch to ensure reminders reflect current inventory state.
  * Does NOT fire immediate notifications — only (re-)schedules daily 9 AM reminders.
  */
-export function recheckAllLowSupplyReminders(
-  medications: LowSupplyMedication[],
-): Promise<void> {
+export function recheckAllLowSupplyReminders(medications: LowSupplyMedication[]): Promise<void> {
   return withSchedulingLock(async () => {
     for (const med of medications) {
       if (med.is_active && med.current_supply <= med.low_supply_threshold) {
@@ -594,7 +605,9 @@ export function recheckAllLowSupplyReminders(
         await _cancelLowSupplyReminder(med.id);
       }
     }
-    console.log(`[Notifications] Low-supply check complete for ${medications.length} medication(s)`);
+    console.log(
+      `[Notifications] Low-supply check complete for ${medications.length} medication(s)`,
+    );
   });
 }
 
@@ -634,9 +647,7 @@ export async function fireMissedDoseReminders(
   const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   const todayLabel = dayLabels[now.getDay()];
 
-  const loggedKeys = new Set(
-    todayLogs.map((l) => `${l.schedule_id}-${l.time_label}`),
-  );
+  const loggedKeys = new Set(todayLogs.map((l) => `${l.schedule_id}-${l.time_label}`));
 
   const channelId = Platform.OS === 'android' ? 'medication-reminders' : undefined;
   let fired = 0;
@@ -646,7 +657,7 @@ export async function fireMissedDoseReminders(
 
     // Check if today is a scheduled day for this frequency
     if (sch.frequency === 'interval' && sch.interval_days) {
-      const startDate = new Date(sch.start_date + 'T00:00:00');
+      const startDate = new Date(`${sch.start_date}T00:00:00`);
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       const diffDays = Math.round((today.getTime() - startDate.getTime()) / 86400000);

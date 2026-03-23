@@ -1,42 +1,57 @@
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, RefreshControl, Pressable, Animated } from 'react-native';
-import { router } from 'expo-router';
-import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { Feather } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useQueryClient } from '@tanstack/react-query';
-import { ProgressRing } from '../../components/ui/ProgressRing';
-import { MedicationCard } from '../../components/ui/MedicationCard';
-import { AlertDialog } from '../../components/ui/AlertDialog';
-import { EmptyState } from '../../components/ui/EmptyState';
-import { LoadingState } from '../../components/ui/LoadingState';
-import { ErrorState } from '../../components/ui/ErrorState';
-import { CalendarSection } from '../../components/ui/CalendarSection';
-import { AdBanner } from '../../components/ui/AdBanner';
-import { type ColorScheme, gradients, borderRadius, shadows, tablet as tabletLayout } from '../../components/ui/theme';
-import { useThemeColors } from '../../hooks/useThemeColors';
-import { useResponsive } from '../../hooks/useResponsive';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useCalendar } from '../../hooks/useCalendar';
-import { useSnooze } from '../../hooks/useSnooze';
+import { LinearGradient } from 'expo-linear-gradient';
+import * as Notifications from 'expo-notifications';
+import { type Href, router } from 'expo-router';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  useMedications,
-  useSchedules,
+  Animated,
+  type DimensionValue,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Toast from 'react-native-toast-message';
+import { AdBanner } from '../../components/ui/AdBanner';
+import { AlertDialog } from '../../components/ui/AlertDialog';
+import { CalendarSection } from '../../components/ui/CalendarSection';
+import { EmptyState } from '../../components/ui/EmptyState';
+import { ErrorState } from '../../components/ui/ErrorState';
+import { LoadingState } from '../../components/ui/LoadingState';
+import { MedicationCard } from '../../components/ui/MedicationCard';
+import { ProgressRing } from '../../components/ui/ProgressRing';
+import {
+  borderRadius,
+  type ColorScheme,
+  gradients,
+  shadows,
+  tablet as tabletLayout,
+} from '../../components/ui/theme';
+import { useCalendar } from '../../hooks/useCalendar';
+import {
+  useAdjustSupply,
+  useDeleteDoseLog,
+  useDeleteSymptom,
+  useDeleteSymptomsByDate,
   useDoseLogsByDate,
   useDoseLogsByRange,
   useLogDose,
-  useDeleteDoseLog,
-  useAdjustSupply,
+  useMedications,
+  useSchedules,
   useSymptomsByDate,
-  useDeleteSymptom,
-  useDeleteSymptomsByDate,
 } from '../../hooks/useQueryHooks';
-import Toast from 'react-native-toast-message';
+import { useResponsive } from '../../hooks/useResponsive';
+import { useSnooze } from '../../hooks/useSnooze';
+import { useThemeColors } from '../../hooks/useThemeColors';
 import { queryKeys } from '../../lib/queryKeys';
+import { computeDayStatusMap } from '../../utils/calendar';
 import { toISO } from '../../utils/date';
 import { buildTodayDoses, type TodayDose } from '../../utils/dose';
-import { computeDayStatusMap } from '../../utils/calendar';
 import { formatTimeLeft } from '../../utils/snooze';
-import * as Notifications from 'expo-notifications';
 
 // ─ Component ───────────────────────────────────────────────────────
 
@@ -44,7 +59,10 @@ export default function TodayDashboard() {
   const c = useThemeColors();
   const insets = useSafeAreaInsets();
   const { isTablet, isLandscape } = useResponsive();
-  const styles = useMemo(() => makeStyles(c, insets.bottom, isTablet), [c, insets.bottom, isTablet]);
+  const styles = useMemo(
+    () => makeStyles(c, insets.bottom, isTablet),
+    [c, insets.bottom, isTablet],
+  );
   const queryClient = useQueryClient();
 
   const calendar = useCalendar();
@@ -62,20 +80,45 @@ export default function TodayDashboard() {
       if (mounted) setHasNotifications(delivered.length > 0 || scheduled.length > 0);
     };
     check();
-    const sub = Notifications.addNotificationReceivedListener(() => { if (mounted) setHasNotifications(true); });
-    return () => { mounted = false; sub.remove(); };
+    const sub = Notifications.addNotificationReceivedListener(() => {
+      if (mounted) setHasNotifications(true);
+    });
+    return () => {
+      mounted = false;
+      sub.remove();
+    };
   }, []);
 
   // ── Data queries ──
 
   const [hasNotifications, setHasNotifications] = useState(false);
 
-  const { data: medications = [], isLoading: medsLoading, error: medsError, refetch: refetchMeds } = useMedications();
-  const { data: schedules = [], isLoading: schLoading, error: schError, refetch: refetchSchedules } = useSchedules();
-  const { data: doseLogs = [], isLoading: logsLoading, error: logsError, refetch: refetchLogs } = useDoseLogsByDate(selectedISO);
+  const {
+    data: medications = [],
+    isLoading: medsLoading,
+    error: medsError,
+    refetch: refetchMeds,
+  } = useMedications();
+  const {
+    data: schedules = [],
+    isLoading: schLoading,
+    error: schError,
+    refetch: refetchSchedules,
+  } = useSchedules();
+  const {
+    data: doseLogs = [],
+    isLoading: logsLoading,
+    error: logsError,
+    refetch: refetchLogs,
+  } = useDoseLogsByDate(selectedISO);
 
   // Symptoms for today
-  const { data: todaySymptoms = [], isLoading: symptomsLoading, error: symptomsError, refetch: refetchSymptoms } = useSymptomsByDate(selectedISO);
+  const {
+    data: todaySymptoms = [],
+    isLoading: symptomsLoading,
+    error: symptomsError,
+    refetch: refetchSymptoms,
+  } = useSymptomsByDate(selectedISO);
   const deleteSymptom = useDeleteSymptom();
   const deleteSymptomsByDate = useDeleteSymptomsByDate();
   const [showClearSymptomsDialog, setShowClearSymptomsDialog] = useState(false);
@@ -89,15 +132,26 @@ export default function TodayDashboard() {
     const weekEnd = new Date(today);
     weekEnd.setDate(weekEnd.getDate() + 3);
 
-    const monthStart = new Date(calendar.selectedDate.getFullYear(), calendar.selectedDate.getMonth(), 1);
-    const monthEnd = new Date(calendar.selectedDate.getFullYear(), calendar.selectedDate.getMonth() + 1, 0);
+    const monthStart = new Date(
+      calendar.selectedDate.getFullYear(),
+      calendar.selectedDate.getMonth(),
+      1,
+    );
+    const monthEnd = new Date(
+      calendar.selectedDate.getFullYear(),
+      calendar.selectedDate.getMonth() + 1,
+      0,
+    );
 
     const rangeStart = weekStart < monthStart ? weekStart : monthStart;
     const rangeEnd = weekEnd > monthEnd ? weekEnd : monthEnd;
     return { rangeStartISO: toISO(rangeStart), rangeEndISO: toISO(rangeEnd) };
-  }, [calendar.selectedDate, todayISO]);
+  }, [calendar.selectedDate]);
 
-  const { data: rangeLogs = [], refetch: refetchRangeLogs } = useDoseLogsByRange(rangeStartISO, rangeEndISO);
+  const { data: rangeLogs = [], refetch: refetchRangeLogs } = useDoseLogsByRange(
+    rangeStartISO,
+    rangeEndISO,
+  );
 
   // ── Pull-to-refresh ──
 
@@ -125,7 +179,12 @@ export default function TodayDashboard() {
     const prnLogs = doseLogs.filter((l) => l.schedule_id === null);
     return prnLogs.map((log) => {
       const med = medications.find((m) => m.id === log.medication_id);
-      return { ...log, medName: med?.name ?? 'Unknown', medDosage: med?.dosage ?? '', medForm: med?.form ?? '' };
+      return {
+        ...log,
+        medName: med?.name ?? 'Unknown',
+        medDosage: med?.dosage ?? '',
+        medForm: med?.form ?? '',
+      };
     });
   }, [doseLogs, medications]);
 
@@ -166,7 +225,10 @@ export default function TodayDashboard() {
           status: newStatus,
         });
 
-        setOverrides((prev) => ({ ...prev, [dose.key]: { status: newStatus, doseLogId: data.id } }));
+        setOverrides((prev) => ({
+          ...prev,
+          [dose.key]: { status: newStatus, doseLogId: data.id },
+        }));
 
         if (newStatus === 'taken') {
           adjustSupplyMut.mutate({ medicationId: dose.medicationId, delta: -dose.dosagePerDose });
@@ -205,9 +267,21 @@ export default function TodayDashboard() {
   // ── Snooze adapters ──
 
   const logDoseAdapter = useCallback(
-    async (scheduleId: string | null, medicationId: string, date: string, timeLabel: string, status: 'taken' | 'skipped') => {
+    async (
+      scheduleId: string | null,
+      medicationId: string,
+      date: string,
+      timeLabel: string,
+      status: 'taken' | 'skipped',
+    ) => {
       try {
-        const data = await logDoseMut.mutateAsync({ scheduleId, medicationId, date, timeLabel, status });
+        const data = await logDoseMut.mutateAsync({
+          scheduleId,
+          medicationId,
+          date,
+          timeLabel,
+          status,
+        });
         return { data, error: null };
       } catch (err: unknown) {
         return { data: null, error: err instanceof Error ? err.message : 'Failed to log dose' };
@@ -248,98 +322,119 @@ export default function TodayDashboard() {
 
   // ── Dose card helper ──
 
-  const doseAmount = (dose: TodayDose) =>
-    `${dose.dosagePerDose} ${dose.form}${dose.dosagePerDose !== 1 ? 's' : ''}`;
+  const doseAmount = useCallback(
+    (dose: TodayDose) => `${dose.dosagePerDose} ${dose.form}${dose.dosagePerDose !== 1 ? 's' : ''}`,
+    [],
+  );
 
   // ── Dose sections config ──
 
-  const doseSections = [
-    {
-      key: 'next',
-      title: 'Next Dose',
-      data: pendingDoses.slice(0, 1),
-      renderCard: (dose: TodayDose) => (
-        <MedicationCard
-          name={dose.name}
-          strength={dose.dosage}
-          doseAmount={doseAmount(dose)}
-          time={dose.time}
-          status="pending"
-          onTake={() => handleStatusChange(dose, 'taken')}
-          onSkip={() => handleStatusChange(dose, 'skipped')}
-          onSnooze={() => snooze.handleSnoozeRequest(dose)}
-        />
-      ),
-    },
-    {
-      key: 'upcoming',
-      title: 'Upcoming',
-      data: pendingDoses.slice(1),
-      renderCard: (dose: TodayDose) => (
-        <MedicationCard
-          name={dose.name}
-          strength={dose.dosage}
-          doseAmount={doseAmount(dose)}
-          time={dose.time}
-          status="pending"
-          onTake={() => handleStatusChange(dose, 'taken')}
-          onSkip={() => handleStatusChange(dose, 'skipped')}
-          onSnooze={() => snooze.handleSnoozeRequest(dose)}
-        />
-      ),
-    },
-    {
-      key: 'snoozed',
-      title: 'Snoozed',
-      data: snoozedDoses,
-      renderCard: (dose: TodayDose) => {
-        const remaining = (snooze.snoozedUntil[dose.key] ?? 0) - Date.now();
-        return (
+  const doseSections = useMemo(
+    () => [
+      {
+        key: 'next',
+        title: 'Next Dose',
+        data: pendingDoses.slice(0, 1),
+        renderCard: (dose: TodayDose) => (
           <MedicationCard
             name={dose.name}
             strength={dose.dosage}
             doseAmount={doseAmount(dose)}
             time={dose.time}
-            status="snoozed"
-            snoozeTimeLeft={formatTimeLeft(remaining)}
-            onTake={() => snooze.handleTakeSnoozed(dose)}
-            onCancelSnooze={() => snooze.handleCancelSnooze(dose)}
+            status="pending"
+            onTake={() => handleStatusChange(dose, 'taken')}
+            onSkip={() => handleStatusChange(dose, 'skipped')}
+            onSnooze={() => snooze.handleSnoozeRequest(dose)}
           />
-        );
+        ),
       },
-    },
-    {
-      key: 'completed',
-      title: 'Completed',
-      data: completedDoses,
-      renderCard: (dose: TodayDose) => (
-        <MedicationCard
-          name={dose.name}
-          strength={dose.dosage}
-          doseAmount={doseAmount(dose)}
-          time={dose.time}
-          status={dose.status}
-          onUndo={() => handleUndo(dose)}
-        />
-      ),
-    },
-  ];
+      {
+        key: 'upcoming',
+        title: 'Upcoming',
+        data: pendingDoses.slice(1),
+        renderCard: (dose: TodayDose) => (
+          <MedicationCard
+            name={dose.name}
+            strength={dose.dosage}
+            doseAmount={doseAmount(dose)}
+            time={dose.time}
+            status="pending"
+            onTake={() => handleStatusChange(dose, 'taken')}
+            onSkip={() => handleStatusChange(dose, 'skipped')}
+            onSnooze={() => snooze.handleSnoozeRequest(dose)}
+          />
+        ),
+      },
+      {
+        key: 'snoozed',
+        title: 'Snoozed',
+        data: snoozedDoses,
+        renderCard: (dose: TodayDose) => {
+          const remaining = (snooze.snoozedUntil[dose.key] ?? 0) - Date.now();
+          return (
+            <MedicationCard
+              name={dose.name}
+              strength={dose.dosage}
+              doseAmount={doseAmount(dose)}
+              time={dose.time}
+              status="snoozed"
+              snoozeTimeLeft={formatTimeLeft(remaining)}
+              onTake={() => snooze.handleTakeSnoozed(dose)}
+              onCancelSnooze={() => snooze.handleCancelSnooze(dose)}
+            />
+          );
+        },
+      },
+      {
+        key: 'completed',
+        title: 'Completed',
+        data: completedDoses,
+        renderCard: (dose: TodayDose) => (
+          <MedicationCard
+            name={dose.name}
+            strength={dose.dosage}
+            doseAmount={doseAmount(dose)}
+            time={dose.time}
+            status={dose.status}
+            onUndo={() => handleUndo(dose)}
+          />
+        ),
+      },
+    ],
+    [
+      pendingDoses,
+      snoozedDoses,
+      completedDoses,
+      handleStatusChange,
+      snooze,
+      handleUndo,
+      doseAmount,
+    ],
+  );
 
   const toggleFab = useCallback(() => {
     const opening = !fabOpen;
     setFabOpen(opening);
     if (opening) {
-      Animated.spring(fabAnim, { toValue: 1, delay: 150, useNativeDriver: true, friction: 6 }).start();
+      Animated.spring(fabAnim, {
+        toValue: 1,
+        delay: 150,
+        useNativeDriver: true,
+        friction: 6,
+      }).start();
     } else {
       Animated.timing(fabAnim, { toValue: 0, duration: 50, useNativeDriver: true }).start();
     }
   }, [fabOpen, fabAnim]);
 
-  const handleFabAction = useCallback((route: string) => {
-    setFabOpen(false);
-    Animated.timing(fabAnim, { toValue: 0, duration: 150, useNativeDriver: true }).start();
-    router.push(route as any);
-  }, [fabAnim]);
+  const handleFabAction = useCallback(
+    (route: string) => {
+      setFabOpen(false);
+      Animated.timing(fabAnim, { toValue: 0, duration: 150, useNativeDriver: true }).start();
+      router.push(route as Href);
+    },
+    [fabAnim],
+  );
 
   const fabRotation = fabAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '45deg'] });
   const fabActionsOpacity = fabAnim;
@@ -350,7 +445,12 @@ export default function TodayDashboard() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[c.teal]} tintColor={c.teal} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[c.teal]}
+            tintColor={c.teal}
+          />
         }
       >
         {/* Gradient header */}
@@ -366,26 +466,32 @@ export default function TodayDashboard() {
               <Text style={styles.headerDate}>{isToday ? dateStr : 'Viewing another day'}</Text>
             </View>
             <View style={styles.headerButtons}>
-              <TouchableOpacity
+              <Pressable
                 style={styles.notifButton}
-                activeOpacity={0.7}
                 onPress={() => router.push('/notifications')}
+                accessibilityRole="button"
+                accessibilityLabel="Notifications"
               >
                 <Feather name="bell" size={22} color={c.white} />
                 {hasNotifications && <View style={styles.notifDot} />}
-              </TouchableOpacity>
-              <TouchableOpacity
+              </Pressable>
+              <Pressable
                 style={styles.notifButton}
-                activeOpacity={0.7}
                 onPress={() => router.push('/symptoms')}
+                accessibilityRole="button"
+                accessibilityLabel="Symptoms"
               >
                 <Feather name="activity" size={22} color={c.white} />
-              </TouchableOpacity>
+              </Pressable>
             </View>
           </View>
 
           <View style={styles.progressSection}>
-            <ProgressRing percentage={completionPct} size={isTablet ? 140 : 120} strokeWidth={isTablet ? 14 : 12} />
+            <ProgressRing
+              percentage={completionPct}
+              size={isTablet ? 140 : 120}
+              strokeWidth={isTablet ? 14 : 12}
+            />
             <View style={styles.progressInfo}>
               <Text style={styles.progressLabel}>Daily Progress</Text>
               <Text style={styles.progressCount}>
@@ -423,11 +529,15 @@ export default function TodayDashboard() {
 
           {/* Error state */}
           {!loading && error && (
-            <ErrorState title="Couldn't load schedule" message={error.message} onRetry={() => {
-              queryClient.invalidateQueries({ queryKey: queryKeys.medications.all });
-              queryClient.invalidateQueries({ queryKey: queryKeys.schedules.all });
-              queryClient.invalidateQueries({ queryKey: queryKeys.doseLogs.all });
-            }} />
+            <ErrorState
+              title="Couldn't load schedule"
+              message={error.message}
+              onRetry={() => {
+                queryClient.invalidateQueries({ queryKey: queryKeys.medications.all });
+                queryClient.invalidateQueries({ queryKey: queryKeys.schedules.all });
+                queryClient.invalidateQueries({ queryKey: queryKeys.doseLogs.all });
+              }}
+            />
           )}
 
           {/* Empty state — no medications at all */}
@@ -453,25 +563,29 @@ export default function TodayDashboard() {
           )}
 
           {/* Dose sections */}
-          {!loading &&
-            !error && (
-              <View style={isTablet && isLandscape ? styles.doseGrid : undefined}>
-                {doseSections.map(
-                  (section) =>
-                    section.data.length > 0 && (
-                      <View key={section.key} style={[styles.section, isTablet && isLandscape && styles.doseGridItem]}>
-                        <Text style={styles.sectionTitle}>{section.title}</Text>
-                        {section.data.map((dose) => (
-                          <View key={dose.key} style={section.key !== 'next' ? { marginBottom: 12 } : undefined}>
-                            {section.renderCard(dose)}
-                          </View>
-                        ))}
-                      </View>
-                    ),
-                )}
-              </View>
-            )}
-
+          {!loading && !error && (
+            <View style={isTablet && isLandscape ? styles.doseGrid : undefined}>
+              {doseSections.map(
+                (section) =>
+                  section.data.length > 0 && (
+                    <View
+                      key={section.key}
+                      style={[styles.section, isTablet && isLandscape && styles.doseGridItem]}
+                    >
+                      <Text style={styles.sectionTitle}>{section.title}</Text>
+                      {section.data.map((dose) => (
+                        <View
+                          key={dose.key}
+                          style={section.key !== 'next' ? styles.doseCardSpacing : undefined}
+                        >
+                          {section.renderCard(dose)}
+                        </View>
+                      ))}
+                    </View>
+                  ),
+              )}
+            </View>
+          )}
 
           {/* As Needed (PRN) — taken today */}
           {!loading && !error && prnLogsToday.length > 0 && (
@@ -482,17 +596,19 @@ export default function TodayDashboard() {
                   <View style={styles.prnLogInfo}>
                     <Text style={styles.prnLogName}>{log.medName}</Text>
                     <Text style={styles.prnLogDetail}>
-                      {log.medDosage} · {log.medForm}{log.reason ? ` · ${log.reason}` : ''}
+                      {log.medDosage} · {log.medForm}
+                      {log.reason ? ` · ${log.reason}` : ''}
                     </Text>
                   </View>
                   <Text style={styles.prnLogTime}>{log.time_label}</Text>
-                  <TouchableOpacity
+                  <Pressable
                     style={styles.prnDeleteBtn}
-                    activeOpacity={0.7}
                     onPress={() => setPrnDeleteId(log.id)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Delete ${log.medName} PRN dose`}
                   >
                     <Feather name="trash-2" size={16} color={c.error} />
-                  </TouchableOpacity>
+                  </Pressable>
                 </View>
               ))}
             </View>
@@ -508,7 +624,9 @@ export default function TodayDashboard() {
           {!symptomsLoading && !symptomsError && todaySymptoms.length === 0 && (
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Symptoms Today</Text>
-              <Text style={{ color: c.gray500, fontSize: 14, marginTop: 4 }}>No symptoms logged</Text>
+              <Text style={{ color: c.gray500, fontSize: 14, marginTop: 4 }}>
+                No symptoms logged
+              </Text>
             </View>
           )}
 
@@ -518,35 +636,60 @@ export default function TodayDashboard() {
                 <Text style={styles.sectionTitle}>Symptoms Today</Text>
                 <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
                   {todaySymptoms.length > 1 && (
-                    <TouchableOpacity onPress={() => setShowClearSymptomsDialog(true)} activeOpacity={0.7}>
+                    <Pressable
+                      onPress={() => setShowClearSymptomsDialog(true)}
+                      accessibilityRole="button"
+                      accessibilityLabel="Clear all symptoms"
+                    >
                       <Text style={[styles.seeAllText, { color: c.error }]}>Clear All</Text>
-                    </TouchableOpacity>
+                    </Pressable>
                   )}
-                  <TouchableOpacity onPress={() => router.push('/symptoms')} activeOpacity={0.7}>
+                  <Pressable
+                    onPress={() => router.push('/symptoms')}
+                    accessibilityRole="button"
+                    accessibilityLabel="See all symptoms"
+                  >
                     <Text style={styles.seeAllText}>See All</Text>
-                  </TouchableOpacity>
+                  </Pressable>
                 </View>
               </View>
               <View style={styles.symptomChips}>
                 {todaySymptoms.slice(0, 5).map((s) => (
-                  <TouchableOpacity
+                  <Pressable
                     key={s.id}
-                    style={[styles.symptomChip, s.severity === 'severe' && styles.symptomChipSevere]}
-                    activeOpacity={0.7}
+                    style={[
+                      styles.symptomChip,
+                      s.severity === 'severe' && styles.symptomChipSevere,
+                    ]}
                     onLongPress={async () => {
                       try {
                         await deleteSymptom.mutateAsync(s.id);
                         Toast.show({ type: 'success', text1: 'Symptom removed' });
-                      } catch (err: any) {
-                        Toast.show({ type: 'error', text1: 'Failed to delete', text2: err.message });
+                      } catch (err: unknown) {
+                        Toast.show({
+                          type: 'error',
+                          text1: 'Failed to delete',
+                          text2: err instanceof Error ? err.message : String(err),
+                        });
                       }
                     }}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${s.name}, ${s.severity}. Long press to remove`}
                   >
-                    <Text style={[styles.symptomChipText, s.severity === 'severe' && styles.symptomChipTextSevere]}>
+                    <Text
+                      style={[
+                        styles.symptomChipText,
+                        s.severity === 'severe' && styles.symptomChipTextSevere,
+                      ]}
+                    >
                       {s.name}
                     </Text>
-                    <Feather name="x" size={12} color={s.severity === 'severe' ? c.error : c.warning} />
-                  </TouchableOpacity>
+                    <Feather
+                      name="x"
+                      size={12}
+                      color={s.severity === 'severe' ? c.error : c.warning}
+                    />
+                  </Pressable>
                 ))}
                 {todaySymptoms.length > 5 && (
                   <View style={styles.symptomChip}>
@@ -595,8 +738,12 @@ export default function TodayDashboard() {
             await deleteDoseLogMut.mutateAsync(prnDeleteId);
             setPrnDeleteId(null);
             Toast.show({ type: 'success', text1: 'PRN dose removed' });
-          } catch (err: any) {
-            Toast.show({ type: 'error', text1: 'Failed to delete', text2: err.message });
+          } catch (err: unknown) {
+            Toast.show({
+              type: 'error',
+              text1: 'Failed to delete',
+              text2: err instanceof Error ? err.message : String(err),
+            });
           }
         }}
       />
@@ -615,8 +762,12 @@ export default function TodayDashboard() {
             await deleteSymptomsByDate.mutateAsync(selectedISO);
             setShowClearSymptomsDialog(false);
             Toast.show({ type: 'success', text1: 'All symptoms cleared' });
-          } catch (err: any) {
-            Toast.show({ type: 'error', text1: 'Failed to clear', text2: err.message });
+          } catch (err: unknown) {
+            Toast.show({
+              type: 'error',
+              text1: 'Failed to clear',
+              text2: err instanceof Error ? err.message : String(err),
+            });
           }
         }}
       />
@@ -630,50 +781,74 @@ export default function TodayDashboard() {
       </Animated.View>
 
       <Animated.View
-        style={[styles.fabActions, { opacity: fabActionsOpacity, transform: [{ translateY: fabActionsTranslate }] }]}
+        style={[
+          styles.fabActions,
+          { opacity: fabActionsOpacity, transform: [{ translateY: fabActionsTranslate }] },
+        ]}
         pointerEvents={fabOpen ? 'auto' : 'none'}
       >
-        <TouchableOpacity style={styles.fabActionRow} activeOpacity={0.8} onPress={() => handleFabAction(`/log-symptom?date=${selectedISO}`)}>
+        <Pressable
+          style={styles.fabActionRow}
+          onPress={() => handleFabAction(`/log-symptom?date=${selectedISO}`)}
+          accessibilityRole="button"
+          accessibilityLabel="Log Symptom"
+        >
           <View style={styles.fabActionLabel}>
             <Text style={styles.fabActionLabelText}>Log Symptom</Text>
           </View>
           <View style={[styles.fabActionIcon, { backgroundColor: c.warning }]}>
             <Feather name="activity" size={20} color={c.white} />
           </View>
-        </TouchableOpacity>
+        </Pressable>
 
-        <TouchableOpacity style={styles.fabActionRow} activeOpacity={0.8} onPress={() => handleFabAction('/medication/log-prn')}>
+        <Pressable
+          style={styles.fabActionRow}
+          onPress={() => handleFabAction('/medication/log-prn')}
+          accessibilityRole="button"
+          accessibilityLabel="Log PRN Dose"
+        >
           <View style={styles.fabActionLabel}>
             <Text style={styles.fabActionLabelText}>Log PRN Dose</Text>
           </View>
           <View style={[styles.fabActionIcon, { backgroundColor: c.blue }]}>
             <Feather name="zap" size={20} color={c.white} />
           </View>
-        </TouchableOpacity>
+        </Pressable>
 
-        <TouchableOpacity style={styles.fabActionRow} activeOpacity={0.8} onPress={() => handleFabAction('/medication/add')}>
+        <Pressable
+          style={styles.fabActionRow}
+          onPress={() => handleFabAction('/medication/add')}
+          accessibilityRole="button"
+          accessibilityLabel="Add Medication"
+        >
           <View style={styles.fabActionLabel}>
             <Text style={styles.fabActionLabelText}>Add Medication</Text>
           </View>
           <View style={[styles.fabActionIcon, { backgroundColor: c.teal }]}>
             <Feather name="plus-circle" size={20} color={c.white} />
           </View>
-        </TouchableOpacity>
+        </Pressable>
 
-        <TouchableOpacity style={styles.fabActionRow} activeOpacity={0.8} onPress={() => handleFabAction('/medication/select')}>
+        <Pressable
+          style={styles.fabActionRow}
+          onPress={() => handleFabAction('/medication/select')}
+          accessibilityRole="button"
+          accessibilityLabel="Schedule Medication"
+        >
           <View style={styles.fabActionLabel}>
             <Text style={styles.fabActionLabelText}>Schedule Medication</Text>
           </View>
           <View style={[styles.fabActionIcon, { backgroundColor: c.teal }]}>
             <Feather name="calendar" size={20} color={c.white} />
           </View>
-        </TouchableOpacity>
+        </Pressable>
       </Animated.View>
 
-      <TouchableOpacity
+      <Pressable
         style={styles.fabWrapper}
-        activeOpacity={0.85}
         onPress={toggleFab}
+        accessibilityRole="button"
+        accessibilityLabel={fabOpen ? 'Close actions menu' : 'Open actions menu'}
       >
         <LinearGradient
           colors={[...gradients.primary]}
@@ -685,7 +860,7 @@ export default function TodayDashboard() {
             <Feather name="plus" size={28} color={c.white} />
           </Animated.View>
         </LinearGradient>
-      </TouchableOpacity>
+      </Pressable>
     </View>
   );
 }
@@ -703,7 +878,11 @@ function makeStyles(c: ColorScheme, bottomInset: number, isTablet: boolean) {
       paddingBottom: 32,
       borderBottomLeftRadius: 24,
       borderBottomRightRadius: 24,
-      ...(isTablet && { maxWidth: tabletLayout.contentMaxWidth, alignSelf: 'center' as const, width: '100%' as const }),
+      ...(isTablet && {
+        maxWidth: tabletLayout.contentMaxWidth,
+        alignSelf: 'center' as const,
+        width: '100%' as const,
+      }),
     },
     headerTop: {
       flexDirection: 'row',
@@ -769,7 +948,11 @@ function makeStyles(c: ColorScheme, bottomInset: number, isTablet: boolean) {
     content: {
       paddingHorizontal: 24,
       paddingTop: 24,
-      ...(isTablet && { maxWidth: tabletLayout.contentMaxWidth, alignSelf: 'center' as const, width: '100%' as const }),
+      ...(isTablet && {
+        maxWidth: tabletLayout.contentMaxWidth,
+        alignSelf: 'center' as const,
+        width: '100%' as const,
+      }),
     },
     doseGrid: {
       flexDirection: 'row',
@@ -777,10 +960,13 @@ function makeStyles(c: ColorScheme, bottomInset: number, isTablet: boolean) {
       gap: 16,
     },
     doseGridItem: {
-      width: '48%' as any,
+      width: '48%' as DimensionValue,
     },
     section: {
       marginBottom: 24,
+    },
+    doseCardSpacing: {
+      marginBottom: 12,
     },
     sectionTitle: {
       fontSize: 18,

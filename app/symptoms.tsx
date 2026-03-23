@@ -1,28 +1,29 @@
-import React, { useMemo, useState, useCallback, useRef } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  RefreshControl,
-  Animated,
-  PanResponder,
-} from 'react-native';
-import { router } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { EmptyState } from '../components/ui/EmptyState';
-import { LoadingState } from '../components/ui/LoadingState';
-import { ErrorState } from '../components/ui/ErrorState';
-import { AlertDialog } from '../components/ui/AlertDialog';
-import { type ColorScheme, gradients, borderRadius, shadows } from '../components/ui/theme';
-import { useThemeColors } from '../hooks/useThemeColors';
+import { router } from 'expo-router';
+import type React from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
+import {
+  Animated,
+  PanResponder,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useSymptomsByRange, useMedications, useDeleteSymptom } from '../hooks/useQueryHooks';
-import { toISO } from '../utils/date';
+import { AlertDialog } from '../components/ui/AlertDialog';
+import { EmptyState } from '../components/ui/EmptyState';
+import { ErrorState } from '../components/ui/ErrorState';
+import { LoadingState } from '../components/ui/LoadingState';
+import { borderRadius, type ColorScheme, gradients, shadows } from '../components/ui/theme';
 import { SEVERITY_CONFIG } from '../constants/symptoms';
+import { useDeleteSymptom, useMedications, useSymptomsByRange } from '../hooks/useQueryHooks';
+import { useThemeColors } from '../hooks/useThemeColors';
 import type { SymptomRow } from '../types/database';
+import { toISO } from '../utils/date';
 
 export default function SymptomsScreen() {
   const c = useThemeColors();
@@ -56,13 +57,12 @@ export default function SymptomsScreen() {
     try {
       await deleteSymptomMut.mutateAsync(deleteTarget.id);
       setDeleteTarget(null);
-    } catch { /* mutation handles error */ }
+    } catch {
+      /* mutation handles error */
+    }
   };
 
-  const medMap = useMemo(
-    () => new Map(medications.map((m) => [m.id, m.name])),
-    [medications],
-  );
+  const medMap = useMemo(() => new Map(medications.map((m) => [m.id, m.name])), [medications]);
 
   // Group symptoms by date
   const grouped = useMemo(() => {
@@ -80,7 +80,12 @@ export default function SymptomsScreen() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[c.teal]} tintColor={c.teal} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[c.teal]}
+            tintColor={c.teal}
+          />
         }
       >
         <LinearGradient
@@ -99,9 +104,7 @@ export default function SymptomsScreen() {
             </TouchableOpacity>
             <Text style={styles.headerTitle}>Symptoms</Text>
           </View>
-          <Text style={styles.headerSub}>
-            {symptoms.length} recorded in the last 30 days
-          </Text>
+          <Text style={styles.headerSub}>{symptoms.length} recorded in the last 30 days</Text>
           <Text style={styles.headerTip}>Swipe right on an entry to delete</Text>
         </LinearGradient>
 
@@ -126,43 +129,57 @@ export default function SymptomsScreen() {
             />
           )}
 
-          {!isLoading && !error && grouped.map(([date, items]) => (
-            <View key={date} style={styles.dateGroup}>
-              <Text style={styles.dateLabel}>
-                {new Date(date + 'T12:00:00').toLocaleDateString('en-US', {
-                  weekday: 'short',
-                  month: 'short',
-                  day: 'numeric',
+          {!isLoading &&
+            !error &&
+            grouped.map(([date, items]) => (
+              <View key={date} style={styles.dateGroup}>
+                <Text style={styles.dateLabel}>
+                  {new Date(`${date}T12:00:00`).toLocaleDateString('en-US', {
+                    weekday: 'short',
+                    month: 'short',
+                    day: 'numeric',
+                  })}
+                </Text>
+                {items.map((s) => {
+                  const cfg = SEVERITY_CONFIG[s.severity];
+                  return (
+                    <SwipeableCard
+                      key={s.id}
+                      onDelete={() => setDeleteTarget(s)}
+                      c={c}
+                      styles={styles}
+                    >
+                      <View
+                        style={[
+                          styles.severityDot,
+                          {
+                            backgroundColor: s.severity === 'severe' ? c.error : c.warning,
+                          },
+                        ]}
+                      />
+                      <View style={styles.symptomInfo}>
+                        <Text style={styles.symptomName}>{s.name}</Text>
+                        <Text style={styles.symptomMeta}>
+                          {cfg.label}
+                          {s.medication_id && medMap.has(s.medication_id)
+                            ? ` · ${medMap.get(s.medication_id)}`
+                            : ''}
+                        </Text>
+                        {s.notes ? <Text style={styles.symptomNotes}>{s.notes}</Text> : null}
+                      </View>
+                      {s.logged_at && (
+                        <Text style={styles.symptomTime}>
+                          {new Date(s.logged_at).toLocaleTimeString('en-US', {
+                            hour: 'numeric',
+                            minute: '2-digit',
+                          })}
+                        </Text>
+                      )}
+                    </SwipeableCard>
+                  );
                 })}
-              </Text>
-              {items.map((s) => {
-                const cfg = SEVERITY_CONFIG[s.severity];
-                return (
-                  <SwipeableCard key={s.id} onDelete={() => setDeleteTarget(s)} c={c} styles={styles}>
-                    <View style={[styles.severityDot, {
-                      backgroundColor: s.severity === 'severe' ? c.error : c.warning,
-                    }]} />
-                    <View style={styles.symptomInfo}>
-                      <Text style={styles.symptomName}>{s.name}</Text>
-                      <Text style={styles.symptomMeta}>
-                        {cfg.label}
-                        {s.medication_id && medMap.has(s.medication_id) ? ` · ${medMap.get(s.medication_id)}` : ''}
-                      </Text>
-                      {s.notes ? <Text style={styles.symptomNotes}>{s.notes}</Text> : null}
-                    </View>
-                    {s.logged_at && (
-                      <Text style={styles.symptomTime}>
-                        {new Date(s.logged_at).toLocaleTimeString('en-US', {
-                          hour: 'numeric',
-                          minute: '2-digit',
-                        })}
-                      </Text>
-                    )}
-                  </SwipeableCard>
-                );
-              })}
-            </View>
-          ))}
+              </View>
+            ))}
 
           <View style={{ height: 100 }} />
         </View>
@@ -203,7 +220,12 @@ export default function SymptomsScreen() {
 
 const SWIPE_THRESHOLD = 64;
 
-function SwipeableCard({ children, onDelete, c, styles }: {
+function SwipeableCard({
+  children,
+  onDelete,
+  c,
+  styles,
+}: {
   children: React.ReactNode;
   onDelete: () => void;
   c: ReturnType<typeof useThemeColors>;
@@ -231,7 +253,11 @@ function SwipeableCard({ children, onDelete, c, styles }: {
       },
       onPanResponderRelease: (_, g) => {
         if (g.dx > SWIPE_THRESHOLD) {
-          Animated.spring(translateX, { toValue: SWIPE_THRESHOLD, useNativeDriver: true, friction: 8 }).start();
+          Animated.spring(translateX, {
+            toValue: SWIPE_THRESHOLD,
+            useNativeDriver: true,
+            friction: 8,
+          }).start();
         } else {
           Animated.spring(translateX, { toValue: 0, useNativeDriver: true, friction: 8 }).start();
         }

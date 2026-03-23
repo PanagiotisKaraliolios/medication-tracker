@@ -1,5 +1,5 @@
-import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { create } from 'zustand';
 import { AD_PREFERENCES_KEY } from '../constants/storage';
 
 // ─── Types ───────────────────────────────────────────────────────────
@@ -52,14 +52,26 @@ function persist(prefs: AdPreferences) {
 
 function pick(state: AdPreferencesStore): AdPreferences {
   const {
-    todayBanner, medicationsBanner, reportsBanner, profileBanner,
-    medicationDetailBanner, notificationsBanner, notificationSettingsBanner,
-    interstitials, appOpenAds,
+    todayBanner,
+    medicationsBanner,
+    reportsBanner,
+    profileBanner,
+    medicationDetailBanner,
+    notificationsBanner,
+    notificationSettingsBanner,
+    interstitials,
+    appOpenAds,
   } = state;
   return {
-    todayBanner, medicationsBanner, reportsBanner, profileBanner,
-    medicationDetailBanner, notificationsBanner, notificationSettingsBanner,
-    interstitials, appOpenAds,
+    todayBanner,
+    medicationsBanner,
+    reportsBanner,
+    profileBanner,
+    medicationDetailBanner,
+    notificationsBanner,
+    notificationSettingsBanner,
+    interstitials,
+    appOpenAds,
   };
 }
 

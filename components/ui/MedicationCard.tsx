@@ -1,9 +1,9 @@
-import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { type ColorScheme, borderRadius, shadows, gradients } from './theme';
+import React, { useMemo } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useThemeColors } from '../../hooks/useThemeColors';
+import { borderRadius, type ColorScheme, gradients, shadows } from './theme';
 
 type MedicationStatus = 'pending' | 'taken' | 'skipped' | 'snoozed';
 
@@ -21,7 +21,9 @@ interface MedicationCardProps {
   onCancelSnooze?: () => void;
 }
 
-function getStatusConfig(c: ColorScheme): Record<MedicationStatus, { bg: string; text: string; label: string }> {
+function getStatusConfig(
+  c: ColorScheme,
+): Record<MedicationStatus, { bg: string; text: string; label: string }> {
   return {
     pending: { bg: c.warningLight, text: c.warning, label: 'Pending' },
     taken: { bg: c.successLight, text: c.success, label: 'Taken' },
@@ -30,7 +32,7 @@ function getStatusConfig(c: ColorScheme): Record<MedicationStatus, { bg: string;
   };
 }
 
-export function MedicationCard({
+export const MedicationCard = React.memo(function MedicationCard({
   name,
   strength,
   time,
@@ -48,12 +50,17 @@ export function MedicationCard({
   const config = getStatusConfig(c)[status];
 
   return (
-    <View style={styles.card}>
+    <View
+      style={styles.card}
+      accessibilityRole="summary"
+      accessibilityLabel={`${name}, ${strength}, ${time}, ${config.label}`}
+    >
       <View style={styles.header}>
         <View style={styles.info}>
           <Text style={styles.name}>{name}</Text>
           <Text style={styles.strength}>
-            {strength}{doseAmount ? ` · ${doseAmount}` : ''}
+            {strength}
+            {doseAmount ? ` · ${doseAmount}` : ''}
           </Text>
         </View>
         <View style={[styles.badge, { backgroundColor: config.bg }]}>
@@ -74,7 +81,12 @@ export function MedicationCard({
 
       {status === 'pending' && (
         <View style={styles.actions}>
-          <TouchableOpacity style={styles.takeButton} onPress={onTake} activeOpacity={0.85}>
+          <Pressable
+            style={styles.takeButton}
+            onPress={onTake}
+            accessibilityRole="button"
+            accessibilityLabel={`Take ${name}`}
+          >
             <LinearGradient
               colors={[...gradients.primary]}
               start={{ x: 0, y: 0 }}
@@ -84,19 +96,34 @@ export function MedicationCard({
               <Feather name="check" size={18} color={c.white} />
               <Text style={styles.takeText}>Take</Text>
             </LinearGradient>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.iconButton} onPress={onSkip} activeOpacity={0.7}>
+          </Pressable>
+          <Pressable
+            style={styles.iconButton}
+            onPress={onSkip}
+            accessibilityRole="button"
+            accessibilityLabel={`Skip ${name}`}
+          >
             <Feather name="x" size={18} color={c.gray600} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.iconButton} onPress={onSnooze} activeOpacity={0.7}>
+          </Pressable>
+          <Pressable
+            style={styles.iconButton}
+            onPress={onSnooze}
+            accessibilityRole="button"
+            accessibilityLabel={`Snooze ${name}`}
+          >
             <Feather name="bell" size={18} color={c.gray600} />
-          </TouchableOpacity>
+          </Pressable>
         </View>
       )}
 
       {status === 'snoozed' && (
         <View style={styles.actions}>
-          <TouchableOpacity style={styles.takeButton} onPress={onTake} activeOpacity={0.85}>
+          <Pressable
+            style={styles.takeButton}
+            onPress={onTake}
+            accessibilityRole="button"
+            accessibilityLabel={`Take ${name} now`}
+          >
             <LinearGradient
               colors={[...gradients.primary]}
               start={{ x: 0, y: 0 }}
@@ -106,24 +133,34 @@ export function MedicationCard({
               <Feather name="check" size={18} color={c.white} />
               <Text style={styles.takeText}>Take Now</Text>
             </LinearGradient>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.iconButton} onPress={onCancelSnooze} activeOpacity={0.7}>
+          </Pressable>
+          <Pressable
+            style={styles.iconButton}
+            onPress={onCancelSnooze}
+            accessibilityRole="button"
+            accessibilityLabel={`Cancel snooze for ${name}`}
+          >
             <Feather name="bell-off" size={18} color={c.gray600} />
-          </TouchableOpacity>
+          </Pressable>
         </View>
       )}
 
       {(status === 'taken' || status === 'skipped') && onUndo && (
         <View style={styles.actions}>
-          <TouchableOpacity style={styles.undoButton} onPress={onUndo} activeOpacity={0.7}>
+          <Pressable
+            style={styles.undoButton}
+            onPress={onUndo}
+            accessibilityRole="button"
+            accessibilityLabel={`Undo ${status} for ${name}`}
+          >
             <Feather name="rotate-ccw" size={16} color={c.gray600} />
             <Text style={styles.undoText}>Undo</Text>
-          </TouchableOpacity>
+          </Pressable>
         </View>
       )}
     </View>
   );
-}
+});
 
 function makeStyles(c: ColorScheme) {
   return StyleSheet.create({

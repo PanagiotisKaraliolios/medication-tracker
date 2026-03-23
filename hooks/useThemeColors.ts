@@ -1,4 +1,4 @@
-import { type ColorScheme } from '../components/ui/theme';
+import type { ColorScheme } from '../components/ui/theme';
 import { useThemePreference } from '../contexts/ThemeContext';
 
 /**

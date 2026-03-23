@@ -1,8 +1,8 @@
-import React, { useMemo } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { type ColorScheme } from './theme';
+import { useMemo } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 import { useThemeColors } from '../../hooks/useThemeColors';
+import type { ColorScheme } from './theme';
 
 interface InventoryProgressBarProps {
   current: number;

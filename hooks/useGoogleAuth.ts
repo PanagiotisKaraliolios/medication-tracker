@@ -1,10 +1,10 @@
-import { useCallback, useState } from 'react';
 import {
   GoogleSignin,
   isErrorWithCode,
   isSuccessResponse,
   statusCodes,
 } from '@react-native-google-signin/google-signin';
+import { useCallback, useState } from 'react';
 import { supabase } from '../lib/supabase';
 
 // Configure Google Sign-In once at module level.

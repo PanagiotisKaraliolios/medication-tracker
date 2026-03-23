@@ -1,33 +1,37 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect, useMemo, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
+  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
-  ActivityIndicator,
+  ScrollView,
+  StyleSheet,
   Switch,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
-import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
-import { Input } from '../../components/ui/Input';
-import { Button } from '../../components/ui/Button';
-import { Stepper } from '../../components/ui/Stepper';
-import { DrugSearchInput } from '../../components/ui/DrugSearchInput';
-import { InteractionWarning } from '../../components/ui/InteractionWarning';
-import { type ColorScheme, borderRadius, tablet as tabletLayout } from '../../components/ui/theme';
-import { useThemeColors } from '../../hooks/useThemeColors';
-import { useResponsive } from '../../hooks/useResponsive';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useMedication as useMedicationQuery, useUpdateMedication, useMedications } from '../../hooks/useQueryHooks';
-import { useDrugSearch, useDrugInteractions } from '../../hooks/useDrugSearch';
-import { scheduleLowSupplyReminder, cancelLowSupplyReminder } from '../../lib/notifications';
 import Toast from 'react-native-toast-message';
+import { Button } from '../../components/ui/Button';
+import { DrugSearchInput } from '../../components/ui/DrugSearchInput';
+import { Input } from '../../components/ui/Input';
+import { InteractionWarning } from '../../components/ui/InteractionWarning';
+import { Stepper } from '../../components/ui/Stepper';
+import { borderRadius, type ColorScheme, tablet as tabletLayout } from '../../components/ui/theme';
 import { MEDICATION_TYPES } from '../../constants/medications';
-import type { MedicationUpdate } from '../../types/database';
+import { useDrugInteractions, useDrugSearch } from '../../hooks/useDrugSearch';
+import {
+  useMedication as useMedicationQuery,
+  useMedications,
+  useUpdateMedication,
+} from '../../hooks/useQueryHooks';
+import { useResponsive } from '../../hooks/useResponsive';
+import { useThemeColors } from '../../hooks/useThemeColors';
 import { showInterstitial } from '../../lib/interstitialManager';
+import { cancelLowSupplyReminder, scheduleLowSupplyReminder } from '../../lib/notifications';
+import type { MedicationUpdate } from '../../types/database';
 
 export default function EditMedicationScreen() {
   const router = useRouter();
@@ -35,8 +39,11 @@ export default function EditMedicationScreen() {
   const c = useThemeColors();
   const insets = useSafeAreaInsets();
   const { isTablet } = useResponsive();
-  const styles = useMemo(() => makeStyles(c, insets.bottom, isTablet), [c, insets.bottom, isTablet]);
-  const { data: original, isLoading: loading, error: queryError } = useMedicationQuery(id);
+  const styles = useMemo(
+    () => makeStyles(c, insets.bottom, isTablet),
+    [c, insets.bottom, isTablet],
+  );
+  const { data: original, isLoading: loading } = useMedicationQuery(id);
   const updateMedicationMut = useUpdateMedication();
 
   const [saving, setSaving] = useState(false);
@@ -51,13 +58,19 @@ export default function EditMedicationScreen() {
   const [initialized, setInitialized] = useState(false);
 
   // Drug search
-  const { query: drugQuery, updateQuery: setDrugQuery, clearSearch, results: drugResults, isLoading: drugSearchLoading } = useDrugSearch();
+  const {
+    query: drugQuery,
+    updateQuery: setDrugQuery,
+    clearSearch,
+    results: drugResults,
+    isLoading: drugSearchLoading,
+  } = useDrugSearch();
   const { data: existingMeds = [] } = useMedications();
 
   const allDrugNames = useMemo(() => {
     const names = existingMeds
-      .filter(m => m.id !== id) // exclude the medication being edited
-      .map(m => m.generic_name || m.name);
+      .filter((m) => m.id !== id) // exclude the medication being edited
+      .map((m) => m.generic_name || m.name);
     if (genericName) names.push(genericName);
     else if (name.trim()) names.push(name.trim());
     return [...new Set(names)];
@@ -110,8 +123,12 @@ export default function EditMedicationScreen() {
 
       Toast.show({ type: 'success', text1: 'Medication updated' });
       showInterstitial(() => router.back());
-    } catch (err: any) {
-      Toast.show({ type: 'error', text1: 'Update failed', text2: err.message });
+    } catch (err: unknown) {
+      Toast.show({
+        type: 'error',
+        text1: 'Update failed',
+        text2: err instanceof Error ? err.message : String(err),
+      });
     } finally {
       setSaving(false);
     }
@@ -127,7 +144,9 @@ export default function EditMedicationScreen() {
 
   if (!original && !loading) {
     return (
-      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center', padding: 24 }]}>
+      <View
+        style={[styles.container, { justifyContent: 'center', alignItems: 'center', padding: 24 }]}
+      >
         <Feather name="alert-circle" size={48} color={c.error} />
         <Text style={{ color: c.gray600, fontSize: 16, marginTop: 12 }}>Medication not found</Text>
       </View>
@@ -186,11 +205,7 @@ export default function EditMedicationScreen() {
         {/* Dosage */}
         <View style={styles.fieldGroup}>
           <Text style={styles.fieldLabel}>Dosage</Text>
-          <Input
-            placeholder="e.g., 500mg"
-            value={dosage}
-            onChangeText={setDosage}
-          />
+          <Input placeholder="e.g., 500mg" value={dosage} onChangeText={setDosage} />
         </View>
 
         {/* Medication Type */}
@@ -251,7 +266,6 @@ export default function EditMedicationScreen() {
           <Text style={styles.fieldHint}>Notify me when supply drops below this amount</Text>
           <Stepper value={lowSupplyThreshold} onChange={setLowSupplyThreshold} />
         </View>
-
       </ScrollView>
 
       {/* Footer */}
@@ -274,7 +288,11 @@ function makeStyles(c: ColorScheme, bottomInset: number, isTablet: boolean) {
       paddingHorizontal: 24,
       paddingTop: 16,
       paddingBottom: 120,
-      ...(isTablet && { alignSelf: 'center' as const, width: '100%', maxWidth: tabletLayout.contentMaxWidth }),
+      ...(isTablet && {
+        alignSelf: 'center' as const,
+        width: '100%',
+        maxWidth: tabletLayout.contentMaxWidth,
+      }),
     },
     groupTitle: {
       fontSize: 18,

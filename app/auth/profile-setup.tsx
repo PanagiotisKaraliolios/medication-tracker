@@ -1,16 +1,24 @@
-import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity } from 'react-native';
-import { useRouter } from 'expo-router';
-import { useState, useMemo } from 'react';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { supabase } from '../../lib/supabase';
-import { useAuth } from '../../contexts/AuthContext';
-import { Button } from '../../components/ui/Button';
-import { Input } from '../../components/ui/Input';
-import { DatePickerModal } from '../../components/ui/DatePickerModal';
-import { type ColorScheme, gradients, borderRadius } from '../../components/ui/theme';
-import { useThemeColors } from '../../hooks/useThemeColors';
+import { useRouter } from 'expo-router';
+import { useMemo, useState } from 'react';
+import {
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import Toast from 'react-native-toast-message';
+import { Button } from '../../components/ui/Button';
+import { DatePickerModal } from '../../components/ui/DatePickerModal';
+import { Input } from '../../components/ui/Input';
+import { borderRadius, type ColorScheme, gradients } from '../../components/ui/theme';
+import { useAuth } from '../../contexts/AuthContext';
+import { useThemeColors } from '../../hooks/useThemeColors';
+import { supabase } from '../../lib/supabase';
 
 export default function ProfileSetupScreen() {
   const c = useThemeColors();
@@ -25,7 +33,7 @@ export default function ProfileSetupScreen() {
   const todayISO = useMemo(() => new Date().toISOString().slice(0, 10), []);
 
   const formatDisplayDate = (iso: string) => {
-    const d = new Date(iso + 'T00:00:00');
+    const d = new Date(`${iso}T00:00:00`);
     return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
   };
 
@@ -38,7 +46,9 @@ export default function ProfileSetupScreen() {
     // Get the current user from auth context or directly from Supabase session
     let userId = user?.id;
     if (!userId) {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       userId = session?.user?.id;
     }
 
@@ -49,14 +59,12 @@ export default function ProfileSetupScreen() {
     }
 
     setLoading(true);
-    const { error } = await supabase
-      .from('profiles')
-      .upsert({
-        id: userId,
-        full_name: name,
-        date_of_birth: dateOfBirth,
-        updated_at: new Date().toISOString(),
-      });
+    const { error } = await supabase.from('profiles').upsert({
+      id: userId,
+      full_name: name,
+      date_of_birth: dateOfBirth,
+      updated_at: new Date().toISOString(),
+    });
 
     setLoading(false);
 
@@ -89,7 +97,9 @@ export default function ProfileSetupScreen() {
             <Feather name="user" size={40} color={c.white} />
           </LinearGradient>
           <Text style={styles.title}>Complete Your Profile</Text>
-          <Text style={styles.subtitle}>Tell us a bit about yourself to personalize your experience</Text>
+          <Text style={styles.subtitle}>
+            Tell us a bit about yourself to personalize your experience
+          </Text>
         </View>
 
         <View style={styles.form}>
@@ -104,7 +114,9 @@ export default function ProfileSetupScreen() {
           </View>
 
           <View>
-            <Text style={styles.label}>Date of Birth <Text style={styles.optionalBadge}>(optional)</Text></Text>
+            <Text style={styles.label}>
+              Date of Birth <Text style={styles.optionalBadge}>(optional)</Text>
+            </Text>
             <TouchableOpacity
               style={styles.dobButton}
               onPress={() => setShowDobPicker(true)}
@@ -115,10 +127,7 @@ export default function ProfileSetupScreen() {
                 {dateOfBirth ? formatDisplayDate(dateOfBirth) : 'Select date of birth'}
               </Text>
               {dateOfBirth && (
-                <TouchableOpacity
-                  onPress={() => setDateOfBirth(null)}
-                  hitSlop={8}
-                >
+                <TouchableOpacity onPress={() => setDateOfBirth(null)} hitSlop={8}>
                   <Feather name="x" size={18} color={c.gray400} />
                 </TouchableOpacity>
               )}

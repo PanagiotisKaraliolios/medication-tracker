@@ -1,9 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
-import { Platform, AppState, type AppStateStatus } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Battery from 'expo-battery';
-import { startActivityAsync, ActivityAction } from 'expo-intent-launcher';
 import Constants from 'expo-constants';
+import { ActivityAction, startActivityAsync } from 'expo-intent-launcher';
+import { useCallback, useEffect, useState } from 'react';
+import { AppState, type AppStateStatus, Platform } from 'react-native';
 import { BATTERY_OPT_DISMISSED_KEY } from '../constants/storage';
 
 /**
@@ -89,8 +89,7 @@ export function useBatteryOptimization() {
     }
   }, []);
 
-  const shouldShowModal =
-    Platform.OS === 'android' && checked && optimizationEnabled && !dismissed;
+  const shouldShowModal = Platform.OS === 'android' && checked && optimizationEnabled && !dismissed;
 
   return {
     shouldShowModal,

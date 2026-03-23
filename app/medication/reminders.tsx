@@ -1,14 +1,14 @@
-import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, TextInput, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Button } from '../../components/ui/Button';
-import { SegmentedControl } from '../../components/ui/SegmentedControl';
-import { NotificationCard } from '../../components/ui/NotificationCard';
-import { type ColorScheme, borderRadius } from '../../components/ui/theme';
-import { useThemeColors } from '../../hooks/useThemeColors';
+import { useMemo } from 'react';
+import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useScheduleDraft } from '../../stores/draftStores';
+import { Button } from '../../components/ui/Button';
+import { NotificationCard } from '../../components/ui/NotificationCard';
+import { SegmentedControl } from '../../components/ui/SegmentedControl';
+import { borderRadius, type ColorScheme } from '../../components/ui/theme';
 import { SNOOZE_OPTIONS } from '../../constants/schedule';
+import { useThemeColors } from '../../hooks/useThemeColors';
+import { useScheduleDraft } from '../../stores/draftStores';
 
 export default function RemindersScreen() {
   const router = useRouter();
@@ -19,10 +19,7 @@ export default function RemindersScreen() {
 
   return (
     <View style={styles.container}>
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Notification Settings */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Notifications</Text>

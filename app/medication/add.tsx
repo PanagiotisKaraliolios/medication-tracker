@@ -1,37 +1,40 @@
-import React, { useEffect, useMemo, useState, useRef } from 'react';
+import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
+  StyleSheet,
   Switch,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { useRouter } from 'expo-router';
-import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
-import { Input } from '../../components/ui/Input';
-import { Button } from '../../components/ui/Button';
-import { AlertDialog } from '../../components/ui/AlertDialog';
-import { DrugSearchInput } from '../../components/ui/DrugSearchInput';
-import { InteractionWarning } from '../../components/ui/InteractionWarning';
-import { type ColorScheme, borderRadius, tablet as tabletLayout } from '../../components/ui/theme';
-import { useThemeColors } from '../../hooks/useThemeColors';
-import { useResponsive } from '../../hooks/useResponsive';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useMedicationDraft, useScheduleDraft } from '../../stores/draftStores';
-import { useCreateMedication, useMedications } from '../../hooks/useQueryHooks';
-import { useDrugSearch, useDrugInteractions } from '../../hooks/useDrugSearch';
 import Toast from 'react-native-toast-message';
+import { AlertDialog } from '../../components/ui/AlertDialog';
+import { Button } from '../../components/ui/Button';
+import { DrugSearchInput } from '../../components/ui/DrugSearchInput';
+import { Input } from '../../components/ui/Input';
+import { InteractionWarning } from '../../components/ui/InteractionWarning';
+import { borderRadius, type ColorScheme, tablet as tabletLayout } from '../../components/ui/theme';
 import { MEDICATION_TYPES } from '../../constants/medications';
+import { useDrugInteractions, useDrugSearch } from '../../hooks/useDrugSearch';
+import { useCreateMedication, useMedications } from '../../hooks/useQueryHooks';
+import { useResponsive } from '../../hooks/useResponsive';
+import { useThemeColors } from '../../hooks/useThemeColors';
+import { useMedicationDraft, useScheduleDraft } from '../../stores/draftStores';
 
 export default function AddMedicationScreen() {
   const router = useRouter();
   const c = useThemeColors();
   const insets = useSafeAreaInsets();
   const { isTablet } = useResponsive();
-  const styles = useMemo(() => makeStyles(c, insets.bottom, isTablet), [c, insets.bottom, isTablet]);
+  const styles = useMemo(
+    () => makeStyles(c, insets.bottom, isTablet),
+    [c, insets.bottom, isTablet],
+  );
   const { draft, updateDraft, resetDraft } = useMedicationDraft();
   const createMedication = useCreateMedication();
   const { resetScheduleDraft, setSchedulingMedId } = useScheduleDraft();
@@ -40,12 +43,18 @@ export default function AddMedicationScreen() {
   const createdMedIdRef = useRef<string | null>(null);
 
   // Drug search
-  const { query: drugQuery, updateQuery: setDrugQuery, clearSearch, results: drugResults, isLoading: drugSearchLoading } = useDrugSearch();
+  const {
+    query: drugQuery,
+    updateQuery: setDrugQuery,
+    clearSearch,
+    results: drugResults,
+    isLoading: drugSearchLoading,
+  } = useDrugSearch();
   const { data: existingMeds = [] } = useMedications();
 
   // Build list of drug names for interaction checking
   const allDrugNames = useMemo(() => {
-    const names = existingMeds.map(m => m.generic_name || m.name);
+    const names = existingMeds.map((m) => m.generic_name || m.name);
     if (draft.genericName) names.push(draft.genericName);
     else if (draft.name.trim()) names.push(draft.name.trim());
     return [...new Set(names)];
@@ -57,7 +66,7 @@ export default function AddMedicationScreen() {
   useEffect(() => {
     resetDraft();
     clearSearch();
-  }, []);
+  }, [clearSearch, resetDraft]);
 
   const isFormValid = draft.name.trim().length > 0 && draft.dosage.trim().length > 0;
 
@@ -71,15 +80,19 @@ export default function AddMedicationScreen() {
       } else {
         setShowSchedulePrompt(true);
       }
-    } catch (err: any) {
-      Toast.show({ type: 'error', text1: 'Save failed', text2: err.message });
+    } catch (err: unknown) {
+      Toast.show({
+        type: 'error',
+        text1: 'Save failed',
+        text2: err instanceof Error ? err.message : String(err),
+      });
     }
   };
 
   const handleSchedule = () => {
     setShowSchedulePrompt(false);
     resetScheduleDraft();
-    setSchedulingMedId(createdMedIdRef.current!);
+    setSchedulingMedId(createdMedIdRef.current ?? '');
     router.replace('/medication/schedule');
   };
 
@@ -215,7 +228,9 @@ export default function AddMedicationScreen() {
           <View style={styles.stepper}>
             <TouchableOpacity
               style={styles.stepperButton}
-              onPress={() => updateDraft({ lowSupplyThreshold: Math.max(1, draft.lowSupplyThreshold - 1) })}
+              onPress={() =>
+                updateDraft({ lowSupplyThreshold: Math.max(1, draft.lowSupplyThreshold - 1) })
+              }
               activeOpacity={0.7}
             >
               <Feather name="minus" size={20} color={c.gray600} />
@@ -233,7 +248,11 @@ export default function AddMedicationScreen() {
       </ScrollView>
 
       <View style={styles.footer}>
-        <Button variant="primary" onPress={handleSave} disabled={!isFormValid || createMedication.isPending}>
+        <Button
+          variant="primary"
+          onPress={handleSave}
+          disabled={!isFormValid || createMedication.isPending}
+        >
           {createMedication.isPending ? 'Saving…' : 'Save Medication'}
         </Button>
       </View>
@@ -263,7 +282,11 @@ function makeStyles(c: ColorScheme, bottomInset: number, isTablet: boolean) {
       paddingHorizontal: 24,
       paddingTop: 16,
       paddingBottom: 120,
-      ...(isTablet && { alignSelf: 'center' as const, width: '100%', maxWidth: tabletLayout.contentMaxWidth }),
+      ...(isTablet && {
+        alignSelf: 'center' as const,
+        width: '100%',
+        maxWidth: tabletLayout.contentMaxWidth,
+      }),
     },
     fieldGroup: {
       marginBottom: 24,

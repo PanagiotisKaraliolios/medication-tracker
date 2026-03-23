@@ -1,15 +1,9 @@
-import React, { useMemo } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  Modal,
-  Pressable,
-} from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { Button } from './Button';
-import { type ColorScheme, borderRadius, shadows } from './theme';
+import { useMemo } from 'react';
+import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useThemeColors } from '../../hooks/useThemeColors';
+import { Button } from './Button';
+import { borderRadius, type ColorScheme, shadows } from './theme';
 
 interface BatteryOptimizationModalProps {
   visible: boolean;
@@ -45,9 +39,8 @@ export function BatteryOptimizationModal({
 
           {/* Message */}
           <Text style={styles.message}>
-            Battery optimization may delay or prevent your medication reminders.
-            To ensure uninterrupted notifications, please allow unrestricted
-            background activity for this app.
+            Battery optimization may delay or prevent your medication reminders. To ensure
+            uninterrupted notifications, please allow unrestricted background activity for this app.
           </Text>
 
           {/* Steps */}

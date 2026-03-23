@@ -1,7 +1,7 @@
-import React, { ReactNode, useMemo } from 'react';
-import { View, TextInput, StyleSheet, TextInputProps, ViewStyle } from 'react-native';
-import { type ColorScheme, borderRadius } from './theme';
+import { type ReactNode, useMemo } from 'react';
+import { StyleSheet, TextInput, type TextInputProps, View, type ViewStyle } from 'react-native';
 import { useThemeColors } from '../../hooks/useThemeColors';
+import { borderRadius, type ColorScheme } from './theme';
 
 interface InputProps extends Omit<TextInputProps, 'style'> {
   icon?: ReactNode;

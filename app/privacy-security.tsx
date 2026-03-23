@@ -1,33 +1,32 @@
-import React, { useMemo, useState, useCallback } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Share,
-  Platform,
-  ActivityIndicator,
-} from 'react-native';
-import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Notifications from 'expo-notifications';
-import { supabase } from '../lib/supabase';
-import { useAuth } from '../contexts/AuthContext';
-import { useMedications, useSchedules, useDoseLogsByRange } from '../hooks/useQueryHooks';
-import { AlertDialog } from '../components/ui/AlertDialog';
-import { type ColorScheme, gradients, borderRadius, shadows } from '../components/ui/theme';
-import { useThemeColors } from '../hooks/useThemeColors';
-import { toISO } from '../utils/date';
-import Toast from 'react-native-toast-message';
+import { useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
+import { useCallback, useMemo, useState } from 'react';
+import {
+  ActivityIndicator,
+  ScrollView,
+  Share,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import Toast from 'react-native-toast-message';
+import { AlertDialog } from '../components/ui/AlertDialog';
+import { borderRadius, type ColorScheme, gradients, shadows } from '../components/ui/theme';
+import { useAuth } from '../contexts/AuthContext';
+import { useDoseLogsByRange, useMedications, useSchedules } from '../hooks/useQueryHooks';
+import { useThemeColors } from '../hooks/useThemeColors';
+import { supabase } from '../lib/supabase';
+import { toISO } from '../utils/date';
 
 export default function PrivacySecurityScreen() {
   const c = useThemeColors();
   const styles = useMemo(() => makeStyles(c), [c]);
   const router = useRouter();
-  const { user, signOut } = useAuth();
+  const { user } = useAuth();
 
   const [signOutAllVisible, setSignOutAllVisible] = useState(false);
   const [signOutAllLoading, setSignOutAllLoading] = useState(false);
@@ -47,9 +46,7 @@ export default function PrivacySecurityScreen() {
         identities.some((i) => i.provider === 'email') ||
         appProviders.includes('email') ||
         !!user?.user_metadata?.has_password,
-      hasGoogle:
-        identities.some((i) => i.provider === 'google') ||
-        appProviders.includes('google'),
+      hasGoogle: identities.some((i) => i.provider === 'google') || appProviders.includes('google'),
     };
   }, [user?.identities, user?.app_metadata?.providers, user?.user_metadata?.has_password]);
 
@@ -137,7 +134,9 @@ export default function PrivacySecurityScreen() {
     try {
       // Call the Edge Function which uses admin privileges to delete
       // all user data AND the auth user itself
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       if (!session?.access_token) throw new Error('No active session');
 
       const res = await fetch(
@@ -146,7 +145,7 @@ export default function PrivacySecurityScreen() {
           method: 'POST',
           headers: {
             Authorization: `Bearer ${session.access_token}`,
-            apikey: process.env.EXPO_PUBLIC_SUPABASE_KEY!,
+            apikey: process.env.EXPO_PUBLIC_SUPABASE_KEY ?? '',
             'Content-Type': 'application/json',
           },
         },
@@ -181,7 +180,11 @@ export default function PrivacySecurityScreen() {
       });
 
       if (error || !data.url) {
-        Toast.show({ type: 'error', text1: 'Error', text2: error?.message ?? 'Failed to start linking' });
+        Toast.show({
+          type: 'error',
+          text1: 'Error',
+          text2: error?.message ?? 'Failed to start linking',
+        });
         return;
       }
 
@@ -194,7 +197,10 @@ export default function PrivacySecurityScreen() {
           const accessToken = params.get('access_token');
           const refreshToken = params.get('refresh_token');
           if (accessToken && refreshToken) {
-            await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
+            await supabase.auth.setSession({
+              access_token: accessToken,
+              refresh_token: refreshToken,
+            });
             Toast.show({ type: 'success', text1: 'Google account connected' });
           }
         }
@@ -210,7 +216,10 @@ export default function PrivacySecurityScreen() {
     setGoogleLoading(true);
     try {
       // Fetch fresh user data from the server to get the full identities array
-      const { data: { user: freshUser }, error: fetchErr } = await supabase.auth.getUser();
+      const {
+        data: { user: freshUser },
+        error: fetchErr,
+      } = await supabase.auth.getUser();
       if (fetchErr || !freshUser) throw fetchErr ?? new Error('Could not fetch user');
 
       const googleIdentity = freshUser.identities?.find((i) => i.provider === 'google');
@@ -382,7 +391,9 @@ export default function PrivacySecurityScreen() {
                 </View>
                 <View style={styles.actionText}>
                   <Text style={styles.actionLabel}>Connect Google</Text>
-                  <Text style={styles.actionSubtitle}>Link your Google account for quick sign-in</Text>
+                  <Text style={styles.actionSubtitle}>
+                    Link your Google account for quick sign-in
+                  </Text>
                 </View>
                 <Feather name="chevron-right" size={20} color={c.gray400} />
               </TouchableOpacity>
@@ -408,9 +419,7 @@ export default function PrivacySecurityScreen() {
               </View>
               <View style={styles.actionText}>
                 <Text style={styles.actionLabel}>Sign Out Everywhere</Text>
-                <Text style={styles.actionSubtitle}>
-                  End all active sessions on other devices
-                </Text>
+                <Text style={styles.actionSubtitle}>End all active sessions on other devices</Text>
               </View>
               <Feather name="chevron-right" size={20} color={c.gray400} />
             </TouchableOpacity>
@@ -450,8 +459,8 @@ export default function PrivacySecurityScreen() {
             <View style={styles.infoRow}>
               <Feather name="info" size={14} color={c.gray400} />
               <Text style={styles.infoText}>
-                Your data is stored securely in the cloud and is only accessible to you.
-                We never share your medical information with third parties.
+                Your data is stored securely in the cloud and is only accessible to you. We never
+                share your medical information with third parties.
               </Text>
             </View>
           </View>

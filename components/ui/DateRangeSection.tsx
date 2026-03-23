@@ -1,10 +1,10 @@
-import React, { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Switch } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { DatePickerModal } from './DatePickerModal';
-import { type ColorScheme, borderRadius, shadows } from './theme';
+import { useMemo, useState } from 'react';
+import { StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 import { useThemeColors } from '../../hooks/useThemeColors';
 import { formatDateLabel } from '../../utils/date';
+import { DatePickerModal } from './DatePickerModal';
+import { borderRadius, type ColorScheme, shadows } from './theme';
 
 type Props = {
   startDate: string;
@@ -13,7 +13,12 @@ type Props = {
   onEndDateChange: (date: string | null) => void;
 };
 
-export function DateRangeSection({ startDate, endDate, onStartDateChange, onEndDateChange }: Props) {
+export function DateRangeSection({
+  startDate,
+  endDate,
+  onStartDateChange,
+  onEndDateChange,
+}: Props) {
   const c = useThemeColors();
   const styles = useMemo(() => makeStyles(c), [c]);
   const [showStartPicker, setShowStartPicker] = useState(false);

@@ -1,15 +1,9 @@
-import React, { useMemo } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  Modal,
-  Pressable,
-} from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { Button } from './Button';
-import { type ColorScheme, borderRadius, shadows } from './theme';
+import { useMemo } from 'react';
+import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useThemeColors } from '../../hooks/useThemeColors';
+import { Button } from './Button';
+import { borderRadius, type ColorScheme, shadows } from './theme';
 
 type AlertVariant = 'destructive' | 'info' | 'warning' | 'success';
 
@@ -26,7 +20,12 @@ interface AlertDialogProps {
   loading?: boolean;
 }
 
-function getVariantConfig(c: ColorScheme): Record<AlertVariant, { icon: keyof typeof Feather.glyphMap; iconColor: string; bgColor: string }> {
+function getVariantConfig(
+  c: ColorScheme,
+): Record<
+  AlertVariant,
+  { icon: keyof typeof Feather.glyphMap; iconColor: string; bgColor: string }
+> {
   return {
     destructive: { icon: 'log-out', iconColor: c.error, bgColor: c.errorLight },
     info: { icon: 'info', iconColor: c.blue, bgColor: c.blueLight },
@@ -59,16 +58,23 @@ export function AlertDialog({
       animationType="fade"
       statusBarTranslucent
       onRequestClose={onClose}
+      accessibilityViewIsModal
     >
       <Pressable style={styles.backdrop} onPress={onClose}>
-        <Pressable style={styles.dialog} onPress={(e) => e.stopPropagation()}>
+        <Pressable
+          style={styles.dialog}
+          onPress={(e) => e.stopPropagation()}
+          accessibilityRole="alert"
+        >
           {/* Icon */}
           <View style={[styles.iconCircle, { backgroundColor: config.bgColor }]}>
             <Feather name={resolvedIcon} size={28} color={config.iconColor} />
           </View>
 
           {/* Text */}
-          <Text style={styles.title}>{title}</Text>
+          <Text style={styles.title} accessibilityRole="header">
+            {title}
+          </Text>
           <Text style={styles.message}>{message}</Text>
 
           {/* Actions */}

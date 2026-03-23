@@ -1,8 +1,8 @@
 import { useEffect, useRef } from 'react';
 import { AppState, type AppStateStatus } from 'react-native';
-import { AppOpenAd, AdEventType } from 'react-native-google-mobile-ads';
+import { AdEventType, AppOpenAd } from 'react-native-google-mobile-ads';
 import { AD_UNIT_IDS } from '../lib/ads';
-import { useAdPreferences, areAdPreferencesLoaded } from '../stores/adPreferencesStore';
+import { areAdPreferencesLoaded, useAdPreferences } from '../stores/adPreferencesStore';
 
 const MIN_INTERVAL_MS = 3 * 60 * 1000; // 3 minutes between App Open ads
 
@@ -17,15 +17,15 @@ function preload() {
   appOpenAd.load();
 }
 
-const loadListener = appOpenAd.addAdEventListener(AdEventType.LOADED, () => {
+const _loadListener = appOpenAd.addAdEventListener(AdEventType.LOADED, () => {
   adLoaded = true;
 });
 
-const errorListener = appOpenAd.addAdEventListener(AdEventType.ERROR, () => {
+const _errorListener = appOpenAd.addAdEventListener(AdEventType.ERROR, () => {
   adLoaded = false;
 });
 
-const closedListener = appOpenAd.addAdEventListener(AdEventType.CLOSED, () => {
+const _closedListener = appOpenAd.addAdEventListener(AdEventType.CLOSED, () => {
   adLoaded = false;
   preload();
 });
@@ -73,10 +73,7 @@ export function useAppOpenAd() {
   // Background → foreground: show ad on app return
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (nextState) => {
-      if (
-        appStateRef.current.match(/inactive|background/) &&
-        nextState === 'active'
-      ) {
+      if (appStateRef.current.match(/inactive|background/) && nextState === 'active') {
         tryShowAd();
       }
       appStateRef.current = nextState;

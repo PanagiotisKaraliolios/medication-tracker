@@ -1,26 +1,20 @@
-import React, { useMemo, useState, useCallback } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-} from 'react-native';
-import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
+import { useCallback, useMemo, useState } from 'react';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { BannerAd, BannerAdSize } from 'react-native-google-mobile-ads';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { type ColorScheme, gradients, borderRadius, shadows } from '../components/ui/theme';
+import { borderRadius, type ColorScheme, gradients, shadows } from '../components/ui/theme';
 import { useThemeColors } from '../hooks/useThemeColors';
-import { AD_UNIT_IDS, canShowPersonalizedAds } from '../lib/ads';
+import { AD_UNIT_IDS } from '../lib/ads';
 
 const AD_SLOTS: { size: BannerAdSize; label: string }[] = [
-  { size: BannerAdSize.LARGE_ANCHORED_ADAPTIVE_BANNER , label: 'adaptive-1' },
+  { size: BannerAdSize.LARGE_ANCHORED_ADAPTIVE_BANNER, label: 'adaptive-1' },
   { size: BannerAdSize.MEDIUM_RECTANGLE, label: 'rectangle-1' },
   { size: BannerAdSize.LARGE_BANNER, label: 'large-1' },
   { size: BannerAdSize.MEDIUM_RECTANGLE, label: 'rectangle-2' },
-  { size: BannerAdSize.LARGE_ANCHORED_ADAPTIVE_BANNER , label: 'adaptive-2' },
+  { size: BannerAdSize.LARGE_ANCHORED_ADAPTIVE_BANNER, label: 'adaptive-2' },
   { size: BannerAdSize.LARGE_BANNER, label: 'large-2' },
 ];
 
@@ -38,19 +32,19 @@ export default function SupportDeveloperScreen() {
     setRefreshKey((k) => k + 1);
   }, []);
 
-  const handleAdFailed = useCallback((label: string, error: any) => {
-    console.log(`[SupportDev] Ad FAILED: ${label}`, error?.message ?? error);
+  const handleAdFailed = useCallback((label: string, error: unknown) => {
+    console.log(
+      `[SupportDev] Ad FAILED: ${label}`,
+      error instanceof Error ? error.message : String(error),
+    );
     setFailedSlots((prev) => new Set(prev).add(label));
   }, []);
 
-  const requestOptions = useMemo(
-    () => {
-      const opts = { requestNonPersonalizedAdsOnly: true };
-      console.log('[SupportDev] requestOptions:', opts);
-      return opts;
-    },
-    [],
-  );
+  const requestOptions = useMemo(() => {
+    const opts = { requestNonPersonalizedAdsOnly: true };
+    console.log('[SupportDev] requestOptions:', opts);
+    return opts;
+  }, []);
 
   return (
     <View style={styles.container}>
@@ -83,11 +77,7 @@ export default function SupportDeveloperScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Refresh button */}
-        <TouchableOpacity
-          style={styles.refreshButton}
-          onPress={handleRefresh}
-          activeOpacity={0.7}
-        >
+        <TouchableOpacity style={styles.refreshButton} onPress={handleRefresh} activeOpacity={0.7}>
           <Feather name="refresh-cw" size={18} color={c.white} />
           <Text style={styles.refreshButtonText}>Refresh Ads</Text>
         </TouchableOpacity>
@@ -101,7 +91,9 @@ export default function SupportDeveloperScreen() {
                 unitId={AD_UNIT_IDS.BANNER}
                 size={slot.size}
                 requestOptions={requestOptions}
-                onAdLoaded={() => console.log(`[SupportDev] Ad LOADED: ${slot.label} (${slot.size})`)}
+                onAdLoaded={() =>
+                  console.log(`[SupportDev] Ad LOADED: ${slot.label} (${slot.size})`)
+                }
                 onAdFailedToLoad={(error) => handleAdFailed(slot.label, error)}
               />
             </View>

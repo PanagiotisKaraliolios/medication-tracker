@@ -1,26 +1,34 @@
-import React, { useState, useMemo, useCallback } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  ActivityIndicator,
-  RefreshControl,
-} from 'react-native';
-import { useRouter } from 'expo-router';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Button } from './ui/Button';
-import { AlertDialog } from './ui/AlertDialog';
-import { AdBanner } from './ui/AdBanner';
-import { InventoryProgressBar } from './ui/InventoryProgressBar';
-import { InteractionWarning } from './ui/InteractionWarning';
-import { type ColorScheme, gradients, borderRadius, shadows } from './ui/theme';
-import { useThemeColors } from '../hooks/useThemeColors';
-import { useMedication as useMedicationQuery, useSchedulesByMedication, useDeleteMedication, useDeleteSchedule, usePrnLogs, useSymptomsByMedication, useMedications } from '../hooks/useQueryHooks';
-import { useDrugInteractions } from '../hooks/useDrugSearch';
+import { useRouter } from 'expo-router';
+import { useCallback, useMemo, useState } from 'react';
+import {
+  ActivityIndicator,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { getIconForForm, TIME_ICON_MAP } from '../constants/icons';
+import { useDrugInteractions } from '../hooks/useDrugSearch';
+import {
+  useDeleteMedication,
+  useDeleteSchedule,
+  useMedication as useMedicationQuery,
+  useMedications,
+  usePrnLogs,
+  useSchedulesByMedication,
+  useSymptomsByMedication,
+} from '../hooks/useQueryHooks';
+import { useThemeColors } from '../hooks/useThemeColors';
 import { showInterstitial } from '../lib/interstitialManager';
+import { AdBanner } from './ui/AdBanner';
+import { AlertDialog } from './ui/AlertDialog';
+import { Button } from './ui/Button';
+import { InteractionWarning } from './ui/InteractionWarning';
+import { InventoryProgressBar } from './ui/InventoryProgressBar';
+import { borderRadius, type ColorScheme, gradients, shadows } from './ui/theme';
 
 interface Props {
   medicationId: string;
@@ -33,7 +41,8 @@ export function MedicationDetailPanel({ medicationId, onDeleted }: Props) {
   const c = useThemeColors();
   const styles = useMemo(() => makeStyles(c), [c]);
   const { data: med, isLoading, refetch: refetchMed } = useMedicationQuery(medicationId);
-  const { data: schedules = [], refetch: refetchSchedules } = useSchedulesByMedication(medicationId);
+  const { data: schedules = [], refetch: refetchSchedules } =
+    useSchedulesByMedication(medicationId);
   const schedule = schedules.length > 0 ? schedules[0] : null;
   const deleteMedicationMut = useDeleteMedication();
   const deleteScheduleMut = useDeleteSchedule();
@@ -43,15 +52,15 @@ export function MedicationDetailPanel({ medicationId, onDeleted }: Props) {
 
   // Drug interaction checking
   const drugNames = useMemo(() => {
-    return allMeds.map(m => m.generic_name || m.name).filter(Boolean);
+    return allMeds.map((m) => m.generic_name || m.name).filter(Boolean);
   }, [allMeds]);
   const { data: interactions = [] } = useDrugInteractions(drugNames);
 
   const relevantInteractions = useMemo(() => {
     if (!med) return [];
     const thisName = (med.generic_name || med.name).toLowerCase();
-    return interactions.filter(i =>
-      i.drug1.toLowerCase() === thisName || i.drug2.toLowerCase() === thisName
+    return interactions.filter(
+      (i) => i.drug1.toLowerCase() === thisName || i.drug2.toLowerCase() === thisName,
     );
   }, [interactions, med]);
 
@@ -105,7 +114,12 @@ export function MedicationDetailPanel({ medicationId, onDeleted }: Props) {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[c.teal]} tintColor={c.teal} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[c.teal]}
+            tintColor={c.teal}
+          />
         }
       >
         {/* Medication Header */}
@@ -160,53 +174,79 @@ export function MedicationDetailPanel({ medicationId, onDeleted }: Props) {
 
         {/* Schedule */}
         {schedule && (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Schedule</Text>
-          <View style={styles.card}>
-            {(schedule.times_of_day ?? []).map((tod, index) => (
-              <View key={tod}>
-                {index > 0 && <View style={styles.divider} />}
-                <View style={styles.scheduleRow}>
-                  <View style={styles.scheduleIcon}>
-                    <Feather
-                      name={TIME_ICON_MAP[tod] ?? 'clock'}
-                      size={18}
-                      color={c.teal}
-                    />
-                  </View>
-                  <View style={styles.scheduleInfo}>
-                    <Text style={styles.scheduleLabel}>{tod}</Text>
-                  </View>
-                  <View style={styles.pillBadge}>
-                    <Text style={styles.pillBadgeText}>{schedule.dosage_per_dose} {schedule.dosage_per_dose === 1 ? 'pill' : 'pills'}</Text>
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Schedule</Text>
+            <View style={styles.card}>
+              {(schedule.times_of_day ?? []).map((tod, index) => (
+                <View key={tod}>
+                  {index > 0 && <View style={styles.divider} />}
+                  <View style={styles.scheduleRow}>
+                    <View style={styles.scheduleIcon}>
+                      <Feather name={TIME_ICON_MAP[tod] ?? 'clock'} size={18} color={c.teal} />
+                    </View>
+                    <View style={styles.scheduleInfo}>
+                      <Text style={styles.scheduleLabel}>{tod}</Text>
+                    </View>
+                    <View style={styles.pillBadge}>
+                      <Text style={styles.pillBadgeText}>
+                        {schedule.dosage_per_dose}{' '}
+                        {schedule.dosage_per_dose === 1 ? 'pill' : 'pills'}
+                      </Text>
+                    </View>
                   </View>
                 </View>
-              </View>
-            ))}
+              ))}
+            </View>
           </View>
-        </View>
         )}
 
         {/* Notification Settings */}
         {schedule && (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Notifications</Text>
-          <View style={styles.statsRow}>
-            {([
-              { icon: 'bell' as const, label: 'Push', on: schedule.push_notifications, value: schedule.push_notifications ? 'On' : 'Off' },
-              { icon: 'message-square' as const, label: 'SMS', on: schedule.sms_alerts, value: schedule.sms_alerts ? 'On' : 'Off' },
-              { icon: 'clock' as const, label: 'Snooze', on: null, value: schedule.snooze_duration },
-            ]).map((s) => (
-              <View key={s.label} style={styles.statCard}>
-                <View style={[styles.statIcon, { backgroundColor: s.on === null ? c.tealLight : s.on ? c.successLight : c.errorLight }]}>
-                  <Feather name={s.icon} size={18} color={s.on === null ? c.teal : s.on ? c.success : c.error} />
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Notifications</Text>
+            <View style={styles.statsRow}>
+              {[
+                {
+                  icon: 'bell' as const,
+                  label: 'Push',
+                  on: schedule.push_notifications,
+                  value: schedule.push_notifications ? 'On' : 'Off',
+                },
+                {
+                  icon: 'message-square' as const,
+                  label: 'SMS',
+                  on: schedule.sms_alerts,
+                  value: schedule.sms_alerts ? 'On' : 'Off',
+                },
+                {
+                  icon: 'clock' as const,
+                  label: 'Snooze',
+                  on: null,
+                  value: schedule.snooze_duration,
+                },
+              ].map((s) => (
+                <View key={s.label} style={styles.statCard}>
+                  <View
+                    style={[
+                      styles.statIcon,
+                      {
+                        backgroundColor:
+                          s.on === null ? c.tealLight : s.on ? c.successLight : c.errorLight,
+                      },
+                    ]}
+                  >
+                    <Feather
+                      name={s.icon}
+                      size={18}
+                      color={s.on === null ? c.teal : s.on ? c.success : c.error}
+                    />
+                  </View>
+                  <Text style={styles.statLabel}>{s.label}</Text>
+                  <Text style={[styles.statNumber, { fontSize: 14 }]}>{s.value}</Text>
                 </View>
-                <Text style={styles.statLabel}>{s.label}</Text>
-                <Text style={[styles.statNumber, { fontSize: 14 }]}>{s.value}</Text>
-              </View>
-            ))}
+              ))}
+            </View>
           </View>
-        </View>
         )}
 
         {/* Instructions */}
@@ -234,7 +274,9 @@ export function MedicationDetailPanel({ medicationId, onDeleted }: Props) {
             </Button>
             {prnLogs.length > 0 && (
               <View style={[styles.card, { marginTop: 12 }]}>
-                <Text style={{ fontSize: 14, fontWeight: '600', color: c.gray900, marginBottom: 8 }}>
+                <Text
+                  style={{ fontSize: 14, fontWeight: '600', color: c.gray900, marginBottom: 8 }}
+                >
                   Recent Doses ({prnLogs.length})
                 </Text>
                 {prnLogs.slice(0, 5).map((log, i) => (
@@ -249,7 +291,8 @@ export function MedicationDetailPanel({ medicationId, onDeleted }: Props) {
                           {new Date(log.logged_at).toLocaleDateString()}
                         </Text>
                         <Text style={styles.scheduleTime}>
-                          {log.time_label}{log.reason ? ` · ${log.reason}` : ''}
+                          {log.time_label}
+                          {log.reason ? ` · ${log.reason}` : ''}
                         </Text>
                       </View>
                     </View>
@@ -269,9 +312,14 @@ export function MedicationDetailPanel({ medicationId, onDeleted }: Props) {
                 <View key={s.id}>
                   {i > 0 && <View style={styles.divider} />}
                   <View style={styles.scheduleRow}>
-                    <View style={[styles.scheduleIcon, {
-                      backgroundColor: s.severity === 'severe' ? c.errorLight : c.warningLight,
-                    }]}>
+                    <View
+                      style={[
+                        styles.scheduleIcon,
+                        {
+                          backgroundColor: s.severity === 'severe' ? c.errorLight : c.warningLight,
+                        },
+                      ]}
+                    >
                       <Feather
                         name={s.severity === 'severe' ? 'alert-octagon' : 'alert-triangle'}
                         size={18}
@@ -281,7 +329,8 @@ export function MedicationDetailPanel({ medicationId, onDeleted }: Props) {
                     <View style={styles.scheduleInfo}>
                       <Text style={styles.scheduleLabel}>{s.name}</Text>
                       <Text style={styles.scheduleTime}>
-                        {s.severity} · {s.logged_at ? new Date(s.logged_at).toLocaleDateString() : s.logged_date}
+                        {s.severity} ·{' '}
+                        {s.logged_at ? new Date(s.logged_at).toLocaleDateString() : s.logged_date}
                       </Text>
                     </View>
                   </View>
@@ -296,7 +345,9 @@ export function MedicationDetailPanel({ medicationId, onDeleted }: Props) {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Schedule</Text>
             <View style={styles.card}>
-              <Text style={{ fontSize: 14, color: c.gray500, textAlign: 'center', paddingVertical: 8 }}>
+              <Text
+                style={{ fontSize: 14, color: c.gray500, textAlign: 'center', paddingVertical: 8 }}
+              >
                 No schedule set. Tap the + button on the Today tab to add one.
               </Text>
             </View>
