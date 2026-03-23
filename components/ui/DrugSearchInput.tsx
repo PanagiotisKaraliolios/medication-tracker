@@ -88,7 +88,7 @@ export function DrugSearchInput({
   const hasQuery = query.length >= 2;
 
   const emptyComponent = useMemo(() => {
-    if (!hasQuery) return null;
+    if (!hasQuery) return undefined;
     if (isLoading) {
       return (
         <View style={styles.emptyResult}>
