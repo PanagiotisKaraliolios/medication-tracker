@@ -233,3 +233,99 @@ describe('buildReport', () => {
     expect(result.recentMissed.length).toBeLessThanOrEqual(10);
   });
 });
+
+describe('buildReport branch coverage', () => {
+  beforeEach(() => {
+    resetIdCounter();
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2025-01-15T23:00:00'));
+  });
+  afterEach(() => jest.useRealTimers());
+
+  test('interval schedule: only matching days produce doses', () => {
+    const med = makeMedication({ id: 'med-1' });
+    const sch = makeSchedule({
+      id: 'sch-1',
+      medication_id: 'med-1',
+      frequency: 'interval',
+      interval_days: 3,
+      times_of_day: ['Morning'],
+      start_date: '2025-01-10',
+    });
+    // Every 3 days from Jan 10: Jan 10, Jan 13. Jan 14 & 15 are off.
+    const logs = [
+      makeDoseLog({
+        schedule_id: 'sch-1',
+        scheduled_date: '2025-01-13',
+        time_label: 'Morning',
+        status: 'taken',
+      }),
+    ];
+    const result = buildReport('2025-01-13', '2025-01-15', [med], [sch], logs, 3);
+    expect(result.totalDoses).toBe(1); // only Jan 13 matches
+    expect(result.adherence).toBe(100);
+  });
+
+  test('start_date and end_date filter out days outside range', () => {
+    const med = makeMedication({ id: 'med-1' });
+    const sch = makeSchedule({
+      id: 'sch-1',
+      medication_id: 'med-1',
+      frequency: 'daily',
+      times_of_day: ['Morning'],
+      start_date: '2025-01-14',
+      end_date: '2025-01-14',
+    });
+    const logs = [
+      makeDoseLog({
+        schedule_id: 'sch-1',
+        scheduled_date: '2025-01-14',
+        time_label: 'Morning',
+        status: 'taken',
+      }),
+    ];
+    const result = buildReport('2025-01-13', '2025-01-15', [med], [sch], logs, 3);
+    expect(result.totalDoses).toBe(1); // only Jan 14
+    expect(result.takenDoses).toBe(1);
+    expect(result.adherence).toBe(100);
+  });
+
+  test('today date triggers time-check branch for doses not yet passed', () => {
+    // Pin to 2025-01-15 at 10:00 so Morning (480 min / 8:00) has passed
+    // but Afternoon (720 min / 12:00) has NOT passed yet
+    jest.setSystemTime(new Date('2025-01-15T10:00:00'));
+
+    const med = makeMedication({ id: 'med-1' });
+    const sch = makeSchedule({
+      id: 'sch-1',
+      medication_id: 'med-1',
+      frequency: 'daily',
+      times_of_day: ['Morning', 'Afternoon'],
+      start_date: '2025-01-15',
+    });
+
+    // Only report for today — this triggers the iso === todayISO branch
+    const result = buildReport('2025-01-15', '2025-01-15', [med], [sch], [], 1);
+    // Only Morning (sortOrder 480) should be counted; Afternoon (720) > 600 (10:00)
+    expect(result.totalDoses).toBe(1);
+    expect(result.missedDoses).toBe(1);
+  });
+
+  test('missed doses include today when iso === todayISO and time has passed', () => {
+    jest.setSystemTime(new Date('2025-01-15T23:00:00'));
+
+    const med = makeMedication({ id: 'med-1' });
+    const sch = makeSchedule({
+      id: 'sch-1',
+      medication_id: 'med-1',
+      frequency: 'daily',
+      times_of_day: ['Morning'],
+      start_date: '2025-01-15',
+    });
+
+    const result = buildReport('2025-01-15', '2025-01-15', [med], [sch], [], 1);
+    expect(result.missedDoses).toBe(1);
+    expect(result.recentMissed).toHaveLength(1);
+    expect(result.recentMissed[0].medName).toBe('Aspirin 100mg');
+  });
+});

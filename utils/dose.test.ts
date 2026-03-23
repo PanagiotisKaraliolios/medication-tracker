@@ -221,4 +221,57 @@ describe('buildTodayDoses', () => {
     expect(orphan).toBeDefined();
     expect(orphan?.status).toBe('taken');
   });
+
+  test('skips schedule whose medication_id has no matching medication', () => {
+    const med = makeMedication({ id: 'med-1' });
+    const orphanSch = makeSchedule({
+      id: 'sch-orphan',
+      medication_id: 'med-nonexistent',
+      frequency: 'daily',
+      times_of_day: ['Morning'],
+    });
+
+    const doses = buildTodayDoses([med], [orphanSch], [], 'Mon', '2025-01-06');
+    expect(doses).toHaveLength(0);
+  });
+
+  test('orphan loop skips logs whose schedule_id does not match current schedule', () => {
+    const med = makeMedication({ id: 'med-1' });
+    const sch = makeSchedule({
+      id: 'sch-1',
+      medication_id: 'med-1',
+      frequency: 'daily',
+      times_of_day: ['Morning'],
+    });
+    // Log belongs to a different schedule
+    const unmatchedLog = makeDoseLog({
+      schedule_id: 'sch-other',
+      medication_id: 'med-1',
+      time_label: 'Evening',
+      status: 'taken',
+    });
+
+    const doses = buildTodayDoses([med], [sch], [unmatchedLog], 'Mon', '2025-01-06');
+    // Only the scheduled Morning dose should appear, not the unmatched log
+    expect(doses).toHaveLength(1);
+    expect(doses[0].timeLabel).toBe('Morning');
+  });
+
+  test('interval schedule without dateISO falls through to selected_days check', () => {
+    const med = makeMedication({ id: 'med-1' });
+    const sch = makeSchedule({
+      id: 'sch-1',
+      medication_id: 'med-1',
+      frequency: 'interval',
+      interval_days: 2,
+      times_of_day: ['Morning'],
+      start_date: '2025-01-01',
+      selected_days: ['Mon'],
+    });
+
+    // dateISO is undefined — the interval branch guard fails, falls to else-if
+    // todayLabel 'Mon' matches selected_days
+    const doses = buildTodayDoses([med], [sch], [], 'Mon');
+    expect(doses).toHaveLength(1);
+  });
 });

@@ -195,3 +195,57 @@ describe('computeDayStatusMap', () => {
     expect(result['2025-01-15']).toBe('all');
   });
 });
+
+describe('computeDayStatusMap branch coverage', () => {
+  beforeEach(() => resetIdCounter());
+
+  test('interval schedule: only matching days are scheduled', () => {
+    const med = makeMedication({ id: 'med-1' });
+    const sch = makeSchedule({
+      id: 'sch-1',
+      medication_id: 'med-1',
+      frequency: 'interval',
+      interval_days: 3,
+      times_of_day: ['Morning'],
+      start_date: '2025-01-13',
+    });
+    // Every 3 days from Jan 13: Jan 13, Jan 16. Jan 14 & 15 are off.
+    const result = computeDayStatusMap('2025-01-13', '2025-01-16', [med], [sch], []);
+    expect(result['2025-01-13']).toBe('none'); // scheduled
+    expect(result['2025-01-14']).toBe('empty'); // off-day
+    expect(result['2025-01-15']).toBe('empty'); // off-day
+    expect(result['2025-01-16']).toBe('none'); // scheduled
+  });
+
+  test('start_date excludes days before it', () => {
+    const med = makeMedication({ id: 'med-1' });
+    const sch = makeSchedule({
+      id: 'sch-1',
+      medication_id: 'med-1',
+      frequency: 'daily',
+      times_of_day: ['Morning'],
+      start_date: '2025-01-15',
+    });
+    const result = computeDayStatusMap('2025-01-13', '2025-01-15', [med], [sch], []);
+    expect(result['2025-01-13']).toBe('empty');
+    expect(result['2025-01-14']).toBe('empty');
+    expect(result['2025-01-15']).toBe('none');
+  });
+
+  test('end_date excludes days after it', () => {
+    const med = makeMedication({ id: 'med-1' });
+    const sch = makeSchedule({
+      id: 'sch-1',
+      medication_id: 'med-1',
+      frequency: 'daily',
+      times_of_day: ['Morning'],
+      start_date: '2025-01-01',
+      end_date: '2025-01-14',
+    });
+    const result = computeDayStatusMap('2025-01-13', '2025-01-16', [med], [sch], []);
+    expect(result['2025-01-13']).toBe('none');
+    expect(result['2025-01-14']).toBe('none');
+    expect(result['2025-01-15']).toBe('empty');
+    expect(result['2025-01-16']).toBe('empty');
+  });
+});

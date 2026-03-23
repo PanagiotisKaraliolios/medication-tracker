@@ -342,3 +342,99 @@ describe('computeStreak', () => {
     expect(computeStreak('2025-01-15', [med], [sch], logs)).toBe(1);
   });
 });
+
+describe('branch coverage: interval with non-matching days', () => {
+  beforeEach(() => {
+    resetIdCounter();
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2025-01-15T23:00:00'));
+  });
+  afterEach(() => jest.useRealTimers());
+
+  test('computeAdherence skips interval days that do not match', () => {
+    const med = makeMedication({ id: 'med-1' });
+    const sch = makeSchedule({
+      id: 'sch-1',
+      medication_id: 'med-1',
+      frequency: 'interval',
+      interval_days: 3,
+      times_of_day: ['Morning'],
+      start_date: '2025-01-10',
+    });
+    // Every 3 days from Jan 10: Jan 10, Jan 13. Jan 14 & 15 are non-match days.
+    // Range Jan 13-15: only Jan 13 matches.
+    const logs = [
+      makeDoseLog({
+        schedule_id: 'sch-1',
+        scheduled_date: '2025-01-13',
+        time_label: 'Morning',
+        status: 'taken',
+      }),
+    ];
+    // 1 scheduled, 1 taken = 100%
+    expect(computeAdherence('2025-01-13', '2025-01-15', [med], [sch], logs)).toBe(100);
+  });
+
+  test('computeAdherence respects end_date excluding later days', () => {
+    const med = makeMedication({ id: 'med-1' });
+    const sch = makeSchedule({
+      id: 'sch-1',
+      medication_id: 'med-1',
+      frequency: 'daily',
+      times_of_day: ['Morning'],
+      start_date: '2025-01-13',
+      end_date: '2025-01-14',
+    });
+    const logs = [
+      makeDoseLog({
+        schedule_id: 'sch-1',
+        scheduled_date: '2025-01-13',
+        time_label: 'Morning',
+        status: 'taken',
+      }),
+      makeDoseLog({
+        schedule_id: 'sch-1',
+        scheduled_date: '2025-01-14',
+        time_label: 'Morning',
+        status: 'taken',
+      }),
+    ];
+    // Jan 15 excluded by end_date → 2 total, 2 taken = 100%
+    expect(computeAdherence('2025-01-13', '2025-01-15', [med], [sch], logs)).toBe(100);
+  });
+
+  test('computeStreak skips days with dayTotal===0 and continues streak', () => {
+    const med = makeMedication({ id: 'med-1' });
+    // Schedule only on Mon, Wed, Fri
+    const sch = makeSchedule({
+      id: 'sch-1',
+      medication_id: 'med-1',
+      frequency: 'weekly',
+      selected_days: ['Mon', 'Wed', 'Fri'],
+      times_of_day: ['Morning'],
+      start_date: '2025-01-01',
+    });
+    // 2025-01-15 is Wed (today), streak starts from Jan 14 (Tue)
+    // Jan 14 Tue: dayTotal=0 → skip
+    // Jan 13 Mon: scheduled → needs log
+    // Jan 12 Sun: dayTotal=0 → skip
+    // Jan 11 Sat: dayTotal=0 → skip
+    // Jan 10 Fri: scheduled → needs log
+    const logs = [
+      makeDoseLog({
+        schedule_id: 'sch-1',
+        scheduled_date: '2025-01-13',
+        time_label: 'Morning',
+        status: 'taken',
+      }),
+      makeDoseLog({
+        schedule_id: 'sch-1',
+        scheduled_date: '2025-01-10',
+        time_label: 'Morning',
+        status: 'taken',
+      }),
+    ];
+    // Tue, Sun, Sat skipped (dayTotal===0), Mon and Fri both taken → streak 2
+    expect(computeStreak('2025-01-15', [med], [sch], logs)).toBe(2);
+  });
+});
