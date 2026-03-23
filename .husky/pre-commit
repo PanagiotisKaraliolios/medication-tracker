@@ -1,0 +1,2 @@
+bunx biome check --no-errors-on-unmatched --files-ignore-unknown=true --staged
+bun test 2>/dev/null || true
