@@ -1,23 +1,24 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '../lib/supabase';
-import { queryKeys } from '../lib/queryKeys';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../contexts/AuthContext';
 import {
-  scheduleMedicationReminders,
+  cancelLowSupplyReminder,
   cancelMedicationReminders,
   scheduleLowSupplyReminder,
-  cancelLowSupplyReminder,
+  scheduleMedicationReminders,
 } from '../lib/notifications';
+import { queryKeys } from '../lib/queryKeys';
+import { supabase } from '../lib/supabase';
+import { fetchAndUpdateWidget } from '../lib/widgetBridge';
+import { useMedicationDraft } from '../stores/draftStores';
 import type {
+  DoseLogRow,
   MedicationRow,
   MedicationUpdate,
+  ScheduleDraft,
   ScheduleRow,
   ScheduleUpdate,
-  ScheduleDraft,
-  DoseLogRow,
   SymptomRow,
 } from '../types/database';
-import { useMedicationDraft } from '../stores/draftStores';
 import { toISO } from '../utils/date';
 
 // ─────────────────────────────────────────────────────────────────────
@@ -34,7 +35,7 @@ export function useMedications() {
       const { data, error } = await supabase
         .from('medications')
         .select('*')
-        .eq('user_id', user!.id)
+        .eq('user_id', user?.id)
         .eq('is_active', true)
         .order('created_at', { ascending: false });
 
@@ -55,8 +56,8 @@ export function useMedication(id: string | undefined) {
       const { data, error } = await supabase
         .from('medications')
         .select('*')
-        .eq('id', id!)
-        .eq('user_id', user!.id)
+        .eq('id', id ?? '')
+        .eq('user_id', user?.id)
         .single();
 
       if (error) throw new Error(error.message);
@@ -112,7 +113,13 @@ export function useUpdateMedication() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, updates }: { id: string; updates: MedicationUpdate }): Promise<MedicationRow> => {
+    mutationFn: async ({
+      id,
+      updates,
+    }: {
+      id: string;
+      updates: MedicationUpdate;
+    }): Promise<MedicationRow> => {
       if (!user?.id) throw new Error('Not authenticated');
 
       const { data, error } = await supabase
@@ -175,7 +182,13 @@ export function useAdjustSupply() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ medicationId, delta }: { medicationId: string; delta: number }): Promise<void> => {
+    mutationFn: async ({
+      medicationId,
+      delta,
+    }: {
+      medicationId: string;
+      delta: number;
+    }): Promise<void> => {
       if (!user?.id) throw new Error('Not authenticated');
       if (delta === 0) return;
 
@@ -229,7 +242,7 @@ export function useSchedules() {
       const { data, error } = await supabase
         .from('schedules')
         .select('*')
-        .eq('user_id', user!.id)
+        .eq('user_id', user?.id)
         .eq('is_active', true)
         .order('created_at', { ascending: false });
 
@@ -250,8 +263,8 @@ export function useSchedulesByMedication(medicationId: string | undefined) {
       const { data, error } = await supabase
         .from('schedules')
         .select('*')
-        .eq('medication_id', medicationId!)
-        .eq('user_id', user!.id)
+        .eq('medication_id', medicationId ?? '')
+        .eq('user_id', user?.id)
         .eq('is_active', true)
         .order('created_at', { ascending: false });
 
@@ -272,8 +285,8 @@ export function useSchedule(id: string | undefined) {
       const { data, error } = await supabase
         .from('schedules')
         .select('*')
-        .eq('id', id!)
-        .eq('user_id', user!.id)
+        .eq('id', id ?? '')
+        .eq('user_id', user?.id)
         .single();
 
       if (error) throw new Error(error.message);
@@ -360,6 +373,7 @@ export function useCreateSchedule() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.schedules.all });
+      fetchAndUpdateWidget(user?.id);
     },
   });
 }
@@ -370,7 +384,13 @@ export function useUpdateSchedule() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, updates }: { id: string; updates: ScheduleUpdate }): Promise<ScheduleRow> => {
+    mutationFn: async ({
+      id,
+      updates,
+    }: {
+      id: string;
+      updates: ScheduleUpdate;
+    }): Promise<ScheduleRow> => {
       if (!user?.id) throw new Error('Not authenticated');
 
       const { data, error } = await supabase
@@ -416,6 +436,7 @@ export function useUpdateSchedule() {
     onSuccess: (_data, { id }) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.schedules.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.schedules.detail(id) });
+      fetchAndUpdateWidget(user?.id);
     },
   });
 }
@@ -441,6 +462,7 @@ export function useDeleteSchedule() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.schedules.all });
+      fetchAndUpdateWidget(user?.id);
     },
   });
 }
@@ -459,8 +481,9 @@ export function useDoseLogsByDate(date: string | undefined) {
       const { data, error } = await supabase
         .from('dose_logs')
         .select('*')
-        .eq('user_id', user!.id)
-        .eq('scheduled_date', date!);
+        .eq('user_id', user?.id)
+        .eq('scheduled_date', date ?? '')
+        .order('logged_at', { ascending: true });
 
       if (error) throw new Error(error.message);
       return (data ?? []) as DoseLogRow[];
@@ -479,9 +502,11 @@ export function useDoseLogsByRange(startDate: string | undefined, endDate: strin
       const { data, error } = await supabase
         .from('dose_logs')
         .select('*')
-        .eq('user_id', user!.id)
-        .gte('scheduled_date', startDate!)
-        .lte('scheduled_date', endDate!);
+        .eq('user_id', user?.id)
+        .gte('scheduled_date', startDate ?? '')
+        .lte('scheduled_date', endDate ?? '')
+        .order('scheduled_date', { ascending: true })
+        .order('logged_at', { ascending: true });
 
       if (error) throw new Error(error.message);
       return (data ?? []) as DoseLogRow[];
@@ -562,6 +587,7 @@ export function useLogDose() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.doseLogs.all });
+      fetchAndUpdateWidget(user?.id);
     },
   });
 }
@@ -585,6 +611,7 @@ export function useDeleteDoseLog() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.doseLogs.all });
+      fetchAndUpdateWidget(user?.id);
     },
   });
 }
@@ -594,11 +621,7 @@ export function useDeleteDoseLog() {
 // ─────────────────────────────────────────────────────────────────────
 
 /** Fetch PRN dose logs for a specific medication (most recent first). */
-export function usePrnLogs(
-  medicationId: string | undefined,
-  startDate?: string,
-  endDate?: string,
-) {
+export function usePrnLogs(medicationId: string | undefined, startDate?: string, endDate?: string) {
   const { user } = useAuth();
 
   return useQuery({
@@ -607,8 +630,8 @@ export function usePrnLogs(
       let query = supabase
         .from('dose_logs')
         .select('*')
-        .eq('user_id', user!.id)
-        .eq('medication_id', medicationId!)
+        .eq('user_id', user?.id)
+        .eq('medication_id', medicationId ?? '')
         .is('schedule_id', null)
         .order('logged_at', { ascending: false });
 
@@ -637,8 +660,8 @@ export function useSymptomsByDate(date: string | undefined) {
       const { data, error } = await supabase
         .from('symptoms')
         .select('*')
-        .eq('user_id', user!.id)
-        .eq('logged_date', date!)
+        .eq('user_id', user?.id)
+        .eq('logged_date', date ?? '')
         .order('logged_at', { ascending: false });
 
       if (error) throw new Error(error.message);
@@ -658,9 +681,9 @@ export function useSymptomsByRange(startDate: string | undefined, endDate: strin
       const { data, error } = await supabase
         .from('symptoms')
         .select('*')
-        .eq('user_id', user!.id)
-        .gte('logged_date', startDate!)
-        .lte('logged_date', endDate!)
+        .eq('user_id', user?.id)
+        .gte('logged_date', startDate ?? '')
+        .lte('logged_date', endDate ?? '')
         .order('logged_at', { ascending: false });
 
       if (error) throw new Error(error.message);
@@ -680,8 +703,8 @@ export function useSymptomsByMedication(medicationId: string | undefined) {
       const { data, error } = await supabase
         .from('symptoms')
         .select('*')
-        .eq('user_id', user!.id)
-        .eq('medication_id', medicationId!)
+        .eq('user_id', user?.id)
+        .eq('medication_id', medicationId ?? '')
         .order('logged_at', { ascending: false });
 
       if (error) throw new Error(error.message);

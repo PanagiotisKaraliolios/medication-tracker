@@ -1,35 +1,44 @@
-import { Stack, useRouter, useSegments } from 'expo-router';
-import { ThemeProvider, DefaultTheme, DarkTheme } from '@react-navigation/native';
-import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { useReactQueryDevTools } from '@dev-plugins/react-query';
+import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
+import { Stack, useRouter, useSegments } from 'expo-router';
+import * as ScreenOrientation from 'expo-screen-orientation';
+import { StatusBar } from 'expo-status-bar';
+import { useCallback, useEffect, useRef } from 'react';
+import { ActivityIndicator, AppState, View } from 'react-native';
+import { AutocompleteDropdownContextProvider } from 'react-native-autocomplete-dropdown';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { BatteryOptimizationModal } from '../components/ui/BatteryOptimizationModal';
+import ErrorBoundaryWrapper from '../components/ui/ErrorBoundary';
+import { OfflineBanner } from '../components/ui/OfflineBanner';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import { ThemePreferenceProvider, useThemePreference } from '../contexts/ThemeContext';
-import { queryClient, queryPersister } from '../lib/queryClient';
-import { registerNotificationHandler, rescheduleAllMedicationReminders, recheckAllLowSupplyReminders, fireMissedDoseReminders, type MissedDoseLogInput } from '../lib/notifications';
-import { supabase } from '../lib/supabase';
-import type { MedicationRow, ScheduleRow } from '../types/database';
-import { useEffect, useRef, useCallback } from 'react';
-import { AppState, ActivityIndicator, View, Platform } from 'react-native';
-import { StatusBar } from 'expo-status-bar';
-import * as ScreenOrientation from 'expo-screen-orientation';
-import { useResponsive } from '../hooks/useResponsive';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { AutocompleteDropdownContextProvider } from 'react-native-autocomplete-dropdown';
+import { useAppOpenAd } from '../hooks/useAppOpenAd';
 import { useBatteryOptimization } from '../hooks/useBatteryOptimization';
-import { BatteryOptimizationModal } from '../components/ui/BatteryOptimizationModal';
-import { OfflineBanner } from '../components/ui/OfflineBanner';
+import { useResponsive } from '../hooks/useResponsive';
 import { initializeAds } from '../lib/ads';
 import { preloadInterstitial } from '../lib/interstitialManager';
-import { useAppOpenAd } from '../hooks/useAppOpenAd';
+import {
+  fireMissedDoseReminders,
+  type MissedDoseLogInput,
+  recheckAllLowSupplyReminders,
+  registerNotificationHandler,
+  rescheduleAllMedicationReminders,
+} from '../lib/notifications';
+import { queryClient, queryPersister } from '../lib/queryClient';
+import { supabase } from '../lib/supabase';
+import { updateWidget } from '../lib/widgetBridge';
 import { useAdPreferences } from '../stores/adPreferencesStore';
+import type { DoseLogRow, MedicationRow, ScheduleRow } from '../types/database';
 
 // Register notification handler ASAP so foreground notifications display correctly
 registerNotificationHandler();
 
 // Initialize Mobile Ads SDK (consent + init) once at module level
 initializeAds().then(() => preloadInterstitial());
-import Toast, { BaseToast, ErrorToast, type BaseToastProps } from 'react-native-toast-message';
-import { colors, darkColors, borderRadius, shadows } from '../components/ui/theme';
+
+import Toast, { BaseToast, type BaseToastProps, ErrorToast } from 'react-native-toast-message';
+import { borderRadius, colors, darkColors, shadows } from '../components/ui/theme';
 
 const LightNavTheme = {
   ...DefaultTheme,
@@ -87,19 +96,26 @@ function RootLayoutNav() {
   const syncReminders = useCallback(async () => {
     if (!session || loading || hasProfile !== true) return;
     try {
-      const [{ data: schedData, error: schedErr }, { data: medData, error: medErr }] = await Promise.all([
-        supabase.from('schedules').select('*').eq('user_id', session.user.id).eq('is_active', true),
-        supabase.from('medications').select('*').eq('user_id', session.user.id).eq('is_active', true),
-      ]);
+      const [{ data: schedData, error: schedErr }, { data: medData, error: medErr }] =
+        await Promise.all([
+          supabase
+            .from('schedules')
+            .select('*')
+            .eq('user_id', session.user.id)
+            .eq('is_active', true),
+          supabase
+            .from('medications')
+            .select('*')
+            .eq('user_id', session.user.id)
+            .eq('is_active', true),
+        ]);
       if (schedErr || medErr) return;
 
       const schedules = (schedData ?? []) as ScheduleRow[];
       const meds = (medData ?? []) as MedicationRow[];
 
       // Build a map from schedule ID → medication name
-      const medNameById = Object.fromEntries(
-        meds.map((m) => [m.id, m.name]),
-      );
+      const medNameById = Object.fromEntries(meds.map((m) => [m.id, m.name]));
       const scheduleToMedName: Record<string, string> = {};
       for (const s of schedules) {
         scheduleToMedName[s.id] = medNameById[s.medication_id] ?? 'your medication';
@@ -146,6 +162,14 @@ function RootLayoutNav() {
         (logData ?? []) as MissedDoseLogInput[],
         scheduleToMedName,
       );
+
+      // Push widget data so home screen widget shows current next dose
+      const { data: fullLogData } = await supabase
+        .from('dose_logs')
+        .select('*')
+        .eq('user_id', session.user.id)
+        .eq('scheduled_date', todayISO);
+      updateWidget(meds, schedules, (fullLogData ?? []) as DoseLogRow[]);
     } catch (err) {
       console.warn('[Layout] Failed to sync reminders:', err);
     }
@@ -184,11 +208,18 @@ function RootLayoutNav() {
         router.replace('/(tabs)');
       }
     }
-  }, [session, loading, hasProfile, segments]);
+  }, [session, loading, hasProfile, segments, router.replace]);
 
   if (loading) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: c.background }}>
+      <View
+        style={{
+          flex: 1,
+          justifyContent: 'center',
+          alignItems: 'center',
+          backgroundColor: c.background,
+        }}
+      >
         <ActivityIndicator size="large" color={c.teal} />
       </View>
     );
@@ -204,16 +235,43 @@ function RootLayoutNav() {
         <Stack.Screen name="auth/signup" />
         <Stack.Screen name="auth/profile-setup" />
         <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="medication/add" options={{ presentation: 'modal', headerShown: true, title: 'Add Medication' }} />
-        <Stack.Screen name="medication/select" options={{ headerShown: true, title: 'Select Medication' }} />
-        <Stack.Screen name="medication/schedule" options={{ headerShown: true, title: 'Set Schedule' }} />
-        <Stack.Screen name="medication/reminders" options={{ headerShown: true, title: 'Reminders' }} />
-        <Stack.Screen name="medication/review" options={{ headerShown: true, title: 'Review Details' }} />
+        <Stack.Screen
+          name="medication/add"
+          options={{ presentation: 'modal', headerShown: true, title: 'Add Medication' }}
+        />
+        <Stack.Screen
+          name="medication/select"
+          options={{ headerShown: true, title: 'Select Medication' }}
+        />
+        <Stack.Screen
+          name="medication/schedule"
+          options={{ headerShown: true, title: 'Set Schedule' }}
+        />
+        <Stack.Screen
+          name="medication/reminders"
+          options={{ headerShown: true, title: 'Reminders' }}
+        />
+        <Stack.Screen
+          name="medication/review"
+          options={{ headerShown: true, title: 'Review Details' }}
+        />
         <Stack.Screen name="medication/success" options={{ headerShown: false }} />
-        <Stack.Screen name="medication/[id]" options={{ headerShown: true, title: 'Medication Details' }} />
-        <Stack.Screen name="medication/edit" options={{ headerShown: true, title: 'Edit Medication' }} />
-        <Stack.Screen name="medication/edit-schedule" options={{ headerShown: true, title: 'Edit Schedule' }} />
-        <Stack.Screen name="medication/log-prn" options={{ headerShown: true, title: 'Log PRN Dose' }} />
+        <Stack.Screen
+          name="medication/[id]"
+          options={{ headerShown: true, title: 'Medication Details' }}
+        />
+        <Stack.Screen
+          name="medication/edit"
+          options={{ headerShown: true, title: 'Edit Medication' }}
+        />
+        <Stack.Screen
+          name="medication/edit-schedule"
+          options={{ headerShown: true, title: 'Edit Schedule' }}
+        />
+        <Stack.Screen
+          name="medication/log-prn"
+          options={{ headerShown: true, title: 'Log PRN Dose' }}
+        />
         <Stack.Screen name="profile/edit" options={{ headerShown: false }} />
         <Stack.Screen name="notification-settings" options={{ headerShown: false }} />
         <Stack.Screen name="notifications" options={{ headerShown: false }} />
@@ -288,7 +346,9 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={rootStyle}>
       <ThemePreferenceProvider>
-        <RootLayoutInner />
+        <ErrorBoundaryWrapper>
+          <RootLayoutInner />
+        </ErrorBoundaryWrapper>
       </ThemePreferenceProvider>
     </GestureHandlerRootView>
   );

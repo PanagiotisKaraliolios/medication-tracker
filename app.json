@@ -14,7 +14,10 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.medicationtracker"
+      "bundleIdentifier": "com.anonymous.medicationtracker",
+      "entitlements": {
+        "com.apple.security.application-groups": ["group.com.anonymous.medicationtracker"]
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -61,7 +64,26 @@
           }
         }
       ],
-      "expo-font"
+      "expo-font",
+      [
+        "react-native-android-widget",
+        {
+          "widgets": [
+            {
+              "name": "NextDoseWidget",
+              "label": "Next Dose",
+              "description": "Shows your next upcoming medication dose",
+              "minWidth": "180dp",
+              "minHeight": "110dp",
+              "targetCellWidth": 2,
+              "targetCellHeight": 2,
+              "resizeMode": "none",
+              "updatePeriodMillis": 0
+            }
+          ]
+        }
+      ],
+      "@bacons/apple-targets"
     ],
     "extra": {
       "router": {},
