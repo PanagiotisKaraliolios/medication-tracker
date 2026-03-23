@@ -38,6 +38,9 @@ release.keystore
 
 # local env files
 .env*.local
+
+# scripts
+scripts/
 .env
 
 # typescript
