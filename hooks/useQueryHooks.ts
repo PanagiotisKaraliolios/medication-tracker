@@ -373,7 +373,7 @@ export function useCreateSchedule() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.schedules.all });
-      fetchAndUpdateWidget(user?.id);
+      if (user?.id) fetchAndUpdateWidget(user.id);
     },
   });
 }
@@ -436,7 +436,7 @@ export function useUpdateSchedule() {
     onSuccess: (_data, { id }) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.schedules.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.schedules.detail(id) });
-      fetchAndUpdateWidget(user?.id);
+      if (user?.id) fetchAndUpdateWidget(user.id);
     },
   });
 }
@@ -462,7 +462,7 @@ export function useDeleteSchedule() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.schedules.all });
-      fetchAndUpdateWidget(user?.id);
+      if (user?.id) fetchAndUpdateWidget(user.id);
     },
   });
 }
@@ -587,7 +587,7 @@ export function useLogDose() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.doseLogs.all });
-      fetchAndUpdateWidget(user?.id);
+      if (user?.id) fetchAndUpdateWidget(user.id);
     },
   });
 }
@@ -611,7 +611,7 @@ export function useDeleteDoseLog() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.doseLogs.all });
-      fetchAndUpdateWidget(user?.id);
+      if (user?.id) fetchAndUpdateWidget(user.id);
     },
   });
 }

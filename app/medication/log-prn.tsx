@@ -130,7 +130,7 @@ export default function LogPrnScreen() {
       return (
         <View style={styles.dropdownRow}>
           <View style={styles.pickerIcon}>
-            <MaterialCommunityIcons name={getIconForForm(m?.form)} size={20} color={c.teal} />
+            <MaterialCommunityIcons name={getIconForForm(m?.form ?? '')} size={20} color={c.teal} />
           </View>
           <View style={styles.pickerInfo}>
             <Text style={styles.pickerName}>{m?.name ?? item.title}</Text>

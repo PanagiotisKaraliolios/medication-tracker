@@ -167,7 +167,7 @@ export function DrugSearchInput({
           </View>
         }
         ClearIconComponent={<Feather name="x-circle" size={18} color={c.gray400} />}
-        ItemSeparatorComponent={null}
+        ItemSeparatorComponent={undefined}
         EmptyResultComponent={emptyComponent}
       />
 
