@@ -31,6 +31,7 @@ import { supabase } from '../lib/supabase';
 import { updateWidget } from '../lib/widgetBridge';
 import { useAdPreferences } from '../stores/adPreferencesStore';
 import type { DoseLogRow, MedicationRow, ScheduleRow } from '../types/database';
+import { toISO } from '../utils/date';
 
 // Register notification handler ASAP so foreground notifications display correctly
 registerNotificationHandler();
@@ -145,7 +146,7 @@ function RootLayoutNav() {
       await recheckAllLowSupplyReminders(meds);
 
       // Fire catch-up notifications for doses missed while the phone was off
-      const todayISO = new Date().toISOString().slice(0, 10);
+      const todayISO = toISO(new Date());
       const { data: logData } = await supabase
         .from('dose_logs')
         .select('schedule_id, time_label')
