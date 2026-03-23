@@ -2,7 +2,15 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Session, User } from '@supabase/supabase-js';
 import * as Notifications from 'expo-notifications';
 import type React from 'react';
-import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { AlertDialog } from '../components/ui/AlertDialog';
 import { PROFILE_CACHE_KEY } from '../constants/storage';
 import { queryClient } from '../lib/queryClient';
@@ -131,28 +139,31 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     };
   }, [checkProfile]);
 
-  const signOut = async () => {
+  const signOut = useCallback(async () => {
     setLoading(true);
     isUserSignOut.current = true;
     queryClient.clear();
     await AsyncStorage.removeItem(PROFILE_CACHE_KEY);
     await Notifications.cancelAllScheduledNotificationsAsync();
     await supabase.auth.signOut();
-  };
+  }, []);
+
+  const value = useMemo(
+    () => ({
+      session,
+      user,
+      loading,
+      hasProfile,
+      profileName,
+      profileDateOfBirth,
+      checkProfile,
+      signOut,
+    }),
+    [session, user, loading, hasProfile, profileName, profileDateOfBirth, checkProfile, signOut],
+  );
 
   return (
-    <AuthContext.Provider
-      value={{
-        session,
-        user,
-        loading,
-        hasProfile,
-        profileName,
-        profileDateOfBirth,
-        checkProfile,
-        signOut,
-      }}
-    >
+    <AuthContext.Provider value={value}>
       {children}
       <AlertDialog
         visible={sessionExpired}

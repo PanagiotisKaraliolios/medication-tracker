@@ -20,7 +20,8 @@ export default function ReviewScreen() {
   const c = useThemeColors();
   const insets = useSafeAreaInsets();
   const styles = useMemo(() => makeStyles(c, insets.bottom), [c, insets.bottom]);
-  const { scheduleDraft, schedulingMedId } = useScheduleDraft();
+  const scheduleDraft = useScheduleDraft((s) => s.scheduleDraft);
+  const schedulingMedId = useScheduleDraft((s) => s.schedulingMedId);
   const createScheduleMut = useCreateSchedule();
   const updateScheduleMut = useUpdateSchedule();
   const { data: existingSchedules = [] } = useSchedulesByMedication(schedulingMedId ?? undefined);

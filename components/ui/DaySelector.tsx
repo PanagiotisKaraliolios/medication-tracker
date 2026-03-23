@@ -1,5 +1,5 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { useMemo } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useThemeColors } from '../../hooks/useThemeColors';
 import { borderRadius, type ColorScheme, gradients } from './theme';
@@ -10,17 +10,24 @@ interface DaySelectorProps {
   onChange: (selected: string[]) => void;
 }
 
-export function DaySelector({ days, selected, onChange }: DaySelectorProps) {
+export const DaySelector = React.memo(function DaySelector({
+  days,
+  selected,
+  onChange,
+}: DaySelectorProps) {
   const c = useThemeColors();
   const styles = useMemo(() => makeStyles(c), [c]);
 
-  const toggleDay = (day: string) => {
-    if (selected.includes(day)) {
-      onChange(selected.filter((d) => d !== day));
-    } else {
-      onChange([...selected, day]);
-    }
-  };
+  const toggleDay = useCallback(
+    (day: string) => {
+      if (selected.includes(day)) {
+        onChange(selected.filter((d) => d !== day));
+      } else {
+        onChange([...selected, day]);
+      }
+    },
+    [selected, onChange],
+  );
 
   return (
     <View style={styles.container}>
@@ -54,7 +61,7 @@ export function DaySelector({ days, selected, onChange }: DaySelectorProps) {
       })}
     </View>
   );
-}
+});
 
 function makeStyles(c: ColorScheme) {
   return StyleSheet.create({

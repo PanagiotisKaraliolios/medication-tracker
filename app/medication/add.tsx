@@ -35,9 +35,12 @@ export default function AddMedicationScreen() {
     () => makeStyles(c, insets.bottom, isTablet),
     [c, insets.bottom, isTablet],
   );
-  const { draft, updateDraft, resetDraft } = useMedicationDraft();
+  const draft = useMedicationDraft((s) => s.draft);
+  const updateDraft = useMedicationDraft((s) => s.updateDraft);
+  const resetDraft = useMedicationDraft((s) => s.resetDraft);
   const createMedication = useCreateMedication();
-  const { resetScheduleDraft, setSchedulingMedId } = useScheduleDraft();
+  const resetScheduleDraft = useScheduleDraft((s) => s.resetScheduleDraft);
+  const setSchedulingMedId = useScheduleDraft((s) => s.setSchedulingMedId);
 
   const [showSchedulePrompt, setShowSchedulePrompt] = useState(false);
   const createdMedIdRef = useRef<string | null>(null);

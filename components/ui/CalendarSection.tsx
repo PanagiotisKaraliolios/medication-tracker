@@ -1,5 +1,5 @@
 import { Feather } from '@expo/vector-icons';
-import { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { Pressable, Animated as RNAnimated, StyleSheet, Text, View } from 'react-native';
 import { DAY_LABELS, MONTHS } from '../../constants/days';
 import { useThemeColors } from '../../hooks/useThemeColors';
@@ -26,7 +26,7 @@ interface CalendarSectionProps {
   goToToday: () => void;
 }
 
-export function CalendarSection({
+export const CalendarSection = React.memo(function CalendarSection({
   selectedISO,
   todayISO,
   isToday,
@@ -217,7 +217,7 @@ export function CalendarSection({
       </RNAnimated.View>
     </View>
   );
-}
+});
 
 function makeStyles(c: ColorScheme) {
   return StyleSheet.create({

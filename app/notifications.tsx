@@ -2,8 +2,16 @@ import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Notifications from 'expo-notifications';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useMemo, useState } from 'react';
-import { RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useCallback, useMemo, useState } from 'react';
+import {
+  RefreshControl,
+  SectionList,
+  type SectionListRenderItemInfo,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { AdBanner } from '../components/ui/AdBanner';
 import { EmptyState } from '../components/ui/EmptyState';
 import { LoadingState } from '../components/ui/LoadingState';
@@ -81,6 +89,85 @@ export default function NotificationsScreen() {
 
   const totalCount = scheduled.length + delivered.length;
 
+  type NotificationSection = {
+    title: string;
+    icon: keyof typeof Feather.glyphMap;
+    iconColor: string;
+    badgeBg: string;
+    badgeColor: string;
+    dismissible: boolean;
+    data: NotificationItem[];
+  };
+
+  const sections = useMemo<NotificationSection[]>(() => {
+    if (loading) return [];
+    const result: NotificationSection[] = [];
+    if (scheduled.length > 0) {
+      result.push({
+        title: 'Upcoming',
+        icon: 'clock',
+        iconColor: c.teal,
+        badgeBg: c.tealLight,
+        badgeColor: c.teal,
+        dismissible: false,
+        data: scheduled,
+      });
+    }
+    if (delivered.length > 0) {
+      result.push({
+        title: 'Recent',
+        icon: 'check-circle',
+        iconColor: c.success,
+        badgeBg: c.successLight,
+        badgeColor: c.success,
+        dismissible: true,
+        data: delivered,
+      });
+    }
+    return result;
+  }, [loading, scheduled, delivered, c]);
+
+  const renderNotificationItem = useCallback(
+    ({ item, section }: SectionListRenderItemInfo<NotificationItem, NotificationSection>) => (
+      <NotificationCard
+        item={item}
+        c={c}
+        styles={styles}
+        onDismiss={section.dismissible ? () => handleDismiss(item.id) : undefined}
+      />
+    ),
+    [c, styles, handleDismiss],
+  );
+
+  const renderSectionHeader = useCallback(
+    ({ section }: { section: NotificationSection }) => (
+      <View style={styles.sectionHeader}>
+        <Feather name={section.icon} size={18} color={section.iconColor} />
+        <Text style={styles.sectionTitle}>{section.title}</Text>
+        <View style={[styles.badge, { backgroundColor: section.badgeBg }]}>
+          <Text style={[styles.badgeText, { color: section.badgeColor }]}>
+            {section.data.length}
+          </Text>
+        </View>
+      </View>
+    ),
+    [styles],
+  );
+
+  const listHeader = useMemo(() => {
+    if (loading) return <LoadingState message="Loading notifications…" />;
+    if (totalCount === 0) {
+      return (
+        <EmptyState
+          variant="schedule"
+          title="No notifications"
+          message="You don't have any scheduled or recent notifications. Set up medication schedules with push notifications enabled to see them here."
+        />
+      );
+    }
+    return null;
+  }, [loading, totalCount]);
+
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -118,64 +205,21 @@ export default function NotificationsScreen() {
         </Text>
       </LinearGradient>
 
-      <ScrollView
+      <SectionList<NotificationItem, NotificationSection>
+        sections={sections}
+        renderItem={renderNotificationItem}
+        renderSectionHeader={renderSectionHeader}
+        keyExtractor={(item) => item.id}
+        ListHeaderComponent={listHeader}
+        ListFooterComponent={<View style={{ height: 40 }} />}
+        stickySectionHeadersEnabled={false}
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={c.teal} />
         }
-      >
-        {loading && <LoadingState message="Loading notifications…" />}
-
-        {!loading && totalCount === 0 && (
-          <EmptyState
-            variant="schedule"
-            title="No notifications"
-            message="You don't have any scheduled or recent notifications. Set up medication schedules with push notifications enabled to see them here."
-          />
-        )}
-
-        {/* Upcoming Section */}
-        {!loading && scheduled.length > 0 && (
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Feather name="clock" size={18} color={c.teal} />
-              <Text style={styles.sectionTitle}>Upcoming</Text>
-              <View style={styles.badge}>
-                <Text style={styles.badgeText}>{scheduled.length}</Text>
-              </View>
-            </View>
-            {scheduled.map((item) => (
-              <NotificationCard key={item.id} item={item} c={c} styles={styles} />
-            ))}
-          </View>
-        )}
-
-        {/* Recent Section */}
-        {!loading && delivered.length > 0 && (
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Feather name="check-circle" size={18} color={c.success} />
-              <Text style={styles.sectionTitle}>Recent</Text>
-              <View style={[styles.badge, { backgroundColor: c.successLight }]}>
-                <Text style={[styles.badgeText, { color: c.success }]}>{delivered.length}</Text>
-              </View>
-            </View>
-            {delivered.map((item) => (
-              <NotificationCard
-                key={item.id}
-                item={item}
-                c={c}
-                styles={styles}
-                onDismiss={() => handleDismiss(item.id)}
-              />
-            ))}
-          </View>
-        )}
-
-        <View style={{ height: 40 }} />
-      </ScrollView>
+      />
 
       <AdBanner placement="notificationsBanner" />
     </View>
@@ -184,7 +228,7 @@ export default function NotificationsScreen() {
 
 // ── Notification Card Component ──────────────────────────────────────
 
-function NotificationCard({
+const NotificationCard = React.memo(function NotificationCard({
   item,
   c,
   styles,
@@ -236,7 +280,7 @@ function NotificationCard({
       )}
     </View>
   );
-}
+});
 
 // ── Styles ───────────────────────────────────────────────────────────
 

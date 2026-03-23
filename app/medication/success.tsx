@@ -15,8 +15,9 @@ export default function SuccessScreen() {
   const c = useThemeColors();
   const insets = useSafeAreaInsets();
   const styles = useMemo(() => makeStyles(c, insets.bottom), [c, insets.bottom]);
-  const { resetDraft } = useMedicationDraft();
-  const { resetScheduleDraft, schedulingMedId } = useScheduleDraft();
+  const resetDraft = useMedicationDraft((s) => s.resetDraft);
+  const resetScheduleDraft = useScheduleDraft((s) => s.resetScheduleDraft);
+  const schedulingMedId = useScheduleDraft((s) => s.schedulingMedId);
   const isScheduling = !!schedulingMedId;
 
   const navigateToDashboard = useCallback(() => {

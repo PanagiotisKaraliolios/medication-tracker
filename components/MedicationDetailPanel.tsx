@@ -1,7 +1,7 @@
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   RefreshControl,
@@ -36,7 +36,10 @@ interface Props {
   onDeleted?: () => void;
 }
 
-export function MedicationDetailPanel({ medicationId, onDeleted }: Props) {
+export const MedicationDetailPanel = React.memo(function MedicationDetailPanel({
+  medicationId,
+  onDeleted,
+}: Props) {
   const router = useRouter();
   const c = useThemeColors();
   const styles = useMemo(() => makeStyles(c), [c]);
@@ -421,7 +424,7 @@ export function MedicationDetailPanel({ medicationId, onDeleted }: Props) {
       />
     </View>
   );
-}
+});
 
 function makeStyles(c: ColorScheme) {
   return StyleSheet.create({

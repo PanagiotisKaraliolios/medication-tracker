@@ -8,6 +8,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import { ActivityIndicator, AppState, View } from 'react-native';
 import { AutocompleteDropdownContextProvider } from 'react-native-autocomplete-dropdown';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { enableFreeze } from 'react-native-screens';
 import { BatteryOptimizationModal } from '../components/ui/BatteryOptimizationModal';
 import ErrorBoundaryWrapper from '../components/ui/ErrorBoundary';
 import { OfflineBanner } from '../components/ui/OfflineBanner';
@@ -33,6 +34,9 @@ import type { DoseLogRow, MedicationRow, ScheduleRow } from '../types/database';
 
 // Register notification handler ASAP so foreground notifications display correctly
 registerNotificationHandler();
+
+// Freeze off-screen screens to prevent unnecessary re-renders
+enableFreeze(true);
 
 // Initialize Mobile Ads SDK (consent + init) once at module level
 initializeAds().then(() => preloadInterstitial());

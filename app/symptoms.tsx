@@ -7,7 +7,7 @@ import {
   Animated,
   PanResponder,
   RefreshControl,
-  ScrollView,
+  SectionList,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -65,29 +65,74 @@ export default function SymptomsScreen() {
   const medMap = useMemo(() => new Map(medications.map((m) => [m.id, m.name])), [medications]);
 
   // Group symptoms by date
-  const grouped = useMemo(() => {
+  type SymptomSection = { title: string; data: SymptomRow[] };
+  const sections = useMemo<SymptomSection[]>(() => {
+    if (isLoading || error) return [];
     const map = new Map<string, SymptomRow[]>();
     for (const s of symptoms) {
       const list = map.get(s.logged_date) ?? [];
       list.push(s);
       map.set(s.logged_date, list);
     }
-    return Array.from(map.entries()).sort((a, b) => b[0].localeCompare(a[0]));
-  }, [symptoms]);
+    return Array.from(map.entries())
+      .sort((a, b) => b[0].localeCompare(a[0]))
+      .map(([date, items]) => ({
+        title: new Date(`${date}T12:00:00`).toLocaleDateString('en-US', {
+          weekday: 'short',
+          month: 'short',
+          day: 'numeric',
+        }),
+        data: items,
+      }));
+  }, [symptoms, isLoading, error]);
 
-  return (
-    <View style={styles.container}>
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            colors={[c.teal]}
-            tintColor={c.teal}
+  const renderSymptomItem = useCallback(
+    ({ item: s }: { item: SymptomRow }) => {
+      const cfg = SEVERITY_CONFIG[s.severity];
+      return (
+        <SwipeableCard onDelete={() => setDeleteTarget(s)} c={c} styles={styles}>
+          <View
+            style={[
+              styles.severityDot,
+              {
+                backgroundColor: s.severity === 'severe' ? c.error : c.warning,
+              },
+            ]}
           />
-        }
-      >
+          <View style={styles.symptomInfo}>
+            <Text style={styles.symptomName}>{s.name}</Text>
+            <Text style={styles.symptomMeta}>
+              {cfg.label}
+              {s.medication_id && medMap.has(s.medication_id)
+                ? ` · ${medMap.get(s.medication_id)}`
+                : ''}
+            </Text>
+            {s.notes ? <Text style={styles.symptomNotes}>{s.notes}</Text> : null}
+          </View>
+          {s.logged_at && (
+            <Text style={styles.symptomTime}>
+              {new Date(s.logged_at).toLocaleTimeString('en-US', {
+                hour: 'numeric',
+                minute: '2-digit',
+              })}
+            </Text>
+          )}
+        </SwipeableCard>
+      );
+    },
+    [c, styles, medMap],
+  );
+
+  const renderSectionHeader = useCallback(
+    ({ section }: { section: SymptomSection }) => (
+      <Text style={styles.dateLabel}>{section.title}</Text>
+    ),
+    [styles],
+  );
+
+  const listHeader = useMemo(
+    () => (
+      <>
         <LinearGradient
           colors={[...gradients.primary]}
           start={{ x: 0, y: 0 }}
@@ -109,7 +154,7 @@ export default function SymptomsScreen() {
         </LinearGradient>
 
         <View style={styles.content}>
-          {isLoading && <LoadingState message="Loading symptoms…" />}
+          {isLoading && <LoadingState message="Loading symptoms\u2026" />}
 
           {!isLoading && error && (
             <ErrorState
@@ -128,62 +173,33 @@ export default function SymptomsScreen() {
               onAction={() => router.push('/log-symptom')}
             />
           )}
-
-          {!isLoading &&
-            !error &&
-            grouped.map(([date, items]) => (
-              <View key={date} style={styles.dateGroup}>
-                <Text style={styles.dateLabel}>
-                  {new Date(`${date}T12:00:00`).toLocaleDateString('en-US', {
-                    weekday: 'short',
-                    month: 'short',
-                    day: 'numeric',
-                  })}
-                </Text>
-                {items.map((s) => {
-                  const cfg = SEVERITY_CONFIG[s.severity];
-                  return (
-                    <SwipeableCard
-                      key={s.id}
-                      onDelete={() => setDeleteTarget(s)}
-                      c={c}
-                      styles={styles}
-                    >
-                      <View
-                        style={[
-                          styles.severityDot,
-                          {
-                            backgroundColor: s.severity === 'severe' ? c.error : c.warning,
-                          },
-                        ]}
-                      />
-                      <View style={styles.symptomInfo}>
-                        <Text style={styles.symptomName}>{s.name}</Text>
-                        <Text style={styles.symptomMeta}>
-                          {cfg.label}
-                          {s.medication_id && medMap.has(s.medication_id)
-                            ? ` · ${medMap.get(s.medication_id)}`
-                            : ''}
-                        </Text>
-                        {s.notes ? <Text style={styles.symptomNotes}>{s.notes}</Text> : null}
-                      </View>
-                      {s.logged_at && (
-                        <Text style={styles.symptomTime}>
-                          {new Date(s.logged_at).toLocaleTimeString('en-US', {
-                            hour: 'numeric',
-                            minute: '2-digit',
-                          })}
-                        </Text>
-                      )}
-                    </SwipeableCard>
-                  );
-                })}
-              </View>
-            ))}
-
-          <View style={{ height: 100 }} />
         </View>
-      </ScrollView>
+      </>
+    ),
+    [isLoading, error, symptoms.length, styles, c, refetch],
+  );
+
+  return (
+    <View style={styles.container}>
+      <SectionList<SymptomRow, SymptomSection>
+        sections={sections}
+        renderItem={renderSymptomItem}
+        renderSectionHeader={renderSectionHeader}
+        keyExtractor={(item) => item.id}
+        ListHeaderComponent={listHeader}
+        ListFooterComponent={<View style={{ height: 100 }} />}
+        stickySectionHeadersEnabled={false}
+        contentContainerStyle={styles.sectionListContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[c.teal]}
+            tintColor={c.teal}
+          />
+        }
+      />
 
       {/* FAB to log new symptom */}
       <TouchableOpacity
@@ -342,6 +358,9 @@ function makeStyles(c: ColorScheme) {
       paddingHorizontal: 24,
       paddingTop: 24,
     },
+    sectionListContent: {
+      paddingBottom: 24,
+    },
     dateGroup: {
       marginBottom: 24,
     },
@@ -350,6 +369,7 @@ function makeStyles(c: ColorScheme) {
       fontWeight: '600',
       color: c.gray500,
       marginBottom: 12,
+      paddingHorizontal: 24,
       textTransform: 'uppercase',
     },
     symptomCard: {
@@ -415,6 +435,7 @@ function makeStyles(c: ColorScheme) {
     },
     swipeContainer: {
       marginBottom: 8,
+      marginHorizontal: 24,
       position: 'relative',
     },
     fabWrapper: {

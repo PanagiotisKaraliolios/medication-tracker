@@ -12,7 +12,8 @@ import { useScheduleDraft } from '../../stores/draftStores';
 
 export default function RemindersScreen() {
   const router = useRouter();
-  const { scheduleDraft, updateScheduleDraft } = useScheduleDraft();
+  const scheduleDraft = useScheduleDraft((s) => s.scheduleDraft);
+  const updateScheduleDraft = useScheduleDraft((s) => s.updateScheduleDraft);
   const c = useThemeColors();
   const insets = useSafeAreaInsets();
   const styles = useMemo(() => makeStyles(c, insets.bottom), [c, insets.bottom]);

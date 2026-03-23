@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type React from 'react';
-import { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { useColorScheme } from 'react-native';
 import { type ColorScheme, colors, darkColors } from '../components/ui/theme';
 
@@ -51,12 +51,17 @@ export function ThemePreferenceProvider({ children }: { children: React.ReactNod
       ? ((systemScheme === 'dark' ? 'dark' : 'light') as 'light' | 'dark')
       : preference;
 
-  const value: ThemeContextType = {
-    preference,
-    resolvedScheme,
-    colors: resolvedScheme === 'dark' ? darkColors : colors,
-    setPreference,
-  };
+  const activeColors = resolvedScheme === 'dark' ? darkColors : colors;
+
+  const value = useMemo<ThemeContextType>(
+    () => ({
+      preference,
+      resolvedScheme,
+      colors: activeColors,
+      setPreference,
+    }),
+    [preference, resolvedScheme, activeColors, setPreference],
+  );
 
   // Don't render until we've loaded the persisted preference to avoid flash
   if (!loaded) return null;

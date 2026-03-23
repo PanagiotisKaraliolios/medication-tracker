@@ -1,6 +1,6 @@
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { TIME_SLOTS } from '../../constants/schedule';
 import { useThemeColors } from '../../hooks/useThemeColors';
@@ -11,7 +11,7 @@ type Props = {
   onToggle: (label: string) => void;
 };
 
-export function TimeSlotGrid({ selected, onToggle }: Props) {
+export const TimeSlotGrid = React.memo(function TimeSlotGrid({ selected, onToggle }: Props) {
   const c = useThemeColors();
   const styles = useMemo(() => makeStyles(c), [c]);
 
@@ -49,7 +49,7 @@ export function TimeSlotGrid({ selected, onToggle }: Props) {
       })}
     </View>
   );
-}
+});
 
 function makeStyles(c: ColorScheme) {
   return StyleSheet.create({

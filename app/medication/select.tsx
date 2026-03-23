@@ -1,6 +1,6 @@
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { ErrorState } from '../../components/ui/ErrorState';
@@ -18,7 +18,9 @@ export default function SelectMedicationScreen() {
   const styles = useMemo(() => makeStyles(c), [c]);
   const { data: medications = [], isLoading, error, refetch } = useMedications();
   const { data: allSchedules = [] } = useSchedules();
-  const { resetScheduleDraft, updateScheduleDraft, setSchedulingMedId } = useScheduleDraft();
+  const resetScheduleDraft = useScheduleDraft((s) => s.resetScheduleDraft);
+  const updateScheduleDraft = useScheduleDraft((s) => s.updateScheduleDraft);
+  const setSchedulingMedId = useScheduleDraft((s) => s.setSchedulingMedId);
 
   const [search, setSearch] = useState('');
 
@@ -33,49 +35,59 @@ export default function SelectMedicationScreen() {
     );
   }, [medications, search]);
 
-  const handleSelect = (med: MedicationRow) => {
-    // Reset schedule draft, set the medication being scheduled
-    resetScheduleDraft();
-    setSchedulingMedId(med.id);
+  const handleSelect = useCallback(
+    (med: MedicationRow) => {
+      // Reset schedule draft, set the medication being scheduled
+      resetScheduleDraft();
+      setSchedulingMedId(med.id);
 
-    // If an existing schedule exists, pre-populate the draft with its values
-    const schedules = allSchedules.filter((s) => s.medication_id === med.id);
+      // If an existing schedule exists, pre-populate the draft with its values
+      const schedules = allSchedules.filter((s) => s.medication_id === med.id);
 
-    if (schedules.length > 0) {
-      const s = schedules[0];
-      updateScheduleDraft({
-        frequency: s.frequency.charAt(0).toUpperCase() + s.frequency.slice(1),
-        selectedDays: s.selected_days ?? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-        timesOfDay: s.times_of_day ?? ['Morning'],
-        dosagePerDose: s.dosage_per_dose ?? 1,
-        pushNotifications: s.push_notifications,
-        smsAlerts: s.sms_alerts,
-        snoozeDuration: s.snooze_duration ?? '5 min',
-        instructions: s.instructions ?? '',
-      });
-    }
+      if (schedules.length > 0) {
+        const s = schedules[0];
+        updateScheduleDraft({
+          frequency: s.frequency.charAt(0).toUpperCase() + s.frequency.slice(1),
+          selectedDays: s.selected_days ?? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+          timesOfDay: s.times_of_day ?? ['Morning'],
+          dosagePerDose: s.dosage_per_dose ?? 1,
+          pushNotifications: s.push_notifications,
+          smsAlerts: s.sms_alerts,
+          snoozeDuration: s.snooze_duration ?? '5 min',
+          instructions: s.instructions ?? '',
+        });
+      }
 
-    router.push('/medication/schedule');
-  };
+      router.push('/medication/schedule');
+    },
+    [allSchedules, resetScheduleDraft, setSchedulingMedId, updateScheduleDraft, router],
+  );
 
-  const renderItem = ({ item }: { item: MedicationRow }) => {
-    const mciIcon = getIconForForm(item.form);
+  const renderItem = useCallback(
+    ({ item }: { item: MedicationRow }) => {
+      const mciIcon = getIconForForm(item.form);
 
-    return (
-      <TouchableOpacity style={styles.card} activeOpacity={0.7} onPress={() => handleSelect(item)}>
-        <View style={styles.iconCircle}>
-          <MaterialCommunityIcons name={mciIcon} size={22} color={c.teal} />
-        </View>
-        <View style={styles.cardInfo}>
-          <Text style={styles.medName}>{item.name}</Text>
-          <Text style={styles.medDetail}>
-            {item.dosage} · {item.form}
-          </Text>
-        </View>
-        <Feather name="chevron-right" size={20} color={c.gray400} />
-      </TouchableOpacity>
-    );
-  };
+      return (
+        <TouchableOpacity
+          style={styles.card}
+          activeOpacity={0.7}
+          onPress={() => handleSelect(item)}
+        >
+          <View style={styles.iconCircle}>
+            <MaterialCommunityIcons name={mciIcon} size={22} color={c.teal} />
+          </View>
+          <View style={styles.cardInfo}>
+            <Text style={styles.medName}>{item.name}</Text>
+            <Text style={styles.medDetail}>
+              {item.dosage} · {item.form}
+            </Text>
+          </View>
+          <Feather name="chevron-right" size={20} color={c.gray400} />
+        </TouchableOpacity>
+      );
+    },
+    [styles, c, handleSelect],
+  );
 
   return (
     <View style={styles.container}>

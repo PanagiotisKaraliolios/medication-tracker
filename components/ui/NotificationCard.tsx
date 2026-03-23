@@ -1,5 +1,5 @@
 import { Feather } from '@expo/vector-icons';
-import { useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, Switch, Text, View } from 'react-native';
 import { useThemeColors } from '../../hooks/useThemeColors';
 import { borderRadius, type ColorScheme, shadows } from './theme';
@@ -9,7 +9,10 @@ type Props = {
   onPushChange: (value: boolean) => void;
 };
 
-export function NotificationCard({ pushEnabled, onPushChange }: Props) {
+export const NotificationCard = React.memo(function NotificationCard({
+  pushEnabled,
+  onPushChange,
+}: Props) {
   const c = useThemeColors();
   const styles = useMemo(() => makeStyles(c), [c]);
 
@@ -64,7 +67,7 @@ export function NotificationCard({ pushEnabled, onPushChange }: Props) {
       </View>
     </View>
   );
-}
+});
 
 function makeStyles(c: ColorScheme) {
   return StyleSheet.create({
