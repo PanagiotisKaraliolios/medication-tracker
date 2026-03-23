@@ -5,6 +5,15 @@ import {
   getNotificationIcon,
 } from './notificationHelpers';
 
+// Typed helpers to avoid `as any` casts on opaque expo-notifications types
+type TriggerInput = Parameters<typeof describeTrigger>[0];
+type ScheduledRequest = Parameters<typeof buildScheduledItems>[0][number];
+type DeliveredNotif = Parameters<typeof buildDeliveredItems>[0][number];
+
+function asTrigger(obj: Record<string, unknown> | null): TriggerInput {
+  return obj as unknown as TriggerInput;
+}
+
 // Pin time so nextDailyDate / nextWeeklyDate / formatNextDate are deterministic.
 // Wednesday 2025-01-15 10:00 AM
 beforeAll(() => jest.useFakeTimers({ now: new Date(2025, 0, 15, 10, 0, 0) }));
@@ -14,11 +23,9 @@ afterAll(() => jest.useRealTimers());
 
 describe('describeTrigger', () => {
   it('describes a daily trigger', () => {
-    const { description, sortKey, dateInfo } = describeTrigger({
-      type: 'daily',
-      hour: 8,
-      minute: 30,
-    } as any);
+    const { description, sortKey, dateInfo } = describeTrigger(
+      asTrigger({ type: 'daily', hour: 8, minute: 30 }),
+    );
     expect(description).toBe('Daily at 8:30 AM');
     expect(sortKey).toBe(8 * 60 + 30);
     // 8:30 AM already passed today (10 AM now) → dateInfo should be Tomorrow
@@ -26,61 +33,49 @@ describe('describeTrigger', () => {
   });
 
   it('daily trigger later today shows Today', () => {
-    const { dateInfo } = describeTrigger({
-      type: 'daily',
-      hour: 14,
-      minute: 0,
-    } as any);
+    const { dateInfo } = describeTrigger(asTrigger({ type: 'daily', hour: 14, minute: 0 }));
     expect(dateInfo).toBe('Today');
   });
 
   it('describes a weekly trigger', () => {
     // weekday 5 = Thu (expo: 1=Sun,2=Mon,…,5=Thu)
-    const { description, sortKey } = describeTrigger({
-      type: 'weekly',
-      weekday: 5,
-      hour: 9,
-      minute: 0,
-    } as any);
+    const { description, sortKey } = describeTrigger(
+      asTrigger({ type: 'weekly', weekday: 5, hour: 9, minute: 0 }),
+    );
     expect(description).toBe('Every Thu at 9:00 AM');
     expect(sortKey).toBe((5 - 1) * 1440 + 9 * 60);
   });
 
   it('weekly trigger tomorrow shows Tomorrow', () => {
     // weekday 5 = Thu; today is Wed → next fire = tomorrow
-    const { dateInfo } = describeTrigger({
-      type: 'weekly',
-      weekday: 5,
-      hour: 9,
-      minute: 0,
-    } as any);
+    const { dateInfo } = describeTrigger(
+      asTrigger({ type: 'weekly', weekday: 5, hour: 9, minute: 0 }),
+    );
     expect(dateInfo).toBe('Tomorrow');
   });
 
   it('describes a short timeInterval in seconds', () => {
-    const { description, sortKey } = describeTrigger({
-      type: 'timeInterval',
-      seconds: 30,
-    } as any);
+    const { description, sortKey } = describeTrigger(
+      asTrigger({ type: 'timeInterval', seconds: 30 }),
+    );
     expect(description).toBe('In 30s');
     expect(sortKey).toBe(-30);
   });
 
   it('describes a longer timeInterval in minutes', () => {
-    const { description, sortKey } = describeTrigger({
-      type: 'timeInterval',
-      seconds: 300,
-    } as any);
+    const { description, sortKey } = describeTrigger(
+      asTrigger({ type: 'timeInterval', seconds: 300 }),
+    );
     expect(description).toBe('In 5 min');
     expect(sortKey).toBe(-300);
   });
 
   it('returns Unknown for null trigger', () => {
-    expect(describeTrigger(null as any)).toEqual({ description: 'Unknown', sortKey: 9999 });
+    expect(describeTrigger(asTrigger(null))).toEqual({ description: 'Unknown', sortKey: 9999 });
   });
 
   it('returns Scheduled for unrecognised trigger type', () => {
-    expect(describeTrigger({ type: 'calendar' } as any)).toEqual({
+    expect(describeTrigger(asTrigger({ type: 'calendar' }))).toEqual({
       description: 'Scheduled',
       sortKey: 9999,
     });
@@ -123,7 +118,7 @@ function makeRequest(
       data: overrides.data ?? {},
     },
     trigger,
-  } as any;
+  } as unknown as ScheduledRequest;
 }
 
 describe('buildScheduledItems', () => {
@@ -187,7 +182,7 @@ describe('buildDeliveredItems', () => {
           identifier: 'd1',
           content: { title: 'Taken!', body: 'Aspirin', data: { medicationName: 'Aspirin' } },
         },
-      } as any,
+      } as unknown as DeliveredNotif,
     ]);
     expect(items).toHaveLength(1);
     expect(items[0].type).toBe('delivered');
@@ -200,11 +195,11 @@ describe('buildDeliveredItems', () => {
       {
         date: now - 120_000,
         request: { identifier: 'd1', content: { title: 'A', body: '', data: {} } },
-      } as any,
+      } as unknown as DeliveredNotif,
       {
         date: now - 10_000,
         request: { identifier: 'd2', content: { title: 'B', body: '', data: {} } },
-      } as any,
+      } as unknown as DeliveredNotif,
     ]);
     // Newer (d2) should come first (lower sortKey = more negative date)
     expect(items[0].id).toBe('d2');
