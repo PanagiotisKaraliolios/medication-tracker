@@ -1,4 +1,4 @@
-import { searchDrugs, getDrugProperties, checkInteractions } from './drugApi';
+import { checkInteractions, getDrugProperties, searchDrugs } from './drugApi';
 
 function mockFetchResponse(body: unknown, ok = true): Response {
   return {
@@ -51,9 +51,7 @@ describe('searchDrugs', () => {
     });
 
     const results = await searchDrugs('aspirin');
-    expect(results).toEqual([
-      { rxcui: '1191', name: 'Aspirin', synonym: 'ASA', tty: 'IN' },
-    ]);
+    expect(results).toEqual([{ rxcui: '1191', name: 'Aspirin', synonym: 'ASA', tty: 'IN' }]);
   });
 
   test('deduplicates candidates by rxcui', async () => {
@@ -114,9 +112,7 @@ describe('getDrugProperties', () => {
       if (url.includes('related.json')) {
         return mockFetchResponse({
           relatedGroup: {
-            conceptGroup: [
-              { conceptProperties: [{ name: 'Bayer' }, { name: 'Ecotrin' }] },
-            ],
+            conceptGroup: [{ conceptProperties: [{ name: 'Bayer' }, { name: 'Ecotrin' }] }],
           },
         });
       }
@@ -149,7 +145,7 @@ describe('getDrugProperties', () => {
 
     const result = await getDrugProperties('1191');
     expect(result).not.toBeNull();
-    expect(result!.brandNames).toEqual([]);
+    expect(result?.brandNames).toEqual([]);
   });
 });
 
@@ -193,9 +189,7 @@ describe('checkInteractions', () => {
       mockFetchResponse({
         results: [
           {
-            drug_interactions: [
-              'Caution when used with ibuprofen. Also caution with aspirin.',
-            ],
+            drug_interactions: ['Caution when used with ibuprofen. Also caution with aspirin.'],
           },
         ],
       }),
@@ -285,7 +279,7 @@ describe('getDrugProperties – branch coverage', () => {
     });
 
     const result = await getDrugProperties('123');
-    expect(result!.brandNames).toEqual([]);
+    expect(result?.brandNames).toEqual([]);
   });
 
   test('returns empty brandNames when conceptProperties is not an array', async () => {
@@ -304,7 +298,7 @@ describe('getDrugProperties – branch coverage', () => {
     });
 
     const result = await getDrugProperties('123');
-    expect(result!.brandNames).toEqual([]);
+    expect(result?.brandNames).toEqual([]);
   });
 
   test('defaults props values to empty string when null', async () => {

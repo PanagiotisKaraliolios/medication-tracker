@@ -49,11 +49,7 @@ describe('queryKeys', () => {
 
   describe('doseLogs', () => {
     test('byDate() includes the date string', () => {
-      expect(queryKeys.doseLogs.byDate('2026-03-23')).toEqual([
-        'doseLogs',
-        'byDate',
-        '2026-03-23',
-      ]);
+      expect(queryKeys.doseLogs.byDate('2026-03-23')).toEqual(['doseLogs', 'byDate', '2026-03-23']);
     });
 
     test('byRange() includes start and end', () => {
@@ -66,21 +62,13 @@ describe('queryKeys', () => {
     });
 
     test('prnByMedication() includes medicationId', () => {
-      expect(queryKeys.doseLogs.prnByMedication('med-1')).toEqual([
-        'doseLogs',
-        'prn',
-        'med-1',
-      ]);
+      expect(queryKeys.doseLogs.prnByMedication('med-1')).toEqual(['doseLogs', 'prn', 'med-1']);
     });
   });
 
   describe('symptoms', () => {
     test('byDate() includes the date string', () => {
-      expect(queryKeys.symptoms.byDate('2026-03-23')).toEqual([
-        'symptoms',
-        'byDate',
-        '2026-03-23',
-      ]);
+      expect(queryKeys.symptoms.byDate('2026-03-23')).toEqual(['symptoms', 'byDate', '2026-03-23']);
     });
 
     test('byRange() includes start and end', () => {

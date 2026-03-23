@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { renderHook, act, waitFor } from '@testing-library/react-native';
+import { act, renderHook, waitFor } from '@testing-library/react-native';
 import * as Notifications from 'expo-notifications';
 import Toast from 'react-native-toast-message';
 import { SNOOZE_STORAGE_KEY } from '../constants/storage';
@@ -357,7 +357,13 @@ describe('useSnooze', () => {
         );
       });
 
-      expect(params.logDose).toHaveBeenCalledWith('sched1', 'med1', '2025-01-15', 'Morning', 'taken');
+      expect(params.logDose).toHaveBeenCalledWith(
+        'sched1',
+        'med1',
+        '2025-01-15',
+        'Morning',
+        'taken',
+      );
       expect(params.adjustSupply).toHaveBeenCalledWith('med1', -1);
       expect(Toast.show).toHaveBeenCalledWith(
         expect.objectContaining({ type: 'success', text1: 'Dose taken', text2: 'Aspirin' }),
@@ -426,9 +432,7 @@ describe('useSnooze', () => {
       const handler = getNotificationHandler();
 
       await act(async () => {
-        await handler(
-          makeNotificationResponse('take', {}),
-        );
+        await handler(makeNotificationResponse('take', {}));
       });
 
       expect(params.logDose).not.toHaveBeenCalled();

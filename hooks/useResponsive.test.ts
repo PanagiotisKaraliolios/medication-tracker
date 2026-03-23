@@ -1,5 +1,5 @@
-import { Dimensions } from 'react-native';
 import { renderHook } from '@testing-library/react-native';
+import { Dimensions } from 'react-native';
 import { useResponsive } from './useResponsive';
 
 function setDimensions(width: number, height: number) {

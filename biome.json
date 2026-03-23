@@ -35,6 +35,8 @@
       "!**/.expo",
       "!**/dist",
       "!**/build",
+      "!**/coverage",
+      "!**/scripts",
       "!**/*.lock",
       "!**/bun.lockb"
     ]

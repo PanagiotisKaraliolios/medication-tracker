@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { renderHook, act, waitFor } from '@testing-library/react-native';
+import { act, renderHook, waitFor } from '@testing-library/react-native';
 import * as Notifications from 'expo-notifications';
 import type React from 'react';
 import { PROFILE_CACHE_KEY } from '../constants/storage';

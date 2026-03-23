@@ -1,11 +1,18 @@
-import { renderHook, act } from '@testing-library/react-native';
+import { act, renderHook } from '@testing-library/react-native';
 import { useCalendar } from './useCalendar';
 
 // Pin date to June 15, 2025 (Sunday)
 // Only fake Date, keep setTimeout/setInterval real for Animated and waitFor
 beforeEach(() => {
   jest.useFakeTimers({
-    doNotFake: ['setTimeout', 'setInterval', 'clearTimeout', 'clearInterval', 'setImmediate', 'clearImmediate'],
+    doNotFake: [
+      'setTimeout',
+      'setInterval',
+      'clearTimeout',
+      'clearInterval',
+      'setImmediate',
+      'clearImmediate',
+    ],
   });
   jest.setSystemTime(new Date(2025, 5, 15));
 });

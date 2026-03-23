@@ -1,4 +1,4 @@
-import { renderHook, act } from '@testing-library/react-native';
+import { act, renderHook } from '@testing-library/react-native';
 
 /* ── NetInfo mock ─────────────────────────────────────────────────── */
 type NetInfoCallback = (state: { isConnected?: boolean; isInternetReachable?: boolean }) => void;

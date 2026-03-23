@@ -1,5 +1,13 @@
-import * as Notifications from 'expo-notifications';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Notifications from 'expo-notifications';
+
+/** Shape of a scheduleNotificationAsync mock call for type-safe assertions */
+type NotifMockCall = [
+  {
+    content: { title?: string; channelId?: string };
+    trigger?: { type?: string; date?: Date; channelId?: string };
+  },
+];
 
 jest.mock('expo-notifications', () => ({
   scheduleNotificationAsync: jest.fn().mockResolvedValue('mock-notif-id'),
@@ -31,22 +39,22 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
 jest.mock('react-native', () => ({ Platform: { OS: 'ios' } }));
 
 import {
-  parseTimeToHourMinute,
-  scheduleSnoozeNotification,
-  cancelSnoozeNotification,
-  scheduleMedicationReminders,
-  cancelMedicationReminders,
-  scheduleLowSupplyReminder,
   cancelLowSupplyReminder,
-  fireMissedDoseReminders,
+  cancelMedicationReminders,
+  cancelSnoozeNotification,
   deduplicateScheduledNotifications,
-  requestNotificationPermissions,
-  registerNotificationHandler,
-  rescheduleAllMedicationReminders,
+  fireMissedDoseReminders,
+  type LowSupplyMedication,
+  parseTimeToHourMinute,
   recheckAllLowSupplyReminders,
+  registerNotificationHandler,
+  requestNotificationPermissions,
+  rescheduleAllMedicationReminders,
   type ScheduleNotifInput,
   type SnoozeNotificationData,
-  type LowSupplyMedication,
+  scheduleLowSupplyReminder,
+  scheduleMedicationReminders,
+  scheduleSnoozeNotification,
 } from './notifications';
 
 beforeEach(() => {
@@ -259,10 +267,7 @@ describe('scheduleMedicationReminders', () => {
   it('stores notification IDs in AsyncStorage', async () => {
     await scheduleMedicationReminders(baseSchedule, 'Aspirin');
 
-    expect(AsyncStorage.setItem).toHaveBeenCalledWith(
-      'notif_ids_sched-1',
-      expect.any(String),
-    );
+    expect(AsyncStorage.setItem).toHaveBeenCalledWith('notif_ids_sched-1', expect.any(String));
     const storedValue = (AsyncStorage.setItem as jest.Mock).mock.calls[0][1];
     expect(JSON.parse(storedValue)).toEqual(['mock-notif-id']);
   });
@@ -401,7 +406,9 @@ describe('cancelLowSupplyReminder', () => {
 describe('fireMissedDoseReminders', () => {
   const medicationNames: Record<string, string> = { 'sched-1': 'Aspirin' };
 
-  function makeSchedule(overrides: Partial<import('./notifications').MissedDoseScheduleInput> = {}): import('./notifications').MissedDoseScheduleInput {
+  function makeSchedule(
+    overrides: Partial<import('./notifications').MissedDoseScheduleInput> = {},
+  ): import('./notifications').MissedDoseScheduleInput {
     return {
       id: 'sched-1',
       medication_id: 'med-1',
@@ -421,7 +428,7 @@ describe('fireMissedDoseReminders', () => {
     const mockNow = new Date('2026-03-23T10:00:00');
     jest.spyOn(global, 'Date').mockImplementation((...args: unknown[]) => {
       if (args.length === 0) return mockNow;
-      // @ts-ignore
+      // @ts-expect-error
       return new realDate(...args);
     });
     (Date as unknown as { now: () => number }).now = () => mockNow.getTime();
@@ -445,7 +452,7 @@ describe('fireMissedDoseReminders', () => {
     const mockNow = new Date('2026-03-23T10:00:00');
     jest.spyOn(global, 'Date').mockImplementation((...args: unknown[]) => {
       if (args.length === 0) return mockNow;
-      // @ts-ignore
+      // @ts-expect-error
       return new realDate(...args);
     });
     (Date as unknown as { now: () => number }).now = () => mockNow.getTime();
@@ -464,16 +471,12 @@ describe('fireMissedDoseReminders', () => {
     const mockNow = new Date('2026-03-23T10:00:00');
     jest.spyOn(global, 'Date').mockImplementation((...args: unknown[]) => {
       if (args.length === 0) return mockNow;
-      // @ts-ignore
+      // @ts-expect-error
       return new realDate(...args);
     });
     (Date as unknown as { now: () => number }).now = () => mockNow.getTime();
 
-    await fireMissedDoseReminders(
-      [makeSchedule({ times_of_day: ['Night'] })],
-      [],
-      medicationNames,
-    );
+    await fireMissedDoseReminders([makeSchedule({ times_of_day: ['Night'] })], [], medicationNames);
 
     expect(Notifications.scheduleNotificationAsync).not.toHaveBeenCalled();
 
@@ -486,7 +489,7 @@ describe('fireMissedDoseReminders', () => {
     const mockNow = new Date('2026-03-23T10:00:00');
     jest.spyOn(global, 'Date').mockImplementation((...args: unknown[]) => {
       if (args.length === 0) return mockNow;
-      // @ts-ignore
+      // @ts-expect-error
       return new realDate(...args);
     });
     (Date as unknown as { now: () => number }).now = () => mockNow.getTime();
@@ -629,7 +632,8 @@ describe('ensureCategoryRegistered catch branch', () => {
     const warnSpy = jest.spyOn(console, 'warn').mockImplementation();
 
     jest.doMock('expo-notifications', () => ({
-      setNotificationCategoryAsync: jest.fn()
+      setNotificationCategoryAsync: jest
+        .fn()
         .mockRejectedValueOnce(new Error('category fail'))
         .mockResolvedValueOnce(undefined),
       setNotificationHandler: jest.fn(),
@@ -642,7 +646,12 @@ describe('ensureCategoryRegistered catch branch', () => {
       getPermissionsAsync: jest.fn().mockResolvedValue({ status: 'granted' }),
       requestPermissionsAsync: jest.fn().mockResolvedValue({ status: 'granted' }),
       addNotificationResponseReceivedListener: jest.fn().mockReturnValue({ remove: jest.fn() }),
-      SchedulableTriggerInputTypes: { TIME_INTERVAL: 'timeInterval', DAILY: 'daily', WEEKLY: 'weekly', DATE: 'date' },
+      SchedulableTriggerInputTypes: {
+        TIME_INTERVAL: 'timeInterval',
+        DAILY: 'daily',
+        WEEKLY: 'weekly',
+        DATE: 'date',
+      },
       AndroidImportance: { HIGH: 4 },
     }));
     jest.doMock('react-native', () => ({ Platform: { OS: 'ios' } }));
@@ -705,9 +714,7 @@ describe('scheduleMedicationReminders (interval frequency)', () => {
 
     const calls = (Notifications.scheduleNotificationAsync as jest.Mock).mock.calls;
     // All scheduled triggers should be DATE type
-    const dateTriggers = calls.filter(
-      (c: any) => c[0].trigger?.type === 'date',
-    );
+    const dateTriggers = calls.filter((c: NotifMockCall) => c[0].trigger?.type === 'date');
     expect(dateTriggers.length).toBeGreaterThan(0);
     // Each trigger should have a date property
     for (const call of dateTriggers) {
@@ -729,9 +736,7 @@ describe('scheduleMedicationReminders (interval frequency)', () => {
     await scheduleMedicationReminders(futureSchedule, 'FutureMed');
 
     const calls = (Notifications.scheduleNotificationAsync as jest.Mock).mock.calls;
-    const dateTriggers = calls.filter(
-      (c: any) => c[0].trigger?.type === 'date',
-    );
+    const dateTriggers = calls.filter((c: NotifMockCall) => c[0].trigger?.type === 'date');
     // Should schedule future occurrences that are >= start_date
     for (const call of dateTriggers) {
       const triggerDate = call[0].trigger.date as Date;
@@ -747,9 +752,7 @@ describe('scheduleMedicationReminders (interval frequency)', () => {
     await scheduleMedicationReminders(baseSchedule, 'TestMed');
 
     const calls = (Notifications.scheduleNotificationAsync as jest.Mock).mock.calls;
-    const dateTriggers = calls.filter(
-      (c: any) => c[0].trigger?.type === 'date',
-    );
+    const dateTriggers = calls.filter((c: NotifMockCall) => c[0].trigger?.type === 'date');
     // All scheduled dates should be in the future
     for (const call of dateTriggers) {
       const triggerDate = call[0].trigger.date as Date;
@@ -805,7 +808,7 @@ describe('rescheduleAllMedicationReminders', () => {
 
     // Each schedule should produce at least one scheduleNotificationAsync call
     const calls = (Notifications.scheduleNotificationAsync as jest.Mock).mock.calls;
-    const titles = calls.map((c: any) => c[0].content.title);
+    const titles = calls.map((c: NotifMockCall) => c[0].content.title);
     expect(titles).toContain('💊 Time for Aspirin');
     expect(titles).toContain('💊 Time for Ibuprofen');
   });
@@ -832,7 +835,7 @@ describe('rescheduleAllMedicationReminders', () => {
     await rescheduleAllMedicationReminders(schedules, {});
 
     const calls = (Notifications.scheduleNotificationAsync as jest.Mock).mock.calls;
-    const titles = calls.map((c: any) => c[0].content.title);
+    const titles = calls.map((c: NotifMockCall) => c[0].content.title);
     expect(titles).toContain('💊 Time for your medication');
   });
 });
@@ -842,7 +845,13 @@ describe('rescheduleAllMedicationReminders', () => {
 describe('recheckAllLowSupplyReminders', () => {
   it('schedules reminders for low-supply medications and cancels for others', async () => {
     const medications: LowSupplyMedication[] = [
-      { id: 'med-low', name: 'LowMed', current_supply: 3, low_supply_threshold: 5, is_active: true },
+      {
+        id: 'med-low',
+        name: 'LowMed',
+        current_supply: 3,
+        low_supply_threshold: 5,
+        is_active: true,
+      },
       { id: 'med-ok', name: 'OkMed', current_supply: 20, low_supply_threshold: 5, is_active: true },
     ];
 
@@ -855,14 +864,20 @@ describe('recheckAllLowSupplyReminders', () => {
     // Low-supply med should trigger scheduleNotificationAsync (daily 9AM reminder)
     const scheduleCalls = (Notifications.scheduleNotificationAsync as jest.Mock).mock.calls;
     const lowSupplyTitles = scheduleCalls
-      .map((c: any) => c[0].content.title)
+      .map((c: NotifMockCall) => c[0].content.title)
       .filter((t: string) => t.includes('Low Supply'));
     expect(lowSupplyTitles.length).toBeGreaterThan(0);
   });
 
   it('cancels reminders for inactive medications', async () => {
     const medications: LowSupplyMedication[] = [
-      { id: 'med-inactive', name: 'InactiveMed', current_supply: 2, low_supply_threshold: 5, is_active: false },
+      {
+        id: 'med-inactive',
+        name: 'InactiveMed',
+        current_supply: 2,
+        low_supply_threshold: 5,
+        is_active: false,
+      },
     ];
 
     (Notifications.getAllScheduledNotificationsAsync as jest.Mock).mockResolvedValue([]);
@@ -873,14 +888,20 @@ describe('recheckAllLowSupplyReminders', () => {
     // Should not schedule any new notifications (inactive → cancel path)
     const scheduleCalls = (Notifications.scheduleNotificationAsync as jest.Mock).mock.calls;
     const lowSupplyTitles = scheduleCalls
-      .map((c: any) => c[0].content.title)
+      .map((c: NotifMockCall) => c[0].content.title)
       .filter((t: string) => t?.includes('Low Supply'));
     expect(lowSupplyTitles.length).toBe(0);
   });
 
   it('cancels reminders for medications above threshold', async () => {
     const medications: LowSupplyMedication[] = [
-      { id: 'med-full', name: 'FullMed', current_supply: 50, low_supply_threshold: 10, is_active: true },
+      {
+        id: 'med-full',
+        name: 'FullMed',
+        current_supply: 50,
+        low_supply_threshold: 10,
+        is_active: true,
+      },
     ];
 
     (Notifications.getAllScheduledNotificationsAsync as jest.Mock).mockResolvedValue([]);
@@ -1143,7 +1164,7 @@ describe('Android channelId branches', () => {
     await scheduleMedicationReminders(schedule, 'IntervalMed');
 
     const calls = (Notifications.scheduleNotificationAsync as jest.Mock).mock.calls;
-    const dateTriggers = calls.filter((c: any) => c[0].trigger?.type === 'date');
+    const dateTriggers = calls.filter((c: NotifMockCall) => c[0].trigger?.type === 'date');
     expect(dateTriggers.length).toBeGreaterThan(0);
     for (const call of dateTriggers) {
       expect(call[0].content.channelId).toBe('medication-reminders');
@@ -1158,8 +1179,8 @@ describe('Android channelId branches', () => {
     for (const call of calls) {
       expect(call[0].content.channelId).toBe('medication-reminders');
     }
-    const dailyCall = calls.find((c: any) => c[0].trigger?.type === 'daily');
-    expect(dailyCall![0].trigger.channelId).toBe('medication-reminders');
+    const dailyCall = calls.find((c: NotifMockCall) => c[0].trigger?.type === 'daily');
+    expect(dailyCall?.[0].trigger.channelId).toBe('medication-reminders');
   });
 
   it('scheduleLowSupplyReminder includes channelId on Android (without immediate)', async () => {
@@ -1175,16 +1196,18 @@ describe('Android channelId branches', () => {
     jest.useFakeTimers();
     jest.setSystemTime(new Date('2026-03-23T10:00:00'));
 
-    const schedules: import('./notifications').MissedDoseScheduleInput[] = [{
-      id: 'sch-ad',
-      medication_id: 'med-1',
-      frequency: 'daily',
-      selected_days: [],
-      times_of_day: ['Morning'],
-      push_notifications: true,
-      interval_days: null,
-      start_date: '2025-01-01',
-    }];
+    const schedules: import('./notifications').MissedDoseScheduleInput[] = [
+      {
+        id: 'sch-ad',
+        medication_id: 'med-1',
+        frequency: 'daily',
+        selected_days: [],
+        times_of_day: ['Morning'],
+        push_notifications: true,
+        interval_days: null,
+        start_date: '2025-01-01',
+      },
+    ];
 
     await fireMissedDoseReminders(schedules, [], { 'sch-ad': 'AndroidMed' });
 
@@ -1291,16 +1314,18 @@ describe('fireMissedDoseReminders (additional edge cases)', () => {
     jest.useFakeTimers();
     jest.setSystemTime(new Date('2026-03-23T10:00:00'));
 
-    const schedules: import('./notifications').MissedDoseScheduleInput[] = [{
-      id: 'sch-nopush',
-      medication_id: 'med-1',
-      frequency: 'daily',
-      selected_days: [],
-      times_of_day: ['Morning'],
-      push_notifications: false,
-      interval_days: null,
-      start_date: '2025-01-01',
-    }];
+    const schedules: import('./notifications').MissedDoseScheduleInput[] = [
+      {
+        id: 'sch-nopush',
+        medication_id: 'med-1',
+        frequency: 'daily',
+        selected_days: [],
+        times_of_day: ['Morning'],
+        push_notifications: false,
+        interval_days: null,
+        start_date: '2025-01-01',
+      },
+    ];
 
     await fireMissedDoseReminders(schedules, [], { 'sch-nopush': 'NoPushMed' });
 
@@ -1312,16 +1337,18 @@ describe('fireMissedDoseReminders (additional edge cases)', () => {
     // March 23, 2026 is a Monday
     jest.setSystemTime(new Date('2026-03-23T10:00:00'));
 
-    const schedules: import('./notifications').MissedDoseScheduleInput[] = [{
-      id: 'sch-weekly-match',
-      medication_id: 'med-1',
-      frequency: 'weekly',
-      selected_days: ['Mon', 'Wed', 'Fri'],
-      times_of_day: ['Morning'],
-      push_notifications: true,
-      interval_days: null,
-      start_date: '2025-01-01',
-    }];
+    const schedules: import('./notifications').MissedDoseScheduleInput[] = [
+      {
+        id: 'sch-weekly-match',
+        medication_id: 'med-1',
+        frequency: 'weekly',
+        selected_days: ['Mon', 'Wed', 'Fri'],
+        times_of_day: ['Morning'],
+        push_notifications: true,
+        interval_days: null,
+        start_date: '2025-01-01',
+      },
+    ];
 
     await fireMissedDoseReminders(schedules, [], { 'sch-weekly-match': 'WeeklyMed' });
 
@@ -1337,16 +1364,18 @@ describe('fireMissedDoseReminders (additional edge cases)', () => {
     jest.useFakeTimers();
     jest.setSystemTime(new Date('2026-03-23T10:00:00'));
 
-    const schedules: import('./notifications').MissedDoseScheduleInput[] = [{
-      id: 'sch-noname',
-      medication_id: 'med-1',
-      frequency: 'daily',
-      selected_days: [],
-      times_of_day: ['Morning'],
-      push_notifications: true,
-      interval_days: null,
-      start_date: '2025-01-01',
-    }];
+    const schedules: import('./notifications').MissedDoseScheduleInput[] = [
+      {
+        id: 'sch-noname',
+        medication_id: 'med-1',
+        frequency: 'daily',
+        selected_days: [],
+        times_of_day: ['Morning'],
+        push_notifications: true,
+        interval_days: null,
+        start_date: '2025-01-01',
+      },
+    ];
 
     // Empty map — name missing
     await fireMissedDoseReminders(schedules, [], {});
@@ -1364,22 +1393,22 @@ describe('fireMissedDoseReminders (additional edge cases)', () => {
 
     const logSpy = jest.spyOn(console, 'log').mockImplementation();
 
-    const schedules: import('./notifications').MissedDoseScheduleInput[] = [{
-      id: 'sch-fire',
-      medication_id: 'med-1',
-      frequency: 'daily',
-      selected_days: [],
-      times_of_day: ['Morning'],
-      push_notifications: true,
-      interval_days: null,
-      start_date: '2025-01-01',
-    }];
+    const schedules: import('./notifications').MissedDoseScheduleInput[] = [
+      {
+        id: 'sch-fire',
+        medication_id: 'med-1',
+        frequency: 'daily',
+        selected_days: [],
+        times_of_day: ['Morning'],
+        push_notifications: true,
+        interval_days: null,
+        start_date: '2025-01-01',
+      },
+    ];
 
     await fireMissedDoseReminders(schedules, [], { 'sch-fire': 'FireMed' });
 
-    expect(logSpy).toHaveBeenCalledWith(
-      expect.stringContaining('missed-dose catch-up'),
-    );
+    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('missed-dose catch-up'));
     logSpy.mockRestore();
   });
 });

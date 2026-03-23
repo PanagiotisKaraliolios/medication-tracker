@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { renderHook, act, waitFor } from '@testing-library/react-native';
+import { act, renderHook, waitFor } from '@testing-library/react-native';
 import type React from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import {
@@ -17,6 +17,7 @@ import {
   useDeleteMedication,
   useDeleteSchedule,
   useDeleteSymptom,
+  useDeleteSymptomsByDate,
   useDoseLogsByDate,
   useDoseLogsByRange,
   useLogDose,
@@ -28,18 +29,31 @@ import {
   useSchedules,
   useSchedulesByMedication,
   useSymptomsByDate,
-  useSymptomsByRange,
   useSymptomsByMedication,
-  useDeleteSymptomsByDate,
+  useSymptomsByRange,
   useUpdateMedication,
   useUpdateSchedule,
 } from './useQueryHooks';
 
 // ── Chainable Supabase mock ──────────────────────────────────────────
 
-function createChain(resolvedValue: { data: unknown; error: unknown } = { data: null, error: null }) {
+function createChain(
+  resolvedValue: { data: unknown; error: unknown } = { data: null, error: null },
+) {
   const chain: Record<string, jest.Mock> = {};
-  const methods = ['select', 'insert', 'update', 'delete', 'upsert', 'eq', 'gte', 'lte', 'is', 'order', 'single'];
+  const methods = [
+    'select',
+    'insert',
+    'update',
+    'delete',
+    'upsert',
+    'eq',
+    'gte',
+    'lte',
+    'is',
+    'order',
+    'single',
+  ];
   for (const m of methods) {
     chain[m] = jest.fn().mockReturnValue(chain);
   }
@@ -199,7 +213,9 @@ describe('useQueryHooks', () => {
       const chain = createChain({ data: [{ id: 'sched-1' }], error: null });
       mockFrom.mockReturnValue(chain);
 
-      const { result } = renderHook(() => useSchedulesByMedication('med-1'), { wrapper: createWrapper() });
+      const { result } = renderHook(() => useSchedulesByMedication('med-1'), {
+        wrapper: createWrapper(),
+      });
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
@@ -226,7 +242,9 @@ describe('useQueryHooks', () => {
       const chain = createChain({ data: [{ id: 'log-1' }], error: null });
       mockFrom.mockReturnValue(chain);
 
-      const { result } = renderHook(() => useDoseLogsByDate('2025-01-15'), { wrapper: createWrapper() });
+      const { result } = renderHook(() => useDoseLogsByDate('2025-01-15'), {
+        wrapper: createWrapper(),
+      });
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
@@ -240,7 +258,9 @@ describe('useQueryHooks', () => {
       const chain = createChain({ data: [{ id: 'log-1' }], error: null });
       mockFrom.mockReturnValue(chain);
 
-      const { result } = renderHook(() => useDoseLogsByRange('2025-01-01', '2025-01-31'), { wrapper: createWrapper() });
+      const { result } = renderHook(() => useDoseLogsByRange('2025-01-01', '2025-01-31'), {
+        wrapper: createWrapper(),
+      });
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
@@ -269,7 +289,9 @@ describe('useQueryHooks', () => {
       const chain = createChain({ data: [{ id: 'sym-1' }], error: null });
       mockFrom.mockReturnValue(chain);
 
-      const { result } = renderHook(() => useSymptomsByDate('2025-01-15'), { wrapper: createWrapper() });
+      const { result } = renderHook(() => useSymptomsByDate('2025-01-15'), {
+        wrapper: createWrapper(),
+      });
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
@@ -948,7 +970,9 @@ describe('useQueryHooks', () => {
       const chain = createChain({ data: null, error: { message: 'DB error' } });
       mockFrom.mockReturnValue(chain);
 
-      const { result } = renderHook(() => useSchedulesByMedication('med-1'), { wrapper: createWrapper() });
+      const { result } = renderHook(() => useSchedulesByMedication('med-1'), {
+        wrapper: createWrapper(),
+      });
 
       await waitFor(() => expect(result.current.isError).toBe(true));
       expect(result.current.error?.message).toBe('DB error');
@@ -968,7 +992,9 @@ describe('useQueryHooks', () => {
       const chain = createChain({ data: null, error: { message: 'DB error' } });
       mockFrom.mockReturnValue(chain);
 
-      const { result } = renderHook(() => useDoseLogsByDate('2025-01-15'), { wrapper: createWrapper() });
+      const { result } = renderHook(() => useDoseLogsByDate('2025-01-15'), {
+        wrapper: createWrapper(),
+      });
 
       await waitFor(() => expect(result.current.isError).toBe(true));
       expect(result.current.error?.message).toBe('DB error');
@@ -978,7 +1004,9 @@ describe('useQueryHooks', () => {
       const chain = createChain({ data: null, error: { message: 'DB error' } });
       mockFrom.mockReturnValue(chain);
 
-      const { result } = renderHook(() => useDoseLogsByRange('2025-01-01', '2025-01-31'), { wrapper: createWrapper() });
+      const { result } = renderHook(() => useDoseLogsByRange('2025-01-01', '2025-01-31'), {
+        wrapper: createWrapper(),
+      });
 
       await waitFor(() => expect(result.current.isError).toBe(true));
       expect(result.current.error?.message).toBe('DB error');
@@ -988,7 +1016,9 @@ describe('useQueryHooks', () => {
       const chain = createChain({ data: null, error: { message: 'DB error' } });
       mockFrom.mockReturnValue(chain);
 
-      const { result } = renderHook(() => useSymptomsByDate('2025-01-15'), { wrapper: createWrapper() });
+      const { result } = renderHook(() => useSymptomsByDate('2025-01-15'), {
+        wrapper: createWrapper(),
+      });
 
       await waitFor(() => expect(result.current.isError).toBe(true));
       expect(result.current.error?.message).toBe('DB error');
@@ -998,7 +1028,9 @@ describe('useQueryHooks', () => {
       const chain = createChain({ data: null, error: { message: 'DB error' } });
       mockFrom.mockReturnValue(chain);
 
-      const { result } = renderHook(() => useSymptomsByRange('2025-01-01', '2025-01-31'), { wrapper: createWrapper() });
+      const { result } = renderHook(() => useSymptomsByRange('2025-01-01', '2025-01-31'), {
+        wrapper: createWrapper(),
+      });
 
       await waitFor(() => expect(result.current.isError).toBe(true));
       expect(result.current.error?.message).toBe('DB error');
@@ -1008,7 +1040,9 @@ describe('useQueryHooks', () => {
       const chain = createChain({ data: null, error: { message: 'DB error' } });
       mockFrom.mockReturnValue(chain);
 
-      const { result } = renderHook(() => useSymptomsByMedication('med-1'), { wrapper: createWrapper() });
+      const { result } = renderHook(() => useSymptomsByMedication('med-1'), {
+        wrapper: createWrapper(),
+      });
 
       await waitFor(() => expect(result.current.isError).toBe(true));
       expect(result.current.error?.message).toBe('DB error');
@@ -1052,7 +1086,9 @@ describe('useQueryHooks', () => {
       const chain = createChain({ data: null, error: null });
       mockFrom.mockReturnValue(chain);
 
-      const { result } = renderHook(() => useSchedulesByMedication('med-1'), { wrapper: createWrapper() });
+      const { result } = renderHook(() => useSchedulesByMedication('med-1'), {
+        wrapper: createWrapper(),
+      });
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
       expect(result.current.data).toEqual([]);
@@ -1062,7 +1098,9 @@ describe('useQueryHooks', () => {
       const chain = createChain({ data: null, error: null });
       mockFrom.mockReturnValue(chain);
 
-      const { result } = renderHook(() => useDoseLogsByDate('2025-01-15'), { wrapper: createWrapper() });
+      const { result } = renderHook(() => useDoseLogsByDate('2025-01-15'), {
+        wrapper: createWrapper(),
+      });
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
       expect(result.current.data).toEqual([]);
@@ -1072,7 +1110,9 @@ describe('useQueryHooks', () => {
       const chain = createChain({ data: null, error: null });
       mockFrom.mockReturnValue(chain);
 
-      const { result } = renderHook(() => useDoseLogsByRange('2025-01-01', '2025-01-31'), { wrapper: createWrapper() });
+      const { result } = renderHook(() => useDoseLogsByRange('2025-01-01', '2025-01-31'), {
+        wrapper: createWrapper(),
+      });
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
       expect(result.current.data).toEqual([]);
@@ -1082,7 +1122,9 @@ describe('useQueryHooks', () => {
       const chain = createChain({ data: null, error: null });
       mockFrom.mockReturnValue(chain);
 
-      const { result } = renderHook(() => useSymptomsByDate('2025-01-15'), { wrapper: createWrapper() });
+      const { result } = renderHook(() => useSymptomsByDate('2025-01-15'), {
+        wrapper: createWrapper(),
+      });
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
       expect(result.current.data).toEqual([]);
@@ -1092,7 +1134,9 @@ describe('useQueryHooks', () => {
       const chain = createChain({ data: null, error: null });
       mockFrom.mockReturnValue(chain);
 
-      const { result } = renderHook(() => useSymptomsByRange('2025-01-01', '2025-01-31'), { wrapper: createWrapper() });
+      const { result } = renderHook(() => useSymptomsByRange('2025-01-01', '2025-01-31'), {
+        wrapper: createWrapper(),
+      });
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
       expect(result.current.data).toEqual([]);
@@ -1102,7 +1146,9 @@ describe('useQueryHooks', () => {
       const chain = createChain({ data: null, error: null });
       mockFrom.mockReturnValue(chain);
 
-      const { result } = renderHook(() => useSymptomsByMedication('med-1'), { wrapper: createWrapper() });
+      const { result } = renderHook(() => useSymptomsByMedication('med-1'), {
+        wrapper: createWrapper(),
+      });
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
       expect(result.current.data).toEqual([]);
@@ -1123,7 +1169,9 @@ describe('useQueryHooks', () => {
 
   describe('mutation hooks - not authenticated', () => {
     beforeEach(() => {
-      jest.mocked(useAuth).mockReturnValue({ user: null, session: null } as ReturnType<typeof useAuth>);
+      jest
+        .mocked(useAuth)
+        .mockReturnValue({ user: null, session: null } as ReturnType<typeof useAuth>);
       const chain = createChain({ data: null, error: null });
       mockFrom.mockReturnValue(chain);
     });
@@ -1132,7 +1180,9 @@ describe('useQueryHooks', () => {
       const { result } = renderHook(() => useCreateMedication(), { wrapper: createWrapper() });
 
       await expect(
-        act(async () => { await result.current.mutateAsync(); }),
+        act(async () => {
+          await result.current.mutateAsync();
+        }),
       ).rejects.toThrow('Not authenticated');
     });
 
@@ -1140,7 +1190,9 @@ describe('useQueryHooks', () => {
       const { result } = renderHook(() => useDeleteMedication(), { wrapper: createWrapper() });
 
       await expect(
-        act(async () => { await result.current.mutateAsync('med-1'); }),
+        act(async () => {
+          await result.current.mutateAsync('med-1');
+        }),
       ).rejects.toThrow('Not authenticated');
     });
 
@@ -1148,7 +1200,9 @@ describe('useQueryHooks', () => {
       const { result } = renderHook(() => useAdjustSupply(), { wrapper: createWrapper() });
 
       await expect(
-        act(async () => { await result.current.mutateAsync({ medicationId: 'med-1', delta: -1 }); }),
+        act(async () => {
+          await result.current.mutateAsync({ medicationId: 'med-1', delta: -1 });
+        }),
       ).rejects.toThrow('Not authenticated');
     });
 
@@ -1181,7 +1235,9 @@ describe('useQueryHooks', () => {
       const { result } = renderHook(() => useUpdateSchedule(), { wrapper: createWrapper() });
 
       await expect(
-        act(async () => { await result.current.mutateAsync({ id: 'sched-1', updates: { frequency: 'weekly' } }); }),
+        act(async () => {
+          await result.current.mutateAsync({ id: 'sched-1', updates: { frequency: 'weekly' } });
+        }),
       ).rejects.toThrow('Not authenticated');
     });
 
@@ -1189,7 +1245,9 @@ describe('useQueryHooks', () => {
       const { result } = renderHook(() => useDeleteSchedule(), { wrapper: createWrapper() });
 
       await expect(
-        act(async () => { await result.current.mutateAsync('sched-1'); }),
+        act(async () => {
+          await result.current.mutateAsync('sched-1');
+        }),
       ).rejects.toThrow('Not authenticated');
     });
 
@@ -1213,7 +1271,9 @@ describe('useQueryHooks', () => {
       const { result } = renderHook(() => useDeleteDoseLog(), { wrapper: createWrapper() });
 
       await expect(
-        act(async () => { await result.current.mutateAsync('log-1'); }),
+        act(async () => {
+          await result.current.mutateAsync('log-1');
+        }),
       ).rejects.toThrow('Not authenticated');
     });
 
@@ -1236,7 +1296,9 @@ describe('useQueryHooks', () => {
       const { result } = renderHook(() => useDeleteSymptom(), { wrapper: createWrapper() });
 
       await expect(
-        act(async () => { await result.current.mutateAsync('sym-1'); }),
+        act(async () => {
+          await result.current.mutateAsync('sym-1');
+        }),
       ).rejects.toThrow('Not authenticated');
     });
 
@@ -1244,7 +1306,9 @@ describe('useQueryHooks', () => {
       const { result } = renderHook(() => useDeleteSymptomsByDate(), { wrapper: createWrapper() });
 
       await expect(
-        act(async () => { await result.current.mutateAsync('2025-01-15'); }),
+        act(async () => {
+          await result.current.mutateAsync('2025-01-15');
+        }),
       ).rejects.toThrow('Not authenticated');
     });
   });
@@ -1259,7 +1323,9 @@ describe('useQueryHooks', () => {
       const { result } = renderHook(() => useCreateMedication(), { wrapper: createWrapper() });
 
       await expect(
-        act(async () => { await result.current.mutateAsync(); }),
+        act(async () => {
+          await result.current.mutateAsync();
+        }),
       ).rejects.toThrow('mutation error');
     });
 
@@ -1270,7 +1336,9 @@ describe('useQueryHooks', () => {
       const { result } = renderHook(() => useUpdateMedication(), { wrapper: createWrapper() });
 
       await expect(
-        act(async () => { await result.current.mutateAsync({ id: 'med-1', updates: { name: 'X' } }); }),
+        act(async () => {
+          await result.current.mutateAsync({ id: 'med-1', updates: { name: 'X' } });
+        }),
       ).rejects.toThrow('mutation error');
     });
 
@@ -1290,7 +1358,9 @@ describe('useQueryHooks', () => {
       const { result } = renderHook(() => useDeleteMedication(), { wrapper: createWrapper() });
 
       await expect(
-        act(async () => { await result.current.mutateAsync('med-1'); }),
+        act(async () => {
+          await result.current.mutateAsync('med-1');
+        }),
       ).rejects.toThrow('mutation error');
     });
 
@@ -1357,7 +1427,9 @@ describe('useQueryHooks', () => {
       const { result } = renderHook(() => useDeleteSymptom(), { wrapper: createWrapper() });
 
       await expect(
-        act(async () => { await result.current.mutateAsync('sym-1'); }),
+        act(async () => {
+          await result.current.mutateAsync('sym-1');
+        }),
       ).rejects.toThrow('mutation error');
     });
 
@@ -1368,7 +1440,9 @@ describe('useQueryHooks', () => {
       const { result } = renderHook(() => useDeleteSymptomsByDate(), { wrapper: createWrapper() });
 
       await expect(
-        act(async () => { await result.current.mutateAsync('2025-01-15'); }),
+        act(async () => {
+          await result.current.mutateAsync('2025-01-15');
+        }),
       ).rejects.toThrow('mutation error');
     });
 
@@ -1407,7 +1481,9 @@ describe('useQueryHooks', () => {
       const { result } = renderHook(() => useUpdateSchedule(), { wrapper: createWrapper() });
 
       await expect(
-        act(async () => { await result.current.mutateAsync({ id: 'sched-1', updates: { frequency: 'weekly' } }); }),
+        act(async () => {
+          await result.current.mutateAsync({ id: 'sched-1', updates: { frequency: 'weekly' } });
+        }),
       ).rejects.toThrow('mutation error');
     });
 
@@ -1418,7 +1494,9 @@ describe('useQueryHooks', () => {
       const { result } = renderHook(() => useDeleteSchedule(), { wrapper: createWrapper() });
 
       await expect(
-        act(async () => { await result.current.mutateAsync('sched-1'); }),
+        act(async () => {
+          await result.current.mutateAsync('sched-1');
+        }),
       ).rejects.toThrow('mutation error');
     });
 
@@ -1429,7 +1507,9 @@ describe('useQueryHooks', () => {
       const { result } = renderHook(() => useDeleteDoseLog(), { wrapper: createWrapper() });
 
       await expect(
-        act(async () => { await result.current.mutateAsync('log-1'); }),
+        act(async () => {
+          await result.current.mutateAsync('log-1');
+        }),
       ).rejects.toThrow('mutation error');
     });
 
@@ -1450,7 +1530,9 @@ describe('useQueryHooks', () => {
       const { result } = renderHook(() => useAdjustSupply(), { wrapper: createWrapper() });
 
       await expect(
-        act(async () => { await result.current.mutateAsync({ medicationId: 'med-1', delta: -1 }); }),
+        act(async () => {
+          await result.current.mutateAsync({ medicationId: 'med-1', delta: -1 });
+        }),
       ).rejects.toThrow('mutation error');
     });
   });
@@ -1479,7 +1561,9 @@ describe('useQueryHooks', () => {
       const { result } = renderHook(() => useAdjustSupply(), { wrapper: createWrapper() });
 
       await expect(
-        act(async () => { await result.current.mutateAsync({ medicationId: 'med-1', delta: -1 }); }),
+        act(async () => {
+          await result.current.mutateAsync({ medicationId: 'med-1', delta: -1 });
+        }),
       ).rejects.toThrow('Medication not found');
     });
 
@@ -1704,7 +1788,9 @@ describe('useQueryHooks', () => {
       const chain = createChain({ data: null, error: null });
       mockFrom.mockReturnValue(chain);
 
-      const { result } = renderHook(() => useSchedulesByMedication(undefined), { wrapper: createWrapper() });
+      const { result } = renderHook(() => useSchedulesByMedication(undefined), {
+        wrapper: createWrapper(),
+      });
 
       expect(result.current.fetchStatus).toBe('idle');
       expect(mockFrom).not.toHaveBeenCalled();
@@ -1724,7 +1810,9 @@ describe('useQueryHooks', () => {
       const chain = createChain({ data: null, error: null });
       mockFrom.mockReturnValue(chain);
 
-      const { result } = renderHook(() => useDoseLogsByDate(undefined), { wrapper: createWrapper() });
+      const { result } = renderHook(() => useDoseLogsByDate(undefined), {
+        wrapper: createWrapper(),
+      });
 
       expect(result.current.fetchStatus).toBe('idle');
       expect(mockFrom).not.toHaveBeenCalled();
@@ -1734,7 +1822,9 @@ describe('useQueryHooks', () => {
       const chain = createChain({ data: null, error: null });
       mockFrom.mockReturnValue(chain);
 
-      const { result } = renderHook(() => useDoseLogsByRange(undefined, '2025-01-31'), { wrapper: createWrapper() });
+      const { result } = renderHook(() => useDoseLogsByRange(undefined, '2025-01-31'), {
+        wrapper: createWrapper(),
+      });
 
       expect(result.current.fetchStatus).toBe('idle');
       expect(mockFrom).not.toHaveBeenCalled();
@@ -1744,7 +1834,9 @@ describe('useQueryHooks', () => {
       const chain = createChain({ data: null, error: null });
       mockFrom.mockReturnValue(chain);
 
-      const { result } = renderHook(() => useDoseLogsByRange('2025-01-01', undefined), { wrapper: createWrapper() });
+      const { result } = renderHook(() => useDoseLogsByRange('2025-01-01', undefined), {
+        wrapper: createWrapper(),
+      });
 
       expect(result.current.fetchStatus).toBe('idle');
       expect(mockFrom).not.toHaveBeenCalled();
@@ -1764,7 +1856,9 @@ describe('useQueryHooks', () => {
       const chain = createChain({ data: null, error: null });
       mockFrom.mockReturnValue(chain);
 
-      const { result } = renderHook(() => useSymptomsByDate(undefined), { wrapper: createWrapper() });
+      const { result } = renderHook(() => useSymptomsByDate(undefined), {
+        wrapper: createWrapper(),
+      });
 
       expect(result.current.fetchStatus).toBe('idle');
       expect(mockFrom).not.toHaveBeenCalled();
@@ -1774,7 +1868,9 @@ describe('useQueryHooks', () => {
       const chain = createChain({ data: null, error: null });
       mockFrom.mockReturnValue(chain);
 
-      const { result } = renderHook(() => useSymptomsByRange(undefined, '2025-01-31'), { wrapper: createWrapper() });
+      const { result } = renderHook(() => useSymptomsByRange(undefined, '2025-01-31'), {
+        wrapper: createWrapper(),
+      });
 
       expect(result.current.fetchStatus).toBe('idle');
       expect(mockFrom).not.toHaveBeenCalled();
@@ -1784,7 +1880,9 @@ describe('useQueryHooks', () => {
       const chain = createChain({ data: null, error: null });
       mockFrom.mockReturnValue(chain);
 
-      const { result } = renderHook(() => useSymptomsByRange('2025-01-01', undefined), { wrapper: createWrapper() });
+      const { result } = renderHook(() => useSymptomsByRange('2025-01-01', undefined), {
+        wrapper: createWrapper(),
+      });
 
       expect(result.current.fetchStatus).toBe('idle');
       expect(mockFrom).not.toHaveBeenCalled();
@@ -1794,7 +1892,9 @@ describe('useQueryHooks', () => {
       const chain = createChain({ data: null, error: null });
       mockFrom.mockReturnValue(chain);
 
-      const { result } = renderHook(() => useSymptomsByMedication(undefined), { wrapper: createWrapper() });
+      const { result } = renderHook(() => useSymptomsByMedication(undefined), {
+        wrapper: createWrapper(),
+      });
 
       expect(result.current.fetchStatus).toBe('idle');
       expect(mockFrom).not.toHaveBeenCalled();
