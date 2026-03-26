@@ -197,6 +197,11 @@ export default function TodayDashboard() {
   const [fabOpen, setFabOpen] = useState(false);
   const fabAnim = useRef(new Animated.Value(0)).current;
 
+  // Clear optimistic overrides when the selected date changes
+  useEffect(() => {
+    setOverrides({});
+  }, [selectedISO]);
+
   const doses = useMemo(() => {
     if (Object.keys(overrides).length === 0) return computedDoses;
     return computedDoses.map((d) => {
