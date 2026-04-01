@@ -27,6 +27,10 @@ beforeEach(() => {
   setColorScheme('light');
 });
 
+afterEach(() => {
+  jest.restoreAllMocks();
+});
+
 describe('ThemeContext', () => {
   it('defaults to system preference when AsyncStorage is empty', async () => {
     const { result } = renderHook(() => useThemePreference(), { wrapper });

@@ -61,6 +61,13 @@ beforeEach(() => {
   jest.clearAllMocks();
 });
 
+afterEach(() => {
+  jest.useRealTimers();
+  jest.restoreAllMocks();
+  const { Platform } = require('react-native');
+  Platform.OS = 'ios';
+});
+
 // ── parseTimeToHourMinute ────────────────────────────────────────────
 
 describe('parseTimeToHourMinute', () => {
@@ -424,14 +431,8 @@ describe('fireMissedDoseReminders', () => {
 
   it('fires for past times with no log entry', async () => {
     // Morning = 8:00 AM — set current time to after that
-    const realDate = Date;
-    const mockNow = new Date('2026-03-23T10:00:00');
-    jest.spyOn(global, 'Date').mockImplementation((...args: unknown[]) => {
-      if (args.length === 0) return mockNow;
-      // @ts-expect-error
-      return new realDate(...args);
-    });
-    (Date as unknown as { now: () => number }).now = () => mockNow.getTime();
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2026-03-23T10:00:00'));
 
     await fireMissedDoseReminders([makeSchedule()], [], medicationNames);
 
@@ -443,56 +444,32 @@ describe('fireMissedDoseReminders', () => {
         trigger: null,
       }),
     );
-
-    jest.restoreAllMocks();
   });
 
   it('skips doses that already have a log entry', async () => {
-    const realDate = Date;
-    const mockNow = new Date('2026-03-23T10:00:00');
-    jest.spyOn(global, 'Date').mockImplementation((...args: unknown[]) => {
-      if (args.length === 0) return mockNow;
-      // @ts-expect-error
-      return new realDate(...args);
-    });
-    (Date as unknown as { now: () => number }).now = () => mockNow.getTime();
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2026-03-23T10:00:00'));
 
     const logs = [{ schedule_id: 'sched-1', time_label: 'Morning' }];
     await fireMissedDoseReminders([makeSchedule()], logs, medicationNames);
 
     expect(Notifications.scheduleNotificationAsync).not.toHaveBeenCalled();
-
-    jest.restoreAllMocks();
   });
 
   it('skips future times', async () => {
     // Night = 22:00 — set current time to before that
-    const realDate = Date;
-    const mockNow = new Date('2026-03-23T10:00:00');
-    jest.spyOn(global, 'Date').mockImplementation((...args: unknown[]) => {
-      if (args.length === 0) return mockNow;
-      // @ts-expect-error
-      return new realDate(...args);
-    });
-    (Date as unknown as { now: () => number }).now = () => mockNow.getTime();
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2026-03-23T10:00:00'));
 
     await fireMissedDoseReminders([makeSchedule({ times_of_day: ['Night'] })], [], medicationNames);
 
     expect(Notifications.scheduleNotificationAsync).not.toHaveBeenCalled();
-
-    jest.restoreAllMocks();
   });
 
   it('checks frequency-specific day matching for weekly schedules', async () => {
-    const realDate = Date;
     // March 23, 2026 is a Monday
-    const mockNow = new Date('2026-03-23T10:00:00');
-    jest.spyOn(global, 'Date').mockImplementation((...args: unknown[]) => {
-      if (args.length === 0) return mockNow;
-      // @ts-expect-error
-      return new realDate(...args);
-    });
-    (Date as unknown as { now: () => number }).now = () => mockNow.getTime();
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2026-03-23T10:00:00'));
 
     // Weekly schedule NOT including Monday → should skip
     await fireMissedDoseReminders(
@@ -502,8 +479,6 @@ describe('fireMissedDoseReminders', () => {
     );
 
     expect(Notifications.scheduleNotificationAsync).not.toHaveBeenCalled();
-
-    jest.restoreAllMocks();
   });
 });
 
